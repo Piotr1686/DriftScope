@@ -19,12 +19,14 @@
 # ## Założenia (jawne — do potwierdzenia przed W2)
 #
 # 1. **Testy biegną PER REŻIM** (`regime_split.py`), więc wiążąca jest moc przy n
-#    per-reżim, NIE pooled. Szacunki długości (piątki do 2022, +wtorki w R3):
-#    - R1 (2012-03 → 2014-10): ~135 losowań
-#    - R2 (2014-10 → 2022-03): ~390 losowań
-#    - R3 (2022-03 → 2026):    ~400 losowań
-#    - pooled (kontekst):      ~925; brief miejscami pisze 1500 (rozbieżność z "~700"
-#      w §6.1 — dlatego sweepujemy n, zamiast przyjmować jedną wartość).
+#    per-reżim, NIE pooled. Liczby ZWERYFIKOWANE na committed seed CSV (958 losowań,
+#    2012-03-23 → 2026-05-26; granice z preregistration_v2 §1):
+#    - R1 (2012-03-23 → 2014-10-03): n=133, euron [1..8]  (✓ 2/8)
+#    - R2 (2014-10-10 → 2022-03-18): n=389, euron [1..10] (✓ 2/10)
+#    - R3 (2022-03-25 → 2026):       n=436, euron [1..12] (✓ 2/12)
+#    - pooled:                       n=958
+#    UWAGA: brief miejscami pisze n=1500 — to BŁĄD (real total = 958; §6.1 "~700" też off).
+#    0 losowań w luce 2014-10-03..10 → korekta daty 2014-10-10 jest czysta.
 # 2. **Frequency-shift effect size** (preregistration_v2 §6, signal #1): jedna kategoria
 #    p_k = 1/50 + δ, pozostałe 49 absorbują -δ/49 (suma = 1). δ ∈ {0.01,0.02,0.05,0.10}.
 # 3. **Global multinomial GoF:** chi² z 49 df na wektorze zliczeń. n_obs = liczba
@@ -55,8 +57,8 @@ Q0 = DRAW_SIZE / N_CATS    # 0.10 — baseline marginalna inkluzja liczby
 DELTAS = [0.01, 0.02, 0.05, 0.10]   # pre-registered (preregistration_v2 §6)
 TARGET_POWER = 0.80
 
-# n_draws per reżim (i pooled kontekstowo)
-REGIME_N = {"R1 (~135)": 135, "R2 (~390)": 390, "R3 (~400)": 400, "pooled (~1500)": 1500}
+# n_draws per reżim — ZWERYFIKOWANE na seed CSV (958 losowań)
+REGIME_N = {"R1 (n=133)": 133, "R2 (n=389)": 389, "R3 (n=436)": 436, "pooled (n=958)": 958}
 
 gof = GofChisquarePower()
 

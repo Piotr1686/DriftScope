@@ -65,7 +65,7 @@ GitHub renderuje `<video>` natywnie w MD.
 | Kernel methods (MMD) | **scikit-learn** kernels + custom MMD | sklearn 1.4.x | `pairwise_kernels` jako primitive; MMD ~80 LOC. Input space: frequency vectors p ∈ Δ⁴⁹ per sliding window (NIE raw draws). RBF na simplex z bandwidth z training-window only. ⚠️ Asymptotic stability przy N=200 UNVERIFIED — empirical calibration vs shuffled null w W4 PoC. |
 | Permutation engine | **Numba JIT** (selektywnie) + `joblib.Parallel` (nad konfigami) | Numba 0.65.x | `@njit(cache=True)` tylko gdzie profilowanie pokaże >2× zysk (MMD permutation core priorytetowo, BCPD inner loop opcjonalnie). NumPy sequential default dla prostych testów. Realistyczne: 2.7× dla simple, 10–30× dla MMD O(N²). |
 | Multiple testing | `statsmodels.stats.multitest` | 0.14.x | Benjamini-Hochberg FDR (primary), Storey q-values (secondary sanity, Family A only) |
-| Data manipulation | **Polars** | 1.x | Type-safe, modern stack signal. MVP: 1500 rows; framework dla NIST RNG (10⁶+) stretch |
+| Data manipulation | **Polars** | 1.x | Type-safe, modern stack signal. MVP: ~958 rows (real seed CSV, 2012–2026); framework dla NIST RNG (10⁶+) stretch |
 | Data ingestion | `httpx` + `selectolax` + `tenacity` | — | Scraper z eurojackpot.org archive (brak publicznego API z kluczem). Cached CSV jako Tier-1 fallback w `data/seed/eurojackpot_history.csv` |
 | Storage — raw/cleaned data | **Parquet** (`pyarrow`) | — | Zstd compression. Frequency vectors jako `pl.List(pl.Float64)` (Arrow nested list) |
 | Storage — permutation results | **Parquet shards per worker** | `pyarrow` | `artifacts/permutations/{test}/{regime}/worker_{id}.parquet`. Reduce w Polars LazyFrame `scan_parquet(glob).collect()`. Zero-contention writes, naturalny checkpoint |
@@ -252,7 +252,7 @@ Cached CSV jako primary source dla pierwszego uruchomienia (committed do repo). 
 
 **W0.1 — Scraper probe (research sub-task, mandatory pierwszy krok):** ręczna inspekcja struktury HTML `eurojackpot.org/archive` (lub odpowiednika), zidentyfikowanie selektorów CSS dla tabeli wyników + paginacji. Output: krótka notatka `scripts/scraper_selectors.md` z 3-5 selektorami (`table.results tbody tr`, `td.date`, `td.numbers`, itp.). DOPIERO PO TYM implementacja `lotto_scraper.py`.
 
-Analytic power preview via `statsmodels.stats.power.GofChisquarePower` dla effect sizes {0.01, 0.02, 0.05, 0.10} przy n=1500. **Mandatory** — informuje czy DriftSim ma w ogóle szansę detect i jakie effect sizes można obronić w Negative Result Plan.
+Analytic power preview via `statsmodels.stats.power.GofChisquarePower` dla effect sizes {0.01, 0.02, 0.05, 0.10}. **Mandatory** — informuje czy DriftSim ma w ogóle szansę detect i jakie effect sizes można obronić w Negative Result Plan. Zrealizowane: `notebooks/00_power_preview.py`. **Wynik W0:** testy biegną per-reżim (real n = R1:133, R2:389, R3:436; total 958), więc binding constraint to n per-reżim, NIE pooled. δ=0.01 (najmniejszy pre-reg) jest per-reżim NIEwykrywalny globalnym GoF (power R1≈0.10, R2≈0.25, R3≈0.29); MDE @80% global ≈ 0.016–0.030 per reżim.
 
 **Krok 1 — Ingestion** (`ingestion/lotto_scraper.py`)
 Pull z eurojackpot.org archive page (selektory z W0.1). Cache do `artifacts/raw_draws.parquet`. Retry z exponential backoff (`tenacity`). **Validation:** `DrawRecord` Pydantic model fail-fast przy malformed data. Cadence: manual + wtorek/piątek wieczorem.
@@ -265,7 +265,7 @@ Trzy parquet'y per reżim reguł: pre-2014-10-10, 2014-10-10→2022-03-25, post-
 Minimum sufficient subset:
 - **ADF** — H₀: unit root (non-stationarity)
 - **KPSS** — H₀: trend stationarity (komplementarne do ADF — różna H₀ daje pełniejszy obraz)
-- **Bayesian online CP** (Adams-MacKay 2007, own impl) — generative model: Dirichlet-Multinomial conjugate (frequency vector p ~ Dir(α=1) prior, predictive posterior aktualizowana per draw). Zwraca **pełną macierz run-length posterior `P(R_t)`** (forward-pass, ~700×700 ≈ 4 MB) — wymagane dla animacji W8 (surprise `S_t = -log P(x_t | R_{t-1})`)
+- **Bayesian online CP** (Adams-MacKay 2007, own impl) — generative model: Dirichlet-Multinomial conjugate (frequency vector p ~ Dir(α=1) prior, predictive posterior aktualizowana per draw). Zwraca **pełną macierz run-length posterior `P(R_t)`** (forward-pass, do ~958×958 ≈ 7 MB pooled; per-reżim mniejsza) — wymagane dla animacji W8 (surprise `S_t = -log P(x_t | R_{t-1})`)
 - **Welch periodogram** + **Lomb-Scargle** — periodicity
 - **Autocorrelation + PACF** — memory effect
 
@@ -347,7 +347,7 @@ Wykonuje się TYLKO jeśli ≥1 wzorzec przeszedł DoD-1..5 z FDR<0.05. W przeci
 
 | Etap | RAM peak | Disk | CPU time (12C/16T) | Notes |
 |---|---|---|---|---|
-| Ingestion (scraper) | <100 MB | <5 MB | 30 s – 5 min | Rate-limited (2s/request), ~700 draws |
+| Ingestion (scraper) | <100 MB | <5 MB | 30 s – 5 min | Rate-limited (2s/request), ~958 draws (2012–2026) |
 | Regime split | <200 MB | <10 MB | <5 s | Polars lazy |
 | H1 single run | <500 MB | — | 1–10 s | Per regime per test |
 | MMD single config | <800 MB | — | 5–60 s | Kernel matrix 500×500 max |
@@ -464,12 +464,12 @@ Wykonanie kolejności: (1) DriftSim sweep → (2) permutation runs → (3) spec 
 
 ### 7.2 Power Analysis & Negative Result Plan
 
-**Status: co-primary deliverable** (NIE fallback). Niezależnie od wyniku detekcji, tabela *"minimum detectable effect size @ 80% power"* per test per reżim jest pierwszorzędnym produktem naukowym. Przy n≈1500 (każda liczba ~150 wystąpień) moc dla subtelnych biasów jest z założenia ograniczona — skwantyfikowanie tej granicy JEST wkładem, a wynik null jest publikowalny przy explicit framing.
+**Status: co-primary deliverable** (NIE fallback). Niezależnie od wyniku detekcji, tabela *"minimum detectable effect size @ 80% power"* per test per reżim jest pierwszorzędnym produktem naukowym. Przy realnym n=958 (per-reżim 133/389/436; główna liczba ~13–44 wystąpień per reżim) moc dla subtelnych biasów jest z założenia ograniczona — potwierdzone w `notebooks/00_power_preview.py`. Skwantyfikowanie tej granicy JEST wkładem, a wynik null jest publikowalny przy explicit framing.
 
 Jeśli żaden detektor nie znajduje sygnału przy FDR<0.05, raport zawiera explicit sekcję **"Power Analysis & Detection Limits"**:
 - Plot: power vs effect size z DriftSim, per test, per regime.
 - Tabela: "minimum detectable effect size at 80% power" per test.
-- Conclusion: "n=1500 jest insufficient dla effect sizes <X" — to JEST publishable wynik.
+- Conclusion: "n per-reżim (133–436) jest insufficient dla effect sizes <X" — to JEST publishable wynik (np. δ=0.01 globalnie niewykrywalny per-reżim).
 
 Negative result NIE jest porażką projektu — jest *rigor signal* przy explicit framing.
 
@@ -492,7 +492,7 @@ Z SWOT TOP 1: jeśli H1 + MMD nie wykrywają planted signals → projekt staje s
 | # | Ryzyko | Typ | Prawd. | Impact | Mitygacja | Trigger detekcji |
 |---|---|---|---|---|---|---|
 | R1 | Hallucination (detektor "znajduje" sygnał, którego nie ma) | Methodological | M | **CRITICAL** | Shuffle test obligatory + family-aware FDR + spec curve + DriftSim + 3-panel hook (uniform RNG control) + Disagreement Protocol | p-value <0.05 na real ALE także na ≥1 shuffled fold |
-| R2 | Statistical power <30% dla subtle signals przy n=1500 | Methodological | H | M | W0 power preview; explicit power analysis; Negative Result Presentation Plan | Power curve z W0 + DriftSim |
+| R2 | Statistical power <30% dla subtle signals przy n per-reżim (133/389/436) | Methodological | H | M | W0 power preview (DONE, `notebooks/00_power_preview.py` — potwierdza δ=0.01 niewykrywalny per-reżim); explicit power analysis; Negative Result Presentation Plan | Power curve z W0 + DriftSim |
 | R3 | Specification curve overfitting | Methodological | L | M | Pre-registered space (`preregistration_v{N}.md`); ograniczone 9 points | Diff preregistration z final config |
 | R4 | "Lotto-scam" first impression u recruitera | Portfolio | M | H | 3-sentence disarmer; methodological framing; no emojis; 3-panel hook z uniform control | Recruiter feedback post-launch |
 | R5 | "Stack za prosty" | Portfolio | M | M | Spec curve + DriftSim + Numba/Polars + family-aware FDR | Self-assessment W8 |
@@ -549,7 +549,7 @@ Z SWOT TOP 1: jeśli H1 + MMD nie wykrywają planted signals → projekt staje s
 | §7A.1 — DoD-1 blind protocol sufficient? | RESOLVED | Ranking change-pointów *przed* porównaniem z 2014/2022 |
 | §7A.2 — Paradygmat redefinujący target | DEFERRED to W10+ stretch | TDA jako post-MVP |
 | §7B.5 — Hardware Transcendence? | PARTIALLY RESOLVED | Oś 0 + Oś 3 (Numba) aplikują; reszta nie |
-| §7C.6 — Statistical power przy n=1500 | RESOLVED | W0 power preview + DriftSim curves; Negative Result Presentation Plan |
+| §7C.6 — Statistical power przy n per-reżim | RESOLVED | W0 power preview DONE (real n=958, per-reżim 133/389/436) + DriftSim curves; Negative Result Presentation Plan |
 | §7C.7 — Update cadence per komponent | RESOLVED | Online auditor per-draw; H1 per-draw 1-10s; MMD weekly; DriftSim once + per milestone |
 | §7C.8 — Honest augmentation | RESOLVED | Within-draw permutations odrzucone (operacja tożsamościowa dla frequency vector). Block bootstrap jako alternative null |
 | §7D.9–10 — Framing scam-disarm | RESOLVED | 3-sentence disarmer + 3-panel hook z uniform RNG control |

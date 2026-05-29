@@ -60,7 +60,7 @@ GitHub renderuje `<video>` natywnie w MD.
 | Język/runtime | **Python 3.10** | 3.10.x | Dojrzały ekosystem stat; znany Piotrowi |
 | Stationarity tests | **statsmodels** | 0.14.x | ADF (H₀: unit root), KPSS (H₀: trend stationarity — komplementarne, nie redundantne), ACF/PACF |
 | Change-point detection | **ruptures** | 1.1.9+ | CUSUM, Pelt, Binseg — cross-check vs Bayesian CP |
-| Bayesian online CP | **własna implementacja Adams-MacKay 2007** | — | Generative model: Dirichlet-Multinomial conjugate (zob. `preregistration_v1.md` §2). ~150 LOC + property-based tests |
+| Bayesian online CP | **własna implementacja Adams-MacKay 2007** | — | Generative model: Dirichlet-Multinomial conjugate (zob. `preregistration_v2.md` §2). ~150 LOC + property-based tests |
 | Spectral analysis | **scipy.signal** | 1.13.x | Welch periodogram, Lomb-Scargle |
 | Kernel methods (MMD) | **scikit-learn** kernels + custom MMD | sklearn 1.4.x | `pairwise_kernels` jako primitive; MMD ~80 LOC. Input space: frequency vectors p ∈ Δ⁴⁹ per sliding window (NIE raw draws). RBF na simplex z bandwidth z training-window only. ⚠️ Asymptotic stability przy N=200 UNVERIFIED — empirical calibration vs shuffled null w W4 PoC. |
 | Permutation engine | **Numba JIT** (selektywnie) + `joblib.Parallel` (nad konfigami) | Numba 0.65.x | `@njit(cache=True)` tylko gdzie profilowanie pokaże >2× zysk (MMD permutation core priorytetowo, BCPD inner loop opcjonalnie). NumPy sequential default dla prostych testów. Realistyczne: 2.7× dla simple, 10–30× dla MMD O(N²). |
@@ -123,7 +123,8 @@ driftscope/
 │   │   ├── lotto_scraper.py    # httpx + selectolax, eurojackpot.org archive
 │   │   └── regime_split.py     # 2014/2022 split logic
 │   ├── methodology/
-│   │   ├── preregistration_v1.md  # frozen choices + Dirichlet-Multinomial spec
+│   │   ├── preregistration_v1.md  # SUPERSEDED przez v2 (history)
+│   │   ├── preregistration_v2.md  # ACTIVE — frozen choices + revision log
 │   │   ├── h1_classical.py     # ADF, KPSS, Bayesian online CP, Welch, ACF
 │   │   ├── k4_mmd.py           # Gaussian RBF on frequency vectors
 │   │   ├── permutation.py      # shuffle test core (Numba selektywnie)
@@ -168,7 +169,7 @@ driftscope/
     └── app.py
 ```
 
-**Preregistration versioning:** `preregistration_v1.md` to **active** wersja. Każda metodologiczna korekta po Decision Gate tworzy `preregistration_v{N}.md` z polem `revision_reason: <text>`. Symlink/copy ostatniej jako aktywnej jest opcjonalna; explicit numbering wystarczy.
+**Preregistration versioning:** `preregistration_v2.md` to **active** wersja (`v1` superseded [2026-05-29] — zob. v2 §0 revision_reason). Każda metodologiczna korekta po Decision Gate tworzy `preregistration_v{N}.md` z polem `revision_reason: <text>`. Symlink/copy ostatniej jako aktywnej jest opcjonalna; explicit numbering wystarczy.
 
 **Schemat `data/seed/eurojackpot_history.csv` (ISO 8601 daty, UTF-8, header w pierwszej linii):**
 
@@ -271,9 +272,9 @@ CUSUM zachowany jako classical backup do Bayesian CP (cross-check via `ruptures`
 
 **Krok 4 — K4-MMD Kernel Two-Sample Test** (`methodology/k4_mmd.py`)
 
-**Input space:** frequency vector `p ∈ Δ⁴⁹` per sliding window N=200, reprezentowany jako `pl.List(pl.Float64)` w Parquet. **NIE** raw draw sequences. RBF kernel z bandwidth = median heuristic obliczanej **wyłącznie na training window** (anti-leakage). Pre-registered w `preregistration_v1.md`. Asymptotic theory via Gretton et al. 2012.
+**Input space:** frequency vector `p ∈ Δ⁴⁹` per sliding window N=200, reprezentowany jako `pl.List(pl.Float64)` w Parquet. **NIE** raw draw sequences. RBF kernel z bandwidth = median heuristic obliczanej **wyłącznie na training window** (anti-leakage). Pre-registered w `preregistration_v2.md`. Asymptotic theory via Gretton et al. 2012.
 
-⚠️ Stability przy N=200 UNVERIFIED — W4 PoC: empirical calibration vs shuffled null, threshold pass = false positive rate ≤ 7.5% (preregistration_v1.md §3, granica dwustronna wokół α=0.05).
+⚠️ Stability przy N=200 UNVERIFIED — W4 PoC: empirical calibration vs shuffled null, threshold pass = false positive rate ≤ 7.5% (preregistration_v2.md §3, granica dwustronna wokół α=0.05).
 
 **Krok 4b — Recurrence / gap analysis** (`methodology/recurrence.py`, W6)
 
@@ -452,7 +453,7 @@ Wykonanie kolejności: (1) DriftSim sweep → (2) permutation runs → (3) spec 
 | **W1** (30h) | Environment + H1 core + DoD-1 | `test_environment.py` green; ADF + KPSS + Bayesian CP detect 2014/2022 blind; skeleton committed | DoD-1a, DoD-1b |
 | **W2** (32h) | DriftSim part I | 5 planted signal generators × 4 effect sizes; uniform null; unit tests; 63 datasetów wygenerowane | — |
 | **W3** (32h) | DriftSim part II — calibration | Sensitivity/specificity curves per H1 test per regime; first artifacts under git-lfs | DoD-5 (foundation) |
-| **W4** (24h) | K4-MMD core | MMD impl on frequency vectors; pre-registered choices w `preregistration_v1.md`; PoC: asymptotic stability at N=200 vs shuffled null | DoD-4 (foundation) |
+| **W4** (24h) | K4-MMD core | MMD impl on frequency vectors; pre-registered choices w `preregistration_v2.md`; PoC: asymptotic stability at N=200 vs shuffled null | DoD-4 (foundation) |
 | **W5 — DECISION GATE** (16h) | Triangulation check | H1 + MMD detect planted signals z power >70%? **TAK** → W6. **NIE** → Plan B (§7.3) | DoD-3 |
 | **W6** (24h) | Rigor layer | Family-aware FDR (A: 12 BH, B: 450 BY); `recurrence.py` (gap/Nelson-Aalen/EVT, permutation-calibrated); 9-point spec curve; Storey sanity Family A | DoD-2 (full) |
 | **W7** (24h) | Reporting + adaptive + disagreement | Quarto draft; `disagreement.py`; watchlist module; README disarmer | DoD-6 |
@@ -500,7 +501,7 @@ Z SWOT TOP 1: jeśli H1 + MMD nie wykrywają planted signals → projekt staje s
 | R9 | Bayesian online CP own impl buggy | Methodological | M | M | Dirichlet-Multinomial spec w preregistration; property-based tests; cross-check vs ruptures PELT | Disagreement >10% z PELT |
 | R10 | Gambling addiction ethical concern | Etyczne | L | H | README disclaim §1; no "predict your numbers" framing; honest-None return | — |
 | R11 | Scraper ToS violation lub site change | Legal/Tech | M | M | ToS review w W0; cached CSV jako Tier-1 fallback; manual CSV upload Tier-2 | Scraper fail or ToS change |
-| R12 | MMD asymptotic instability at N=200 | Methodological | M | M | W4 PoC: empirical calibration vs shuffled null; pass threshold = FPR ≤ 7.5% (preregistration_v1.md §3); PRZED W5 Decision Gate | FPR >7.5% w shuffled |
+| R12 | MMD asymptotic instability at N=200 | Methodological | M | M | W4 PoC: empirical calibration vs shuffled null; pass threshold = FPR ≤ 7.5% (preregistration_v2.md §3); PRZED W5 Decision Gate | FPR >7.5% w shuffled |
 | R13 | Gap test: analityczny KS nieważny dla rozkładów dyskretnych (błędne p-value) | Methodological | M | M | Statystyka gap kalibrowana permutacyjnie (Krok 4b via Krok 6), NIGDY `scipy.stats.kstest`; Family B przez Benjamini-Yekutieli (zależność) | KS p-value rozbiega się z permutacyjnym >0.02 |
 
 ---

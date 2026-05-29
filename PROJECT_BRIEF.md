@@ -32,7 +32,7 @@ DriftScope to research-grade audit framework dla detekcji niestacjonarności w s
 **Konkretna scena (≤10 sek):**
 Użytkownik otwiera README/repo. Pierwszy element widoczny w viewport: **animowana "permutation race" — trzy panele obok siebie**, pre-rendered jako `.webm` (autoplay, loop, muted, playsinline).
 
-- **Panel 1 (Real):** EuroJackpot stream, oś czasu 2012→2026, czerwone markery na 2014-10-08 i 2022-03-25 (znane change-pointy). Bayesian online CP "konsumuje" datapoint po datapoint, p-value spada do <0.001 na obu change-pointach.
+- **Panel 1 (Real):** EuroJackpot stream, oś czasu 2012→2026, czerwone markery na 2014-10-10 i 2022-03-25 (znane change-pointy). Bayesian online CP "konsumuje" datapoint po datapoint, p-value spada do <0.001 na obu change-pointach.
 - **Panel 2 (Uniform RNG control):** ten sam framework na `secrets.randbelow(50)` — detektor nie zapala niczego, p-value zostaje w noise. **To jest visceral proof of non-hallucination.**
 - **Panel 3 (Shuffled real):** real stream z permutowaną kolejnością — detektor traci change-pointy.
 
@@ -129,7 +129,8 @@ driftscope/
 │   │   ├── permutation.py      # shuffle test core (Numba selektywnie)
 │   │   ├── block_bootstrap.py  # alternative null
 │   │   ├── multiple_testing.py # BH FDR + Storey (family-aware)
-│   │   └── specification.py    # spec curve: 3 windows × 3 bandwidths = 9 points
+│   │   ├── specification.py    # spec curve: 3 windows × 3 bandwidths = 9 points
+│   │   └── recurrence.py       # gap test (permutation-calibrated) + Nelson-Aalen + EVT max-gap (W6)
 │   ├── driftsim/
 │   │   ├── planted_signals.py  # 5 signals concretely defined (zob. §5 Krok 5)
 │   │   ├── null_uniform.py     # honest null generator
@@ -139,7 +140,7 @@ driftscope/
 │   │   ├── schema_validation.py# Pydantic models per tabela
 │   │   └── queries.py          # safe_insert(table, model) + query funcs
 │   ├── reporting/
-│   │   ├── plots_static.py     # matplotlib (paper + .webm export)
+│   │   ├── plots_static.py     # matplotlib (paper + .webm) + animate_bocpd_posterior()
 │   │   ├── plots_interactive.py# Plotly (HTML embedded w Quarto)
 │   │   ├── disagreement.py     # detector disagreement protocol
 │   │   └── report.qmd          # Quarto source
@@ -152,6 +153,7 @@ driftscope/
 │   ├── test_mmd_properties.py
 │   ├── test_permutation_null.py
 │   ├── test_driftsim_calibration.py
+│   ├── test_recurrence.py
 │   └── test_disagreement.py
 ├── artifacts/                  # git-lfs tracked
 │   ├── raw_draws.parquet
@@ -173,13 +175,13 @@ driftscope/
 ```csv
 draw_date,main_1,main_2,main_3,main_4,main_5,euron_1,euron_2
 2012-03-23,12,18,28,32,44,4,7
-2014-10-08,3,7,12,29,41,4,9
+2014-10-10,3,7,12,29,41,4,9
 ...
 ```
 
 - `draw_date`: `YYYY-MM-DD` (ISO 8601).
 - `main_1..main_5`: integers 1–50, ascending (sorted at scrape time).
-- `euron_1..euron_2`: integers 1–12 (1–10 pre-2014, 1–12 post-2022 — regime_split.py uses date to map valid range).
+- `euron_1..euron_2`: integers 1–12 (outer bound). Valid range per reżim: **1–8 (R1, do 2014-10-03)**, **1–10 (R2, 2014-10-10→2022-03-18)**, **1–12 (R3, od 2022-03-25)**. `regime_split.py` mapuje valid range po dacie; `DrawRecord` waliduje outer bound 1–12. Rozszerzenie support euronumerów = positive control (zob. §10 DoD-1).
 
 **Schemat `.env.example` (7 kluczy):**
 
@@ -254,14 +256,14 @@ Analytic power preview via `statsmodels.stats.power.GofChisquarePower` dla effec
 Pull z eurojackpot.org archive page (selektory z W0.1). Cache do `artifacts/raw_draws.parquet`. Retry z exponential backoff (`tenacity`). **Validation:** `DrawRecord` Pydantic model fail-fast przy malformed data. Cadence: manual + wtorek/piątek wieczorem.
 
 **Krok 2 — Regime split** (`ingestion/regime_split.py`)
-Trzy parquet'y per reżim reguł: pre-2014-10-08, 2014-10-08→2022-03-25, post-2022-03-25. Każdy reżim traktowany jako oddzielny proces dla validation.
+Trzy parquet'y per reżim reguł: pre-2014-10-10, 2014-10-10→2022-03-25, post-2022-03-25. Każdy reżim traktowany jako oddzielny proces dla validation.
 
 **Krok 3 — H1 Classical Baseline** (`methodology/h1_classical.py`)
 
 Minimum sufficient subset:
 - **ADF** — H₀: unit root (non-stationarity)
 - **KPSS** — H₀: trend stationarity (komplementarne do ADF — różna H₀ daje pełniejszy obraz)
-- **Bayesian online CP** (Adams-MacKay 2007, own impl) — generative model: Dirichlet-Multinomial conjugate (frequency vector p ~ Dir(α=1) prior, predictive posterior aktualizowana per draw)
+- **Bayesian online CP** (Adams-MacKay 2007, own impl) — generative model: Dirichlet-Multinomial conjugate (frequency vector p ~ Dir(α=1) prior, predictive posterior aktualizowana per draw). Zwraca **pełną macierz run-length posterior `P(R_t)`** (forward-pass, ~700×700 ≈ 4 MB) — wymagane dla animacji W8 (surprise `S_t = -log P(x_t | R_{t-1})`)
 - **Welch periodogram** + **Lomb-Scargle** — periodicity
 - **Autocorrelation + PACF** — memory effect
 
@@ -273,16 +275,25 @@ CUSUM zachowany jako classical backup do Bayesian CP (cross-check via `ruptures`
 
 ⚠️ Stability przy N=200 UNVERIFIED — W4 PoC: empirical calibration vs shuffled null, threshold pass = false positive rate ≤ 7.5% (preregistration_v1.md §3, granica dwustronna wokół α=0.05).
 
+**Krok 4b — Recurrence / gap analysis** (`methodology/recurrence.py`, W6)
+
+Czas (liczba losowań) między kolejnymi wystąpieniami danej liczby. Pod nullem uniform-iid gap ~ Geometric(q), q = 5/50 dla puli głównej.
+
+- **Gap goodness-of-fit:** odchylenie empirycznego rozkładu gapów od Geometric(q) per liczba per reżim. ⚠️ **NIE analityczny KS** — test Kołmogorowa-Smirnowa jest nieważny dla rozkładów dyskretnych (błędnie skalibrowane p-value). Statystyka kalibrowana przez istniejący silnik permutacyjny (Krok 6), zgodnie z mandatem Krok 5 ("żaden test nie raportuje p-value bez własnej kalibracji").
+- **Nelson-Aalen cumulative hazard** per liczba: liniowość skumulowanego hazardu = stała intensywność = zgodność z uniform. Wizualny artefakt diagnostyczny.
+- **EVT max-gap:** maksymalny gap w sekwencji ma asymptotycznie rozkład Gumbela (gapy geometryczne leżą w domenie przyciągania Gumbela). Test wykrywający odstające "uśpione" liczby.
+- Zasilanie Family B FDR (zob. Krok 7).
+
 **Krok 5 — DriftSim Calibration** (`driftsim/`)
 
 **Concrete 5 planted signals:**
 1. **Frequency shift** — pojedyncza liczba ma p = 1/50 + δ, δ ∈ {0.01, 0.02, 0.05, 0.10}
 2. **Autocorrelation lag-1** — `P(x_t = k | x_{t-1} = k) = (1/50) + ρ`, ρ ∈ {0.05, 0.10, 0.15, 0.20}
 3. **Linear trend** — `p_k(t) = p_k + β·(t/T)`, β kalibrowane dla 4 effect sizes
-4. **Weekly seasonality** — różne p dla wtorek vs piątek (cycle period = 2 draws)
+4. **Weekly seasonality** — różne p dla wtorek vs piątek (cycle period = 2 draws). ⚠️ **Tylko R3:** EuroJackpot losował wyłącznie w piątki do marca 2022; wtorki dodano dopiero w R3. Generator wstrzykuje ten sygnał **wyłącznie w reżimach z ≥2 dniami losowań** (realnie tylko R3). W R1/R2 kontrast Tue/Fri nie istnieje fizycznie → scenariusz degeneruje do uniform null.
 5. **Pair correlation** — liczby `i, j` współwystępują częściej, lift ∈ {1.1, 1.2, 1.5, 2.0}
 
-**Generacja datasetów:** 5 patterns × 4 effect sizes = **20 planted scenarios per regime** + 1 uniform null scenario = **21 datasetów per regime**. × 3 regimes = **63 unikalne datasety**. **Datasety są shared across tests** — każdy H1 test + MMD ewaluowany na każdym datasecie (nie 21 × N_tests datasetów).
+**Generacja datasetów:** 5 patterns × 4 effect sizes = **20 planted scenarios per regime** + 1 uniform null scenario = **21 datasetów per regime**. × 3 regimes = **63 unikalne datasety**. **Datasety są shared across tests** — każdy H1 test + MMD ewaluowany na każdym datasecie (nie 21 × N_tests datasetów). Count 63 zachowany: w R1/R2 scenariusze signal #4 (weekly seasonality) degenerują do uniform null — zajmują slot datasetu i pełnią rolę **dodatkowego negative control** (detektor nie powinien tam nic znaleźć).
 
 Output: sensitivity/specificity curves per test per regime, jako `.parquet` + `.html`. **Mandatory:** żaden test nie raportuje p-value na real data bez własnej kalibracji.
 
@@ -291,13 +302,14 @@ Output: sensitivity/specificity curves per test per regime, jako `.parquet` + `.
 - **Shuffle test core (DoD-2):** permutacje porządku losowań, 10⁴ permutacji per (test, regime, kernel_config).
 - **Block bootstrap** (`block_bootstrap.py`) — alternative null zachowujący krótkozasięgowe korelacje (block size ∈ {5, 10, 20}).
 - Wzorzec: `@njit(cache=True)` wewnętrzny loop (selektywnie); `joblib.Parallel` **nad konfigami** `(test, regime, kernel_config, seed_offset)` — NIGDY nad pojedynczymi permutacjami. Output: parquet shards per worker.
+- **Stratyfikowana permutacja (R3):** w reżimie z dwoma dniami losowań permutacja domyślnie zachowuje etykietę dnia (Tue/Fri), żeby null nie konfundował planted signal #4 (weekly seasonality). W R1/R2 (tylko piątek) bez efektu.
 - **Seedy:** `core.seeds.make_worker_seeds(BASE_SEED, n_workers)` zwraca `list[SeedSequence]`; każdy worker spawnuje własny `np.random.default_rng(seed_seq)` — gwarancja non-correlated streams.
 
 **Krok 7 — Multiple testing correction** (`methodology/multiple_testing.py`)
 
-**Family-aware FDR (Benjamini-Hochberg, α=0.05):**
-- **Family A (global time-series tests):** 4 testy (ADF, KPSS, Bayesian CP, Welch) × 3 regimes = **12 hipotez**. BH FDR + Storey q-values jako secondary sanity.
-- **Family B (per-number goodness-of-fit):** 50 numbers × 2 testy (chi-squared, exact binomial) × 3 regimes = **300 hipotez**. BH FDR only (Storey niestabilne przy 300 hipotez z dominującym null).
+**Family-aware FDR (α=0.05):**
+- **Family A (global time-series tests):** 4 testy (ADF, KPSS, Bayesian CP, Welch) × 3 regimes = **12 hipotez**. **Benjamini-Hochberg** + Storey q-values jako secondary sanity.
+- **Family B (per-number tests):** 50 numbers × 3 testy (chi-squared, exact binomial, gap goodness-of-fit z Kroku 4b) × 3 regimes = **450 hipotez**. **Benjamini-Yekutieli** jako primary — ważny przy dowolnej strukturze zależności (zliczenia 5/50 są ujemnie skorelowane, gapy współzależne), gdzie założenie PRDS dla BH jest niepewne; BH jako secondary. Storey odrzucony (niestabilny przy dominującym null).
 
 **Krok 8 — Specification curve** (`methodology/specification.py`)
 
@@ -442,13 +454,15 @@ Wykonanie kolejności: (1) DriftSim sweep → (2) permutation runs → (3) spec 
 | **W3** (32h) | DriftSim part II — calibration | Sensitivity/specificity curves per H1 test per regime; first artifacts under git-lfs | DoD-5 (foundation) |
 | **W4** (24h) | K4-MMD core | MMD impl on frequency vectors; pre-registered choices w `preregistration_v1.md`; PoC: asymptotic stability at N=200 vs shuffled null | DoD-4 (foundation) |
 | **W5 — DECISION GATE** (16h) | Triangulation check | H1 + MMD detect planted signals z power >70%? **TAK** → W6. **NIE** → Plan B (§7.3) | DoD-3 |
-| **W6** (24h) | Rigor layer | Family-aware FDR (A: 12, B: 300); 9-point spec curve; Storey sanity dla Family A | DoD-2 (full) |
+| **W6** (24h) | Rigor layer | Family-aware FDR (A: 12 BH, B: 450 BY); `recurrence.py` (gap/Nelson-Aalen/EVT, permutation-calibrated); 9-point spec curve; Storey sanity Family A | DoD-2 (full) |
 | **W7** (24h) | Reporting + adaptive + disagreement | Quarto draft; `disagreement.py`; watchlist module; README disarmer | DoD-6 |
-| **W8** (20h) | Polish MVP | Final README; static plots; `.webm` hook export; static `docs/report.html` na GitHub Pages | MVP complete |
+| **W8** (20h) | Polish MVP | Final README; static plots; `.webm` hook export; **BOCPD posterior animation** (`P(R_t)` run-length heatmap + surprise `S_t`); static `docs/report.html` na GitHub Pages | MVP complete |
 | **W9** (16h) | Portfolio polish | Recruiter executive summary (1 page PDF); spec curve sweep documented; (stretch: Streamlit demo) | Portfolio-ready |
 | **W10** (20h, opcjonalny) | Open-source readiness | CI/CD (GitHub Actions); CONTRIBUTING.md; pyproject installable; semver v0.1.0 | OS-ready |
 
-### 7.2 Negative Result Presentation Plan
+### 7.2 Power Analysis & Negative Result Plan
+
+**Status: co-primary deliverable** (NIE fallback). Niezależnie od wyniku detekcji, tabela *"minimum detectable effect size @ 80% power"* per test per reżim jest pierwszorzędnym produktem naukowym. Przy n≈1500 (każda liczba ~150 wystąpień) moc dla subtelnych biasów jest z założenia ograniczona — skwantyfikowanie tej granicy JEST wkładem, a wynik null jest publikowalny przy explicit framing.
 
 Jeśli żaden detektor nie znajduje sygnału przy FDR<0.05, raport zawiera explicit sekcję **"Power Analysis & Detection Limits"**:
 - Plot: power vs effect size z DriftSim, per test, per regime.
@@ -487,6 +501,7 @@ Z SWOT TOP 1: jeśli H1 + MMD nie wykrywają planted signals → projekt staje s
 | R10 | Gambling addiction ethical concern | Etyczne | L | H | README disclaim §1; no "predict your numbers" framing; honest-None return | — |
 | R11 | Scraper ToS violation lub site change | Legal/Tech | M | M | ToS review w W0; cached CSV jako Tier-1 fallback; manual CSV upload Tier-2 | Scraper fail or ToS change |
 | R12 | MMD asymptotic instability at N=200 | Methodological | M | M | W4 PoC: empirical calibration vs shuffled null; pass threshold = FPR ≤ 7.5% (preregistration_v1.md §3); PRZED W5 Decision Gate | FPR >7.5% w shuffled |
+| R13 | Gap test: analityczny KS nieważny dla rozkładów dyskretnych (błędne p-value) | Methodological | M | M | Statystyka gap kalibrowana permutacyjnie (Krok 4b via Krok 6), NIGDY `scipy.stats.kstest`; Family B przez Benjamini-Yekutieli (zależność) | KS p-value rozbiega się z permutacyjnym >0.02 |
 
 ---
 
@@ -514,10 +529,11 @@ Z SWOT TOP 1: jeśli H1 + MMD nie wykrywają planted signals → projekt staje s
 
 | DoD | Komponent walidujący | Pass criterion |
 |---|---|---|
-| DoD-1a — Sanity check (euronumbers) | H1 stationarity tests | Detekcja zmian puli euronumerów 2014/2022 w częstościach 9, 10, 11, 12 |
-| DoD-1b — Blind change-point detection | Bayesian online CP + CUSUM | Top-2 ranked change-points pokrywają się z 2014-10-08 i 2022-03-25 (±30 dni) **przed** ręcznym sprawdzeniem |
+| DoD-1a — Positive control (euronumery) | H1 stationarity tests na strumieniu euronumerów | Detekcja rozszerzenia puli: 1–8 (R1) → 1–10 (R2, od 2014-10-10) → 1–12 (R3, od 2022-03-25). Pojawienie się liczb 9/10 oraz 11/12 = znana zmiana support → detektor MUSI zapalić |
+| DoD-1b — Blind CP (positive control) | Bayesian online CP + CUSUM na euronumerach | Top-2 ranked change-points pokrywają się z 2014-10-10 i 2022-03-25 (±30 dni) **przed** ręcznym sprawdzeniem |
+| DoD-1c — Negative control (główne 1–50) | te same detektory na strumieniu 5/50 | Pula główna NIE zmieniła się w 2014 ani 2022 → detektor nie powinien rankować CP w tych datach. Spurious CP na głównych liczbach = hallucination signal (wiąże z R1) |
 | DoD-2 — Shuffle test rigor | `methodology/permutation.py` | False-positive rate w shuffled data ≤ α=0.05 ± Monte Carlo error |
-| DoD-3 — Multiple testing correction | `methodology/multiple_testing.py` | Family-aware: BH FDR w Family A (12 hyp) i Family B (300 hyp) osobno |
+| DoD-3 — Multiple testing correction | `methodology/multiple_testing.py` | Family-aware: BH w Family A (12 hyp), Benjamini-Yekutieli w Family B (450 hyp) — osobno |
 | DoD-4 — Complementary pillars | H1 + MMD + DriftSim via `reporting/disagreement.py` | Każdy reported signal classified per Disagreement Protocol (§5 Krok 9.1): 3/3, 2/3, 1/3, lub 0/3 |
 | DoD-5 — Honest predictor (kalibracja) | `driftsim/calibration.py` | Adaptive watchlist generuje output IFF passed DoD-1..4; w przeciwnym razie None |
 | DoD-6 — Reproducibility | `core/seeds.py` + git-lfs + GitHub Action | Cold-machine re-run produces bit-identical SHA-256 hash z `ORDER BY (test, regime, seed)` CSV eksportu (nie binarki SQLite) z committed `BASE_SEED=42` |

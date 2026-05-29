@@ -29,14 +29,19 @@
 #    0 losowań w luce 2014-10-03..10 → korekta daty 2014-10-10 jest czysta.
 # 2. **Frequency-shift effect size** (preregistration_v2 §6, signal #1): jedna kategoria
 #    p_k = 1/50 + δ, pozostałe 49 absorbują -δ/49 (suma = 1). δ ∈ {0.01,0.02,0.05,0.10}.
-# 3. **Global multinomial GoF:** chi² z 49 df na wektorze zliczeń. n_obs = liczba
-#    wylosowanych liczb = n_draws × 5 (przybliżenie iid-multinomial; ignoruje
-#    ujemną zależność within-draw 5-z-50 → traktować jako lekko optymistyczne).
-# 4. **Per-number inclusion test:** marginalna inkluzja q0 = 5/50 = 0.1; pod shiftem
-#    q1 ≈ 5·(1/50 + δ) = 0.1 + 5δ (first-order, dla małych δ; dla δ=0.10 przekracza
-#    reżim liniowy — oznaczone). Test 2-binowy chi² na n_draws losowaniach.
+# 3. **Global multinomial GoF:** chi² z 49 df na wektorze zliczeń. n_obs = n_draws × 5
+#    (HEURYSTYKA iid-multinomial — w rzeczywistości 5-z-50 jest bez zwracania
+#    *within-draw*, więc 7500 "obserwacji" nie jest niezależnych; KIERUNEK biasu
+#    niepewny, NIE traktować jako dokładne). Per-number test (#4) jest rygorystyczną
+#    kotwicą.
+# 4. **Per-number inclusion test (EXACT null):** pod uniform count_k ~ Binomial(n_draws,
+#    q0=0.1) DOKŁADNIE (losowania niezależne, inkluzja per-draw = Bernoulli(0.1)).
+#    Pod shiftem q1 ≈ 0.1 + 5δ (first-order; trafne tylko dla małych δ — patrz kolumna
+#    `mapping`). Test 2-binowy chi² na n_draws losowaniach.
 #
-# Wszystko α = 0.05. Brak danych — czysto analityczne (statsmodels GofChisquarePower).
+# Wszystko α = 0.05 BEZ korekty FDR — real pipeline stosuje BH/BY (Family A/B), więc
+# realna per-test power jest NIŻSZA. Czytaj liczby jako UPPER BOUND (patrz §6 caveats).
+# Brak danych — czysto analityczne (statsmodels GofChisquarePower).
 
 # %%
 import sys
@@ -99,13 +104,14 @@ print(global_df.pivot(values="power", index=["regime", "n_draws"], on="delta"))
 rows = []
 for reg, n_draws in REGIME_N.items():
     for d in DELTAS:
-        q1 = Q0 + DRAW_SIZE * d   # first-order
-        capped = q1 >= 1.0
-        q1 = min(q1, 0.999)
+        q1 = min(Q0 + DRAW_SIZE * d, 0.999)   # first-order mapping δ → inkluzja
+        # mapping wiarygodny tylko w reżimie małego Δq (Δq = 5δ ≤ 0.05 ⇔ δ ≤ 0.01);
+        # dla δ ≥ 0.05 power i tak = 1.0, więc nie wpływa na MDE (mały-δ reżim)
+        mapping = "linear" if DRAW_SIZE * d <= 0.05 else "approx"
         w = cohen_w_two_bin(q1)
         power = gof.power(effect_size=w, nobs=n_draws, n_bins=2, alpha=ALPHA)
         rows.append({"regime": reg, "n_draws": n_draws, "delta": d, "q1": round(q1, 3),
-                     "power": round(float(power), 3), "linear_ok": not capped})
+                     "power": round(float(power), 3), "mapping": mapping})
 
 pernum_df = pl.DataFrame(rows)
 print("\n=== PER-NUMBER INCLUSION (2-bin chi², q0=0.1) ===")
@@ -176,4 +182,24 @@ print("\nINTERPRETACJA:")
 print(f"- Pre-registered δ rozciągają się {DELTAS} — sprawdź, które reżimy je łapią @ >70%.")
 print("- Jeśli MDE_delta_global per-reżim > najmniejszego pre-reg δ (0.01), to δ=0.01")
 print("  jest NIEwykrywalny w tym reżimie przy obecnym n — to jest publikowalny wynik.")
-print("- R1 (~135) jest binding constraint: najmniej danych => najwyższe MDE.")
+print("- R1 (n=133) jest binding constraint: najmniej danych => najwyższe MDE.")
+
+# %% [markdown]
+# ## 6. Caveats — czytaj power jako UPPER BOUND
+#
+# Te liczby są optymistyczne na trzech osiach; realna power pipeline'u jest **niższa**:
+#
+# 1. **Multiplicity:** preview używa α=0.05 per-test bez korekty. Real pipeline stosuje
+#    BH (Family A, 12 hyp) i Benjamini-Yekutieli (Family B, 450 hyp) → próg odrzucenia
+#    ostrzejszy → per-test power niższa.
+# 2. **Global GoF n_obs=n_draws×5** to heurystyka (within-draw bez zwracania; 7500
+#    "obserwacji" nie jest niezależnych). Kierunek biasu niepewny — NIE dokładne.
+#    Per-number binomial (null EXACT) jest rygorystyczną kotwicą; ufaj mu bardziej.
+# 3. **Zakres:** preview pokrywa TYLKO signal #1 (frequency shift) przez testy częstości
+#    marginalnej. Moc dla CP/spectral/MMD/recurrence oraz signals #2–5 (autocorr, trend,
+#    seasonality, pair) = wyłącznie DriftSim (W3). **DoD-1b blind CP — headline — NIE jest
+#    informowany tym preview.**
+#
+# Wniosek metodologiczny: traktuj MDE jako *dolne ograniczenie wykrywalności w najlepszym
+# wypadku*. Jeśli sygnał jest niewykrywalny TU (np. δ=0.01 per-reżim), to tym bardziej
+# niewykrywalny po FDR — wzmacnia Negative Result Plan, nie osłabia.

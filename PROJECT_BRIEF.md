@@ -532,7 +532,7 @@ Z SWOT TOP 1: jeśli H1 + MMD nie wykrywają planted signals → projekt staje s
 | DoD | Komponent walidujący | Pass criterion |
 |---|---|---|
 | DoD-1a — Positive control (euronumery) | H1 stationarity tests na strumieniu euronumerów | Detekcja rozszerzenia puli: 1–8 (R1) → 1–10 (R2, od 2014-10-10) → 1–12 (R3, od 2022-03-25). Pojawienie się liczb 9/10 oraz 11/12 = znana zmiana support → detektor MUSI zapalić |
-| DoD-1b — Blind CP (positive control) | Bayesian online CP + CUSUM na euronumerach | Top-2 ranked change-points pokrywają się z 2014-10-10 i 2022-03-25 (±30 dni) **przed** ręcznym sprawdzeniem |
+| DoD-1b — Blind CP (positive control) | Bayesian online CP + CUSUM na euronumerach | Top-2 ranked change-points pokrywają się z 2014-10-10 (**±60 dni** — data-CP = pierwsze losowanie z nowym symbolem ≈2014-11-28) i 2022-03-25 (±30 dni) **przed** ręcznym sprawdzeniem |
 | DoD-1c — Negative control (główne 1–50) | te same detektory na strumieniu 5/50 | Pula główna NIE zmieniła się w 2014 ani 2022 → detektor nie powinien rankować CP w tych datach. Spurious CP na głównych liczbach = hallucination signal (wiąże z R1) |
 | DoD-2 — Shuffle test rigor | `methodology/permutation.py` | False-positive rate w shuffled data ≤ α=0.05 ± Monte Carlo error |
 | DoD-3 — Multiple testing correction | `methodology/multiple_testing.py` | Family-aware: BH w Family A (12 hyp), Benjamini-Yekutieli w Family B (450 hyp) — osobno |

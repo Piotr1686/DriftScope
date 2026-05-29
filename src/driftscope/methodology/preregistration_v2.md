@@ -13,12 +13,16 @@
 
 ## §0. Revision reason (v1 → v2)
 
-`revision_reason:` Cztery zmiany metodologiczne wprowadzone na W0, PRZED jakakolwiek analiza real-data (rewizja czysta):
+`revision_reason:` Piec zmian metodologicznych wprowadzonych na W0, PRZED jakakolwiek analiza real-data (rewizja czysta):
 
 1. **Korekta change-pointu 2014-10-08 → 2014-10-10.** 8 pazdziernika 2014 to byla sroda; pierwsze losowanie z poszerzona pula euronumerow (1-10) odbylo sie w piatek 10 pazdziernika 2014 (potwierdzone 3 niezaleznymi zrodlami). 2014-10-08 byla data komunikatu regulacyjnego, NIE data wejscia zmiany w zycie.
 2. **Reframe DoD-1 na positive/negative control.** Change-pointy 2014/2022 sa ground truth WYLACZNIE dla pod-procesu euronumerow (rozszerzenie support 8→10→12). Glowna pula 1-50 nie zmienila sie → sluzy jako wbudowany negative control w tym samym realnym zbiorze.
 3. **Nowy test family: recurrence / gap analysis** (zob. §5b). Gap goodness-of-fit kalibrowany permutacyjnie (analityczny KS niewazny dla rozkladow dyskretnych).
 4. **Family B FDR: BH → Benjamini-Yekutieli**, 300 → 450 hipotez (dodany gap test; BY ze wzgledu na zaleznosc zliczen 5/50 i gapow).
+5. **Synchronizacja BOCPD z kodem: α=1 → α=0.1, hazard 1/250 → 1/200 (§2).** v1 nosil
+   stale α=1 i hazard 1/250, ale faktyczna zaimplementowana i przetestowana decyzja
+   (MEMORY.md 2026-05-26, uzasadniona empirycznie) to α=0.1, hazard=0.005. To korekta
+   transkrypcji dokumentu do JUZ-podjetej decyzji, NIE zmiana metodologii.
 
 Rozszerzenia information-theoretic (LZ76/MDL) SWIADOMIE poza preregistracja — stretch v2, NIE filar bramkujacy. DoD-4 pozostaje 3/3 (H1/MMD/DriftSim).
 
@@ -45,14 +49,21 @@ w kazdym rezimie:
 
 Oba strumienie pochodza z TEGO SAMEGO realnego zbioru — kontrola wbudowana, nie syntetyczna.
 
+**Tolerancja detekcji (DoD-1b):** BOCPD wykrywa zmiane w DANYCH, nie w regulach.
+Pierwszy nowy symbol: 2014 → 2014-11-28 (~49 dni po regule 2014-10-10, losowania
+trafialy {1-8} przypadkowo); 2022 → 2022-03-29 (~4 dni). Stad **±60 dni dla 2014**,
+**±30 dni dla 2022** (MEMORY.md 2026-05-26).
+
 ---
 
 ## §2. Model generatywny — Bayesian online CP (Adams-MacKay 2007)
 
-- **Prior:** p ~ Dirichlet(α=1) — uniform flat prior na simpleksie Δ⁴⁹
+- **Prior:** p ~ Dirichlet(α=0.1) — slaby (sparse) prior na simpleksie Δ⁴⁹.
+  **Decyzja empiryczna** (MEMORY.md 2026-05-26): α=1 (flat) osłabia sygnał przy
+  zmianie puli; α=0.1 daje cp_prob>0.4 przy pierwszym niewidzianym symbolu.
 - **Likelihood:** draw_t ~ Categorical(p)
 - **Posterior update:** α_k += 1 dla kazdego wylosowanego k
-- **Hazard:** geometric z rate r=1/250 (expected run length = 250 losowan)
+- **Hazard:** geometric z rate r=1/200 = 0.005 (expected run length = 200 losowan)
 - **Output:** pelna macierz run-length posterior P(R_t) (forward-pass) — wymagana dla animacji W8 i surprise S_t = -log P(x_t | R_{t-1})
 - **Implementacja:** wlasna (~150 LOC), cross-check vs ruptures PELT
 - **Cross-check kryterium:** disagreement z PELT ≤ 10%
@@ -120,4 +131,4 @@ Czas (liczba losowan) miedzy kolejnymi wystapieniami danej liczby. Pod nullem un
 
 ## §7. Revision Log
 
-- **v1 → v2** [2026-05-29]: zob. §0 revision_reason. Cztery zmiany czyste (przed real-data): korekta daty 2014-10-10, control design positive/negative, recurrence test family, Family B BH → Benjamini-Yekutieli (300 → 450 hipotez).
+- **v1 → v2** [2026-05-29]: zob. §0 revision_reason. Piec zmian czystych (przed real-data): korekta daty 2014-10-10, control design positive/negative, recurrence test family, Family B BH → Benjamini-Yekutieli (300 → 450 hipotez), synchronizacja BOCPD α=0.1/hazard=0.005 z kodem (korekta transkrypcji).

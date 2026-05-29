@@ -197,7 +197,7 @@ DriftScope/
 | DoD | Komponent walidujący | Pass criterion |
 |---|---|---|
 | DoD-1a | H1 stationarity tests | Detekcja zmian puli euronumerów 2014/2022 |
-| DoD-1b | Bayesian CP + CUSUM (euronumery) | Top-2 CP pokrywają 2014-10-10 i 2022-03-25 (±30 dni) blind; główne 1-50 = negative control (brak CP) |
+| DoD-1b | Bayesian CP + CUSUM (euronumery) | Top-2 CP pokrywają 2014-10-10 (±60 dni — data-CP ≈2014-11-28) i 2022-03-25 (±30 dni) blind; główne 1-50 = negative control (brak CP) |
 | DoD-2 | `methodology/permutation.py` | FPR w shuffled data ≤ α=0.05 ± MC error |
 | DoD-3 | `methodology/multiple_testing.py` | Family-aware FDR (A: 12, BH; B: 450, Benjamini-Yekutieli) |
 | DoD-4 | `reporting/disagreement.py` | Każdy signal classified: 3/3, 2/3, 1/3, 0/3 |

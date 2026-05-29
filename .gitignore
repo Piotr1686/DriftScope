@@ -8,3 +8,14 @@ build/
 .venv/
 venv/
 *.log
+
+# Notebooks: regenerowalne wyjścia (figury, ipynb pairing)
+notebooks/*.png
+notebooks/*.ipynb
+
+# --- Claude Code Session System ---
+# Odkomentuj jeśli nie chcesz commitować stanu sesji:
+# last_session.md
+CLAUDE.md.backup_*
+MEMORY.md.backup_*
+last_session.md.backup_*

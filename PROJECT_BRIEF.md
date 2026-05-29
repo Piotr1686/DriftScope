@@ -89,6 +89,7 @@ GitHub renderuje `<video>` natywnie w MD.
 - **Rust PyO3 permutation engine** — bookmark na W5 Decision Gate jeśli Numba niewystarczająca, NIE commitment.
 - **DVC** — overhead nieproporcjonalny dla <2GB; binary blob anti-pattern dla SQLite.
 - **SQLite jako primary permutation cache** — N writers + WAL → `database is locked`.
+- **lifelines (survival analysis)** — odrzucone dla `recurrence.py`. Ciągnie pandas (zakazane — §0/konwencje) + scipy + autograd dla jednej funkcji (Nelson-Aalen). NA estimator = `cumsum(d_i / n_i)`, ~20 LOC NumPy — implementacja własna zgodna z anti-goal §12 ("nie wrapper"). EVT/Gumbel via `scipy.stats.gumbel_r`.
 
 ---
 
@@ -281,7 +282,7 @@ CUSUM zachowany jako classical backup do Bayesian CP (cross-check via `ruptures`
 Czas (liczba losowań) między kolejnymi wystąpieniami danej liczby. Pod nullem uniform-iid gap ~ Geometric(q), q = 5/50 dla puli głównej.
 
 - **Gap goodness-of-fit:** odchylenie empirycznego rozkładu gapów od Geometric(q) per liczba per reżim. ⚠️ **NIE analityczny KS** — test Kołmogorowa-Smirnowa jest nieważny dla rozkładów dyskretnych (błędnie skalibrowane p-value). Statystyka kalibrowana przez istniejący silnik permutacyjny (Krok 6), zgodnie z mandatem Krok 5 ("żaden test nie raportuje p-value bez własnej kalibracji").
-- **Nelson-Aalen cumulative hazard** per liczba: liniowość skumulowanego hazardu = stała intensywność = zgodność z uniform. Wizualny artefakt diagnostyczny.
+- **Nelson-Aalen cumulative hazard** per liczba: liniowość skumulowanego hazardu = stała intensywność = zgodność z uniform. Wizualny artefakt diagnostyczny. Implementacja własna (~20 LOC NumPy, `cumsum(d_i/n_i)`), bez `lifelines` (zob. §3-alt).
 - **EVT max-gap:** maksymalny gap w sekwencji ma asymptotycznie rozkład Gumbela (gapy geometryczne leżą w domenie przyciągania Gumbela). Test wykrywający odstające "uśpione" liczby.
 - Zasilanie Family B FDR (zob. Krok 7).
 

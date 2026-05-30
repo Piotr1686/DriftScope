@@ -312,15 +312,25 @@ def test_power_increases_with_effect() -> None:
     assert high > low
 
 
-def test_chi2_blind_to_dependence_signal() -> None:
-    """chi² (marginalny) jest ~slepy na autocorr — power ≈ FPR, << freq_shift.
+def test_chi2_blind_to_pair_correlation() -> None:
+    """chi² (marginalny) jest ~slepy na pair_corr — power ≈ FPR << freq_shift.
 
-    Uczciwy wynik kalibracji: sygnaly zaleznosciowe wymagaja wlasnych testow (W4/W6).
+    pair_corr zmienia tylko wspolwystapienia jednej pary (joint), marginal ~uniform.
+    Uczciwy wynik kalibracji: ten sygnal wymaga dedykowanego testu wspolwystapien (W6).
+    (autocorr i seasonality chi² JEDNAK wykrywa — przez nadmierna dyspersje zliczen.)
     """
-    autocorr_power = estimate_rejection_rate("autocorr", 0.20, "R2", n_trials=150)
+    pair_power = estimate_rejection_rate("pair_corr", 2.0, "R2", n_trials=150)
     freq_power = estimate_rejection_rate("freq_shift", 0.10, "R2", n_trials=150)
-    assert autocorr_power < 0.30
-    assert autocorr_power < freq_power
+    assert pair_power < 0.30
+    assert pair_power < freq_power
+
+
+def test_chi2_detects_overdispersion_signals() -> None:
+    """chi² wykrywa autocorr i seasonality (nadmierna dyspersja), nie tylko marginal."""
+    autocorr_power = estimate_rejection_rate("autocorr", 0.20, "R3", n_trials=120)
+    seasonality_power = estimate_rejection_rate("seasonality", 0.10, "R3", n_trials=120)
+    assert autocorr_power > 0.70
+    assert seasonality_power > 0.70
 
 
 def test_estimate_determinism() -> None:

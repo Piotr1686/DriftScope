@@ -1,0 +1,75 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "driftscope"
+version = "0.1.0"
+description = "Stationarity audit framework for streaming discrete-valued processes — with calibrated detector hallucination rates."
+readme = "README.md"
+requires-python = ">=3.10,<3.11"
+license = { text = "MIT" }
+authors = [{ name = "Piotr Lazowski" }]
+
+dependencies = [
+    # Compute core — wersje pinned/ograniczone po weryfikacji PoC (2026-05-17)
+    "numpy>=2.2,<3.0",                   # numba 0.65.x wymaga numpy 2.x
+    "numba==0.65.1",                     # PINNED — zweryfikowane Win11 + numpy 2.2.5
+    "joblib>=1.5,<2.0",                  # Parallel nad konfiguracjami (NIE nad permutacjami)
+    # Statistical methods
+    "statsmodels>=0.14,<0.15",           # ADF, KPSS, BH FDR
+    "ruptures>=1.1.9,<2.0",             # PELT, CUSUM (cross-check dla Bayesian CP)
+    "scipy>=1.13,<2.0",                  # scipy.signal: Welch, Lomb-Scargle
+    "scikit-learn>=1.4,<2.0",           # pairwise_kernels (MMD primitive)
+    # Data layer
+    "polars>=1.0,<2.0",                  # type-safe; NIE pandas
+    "pyarrow>=16.0",                     # Parquet + Zstd compression
+    # Config / validation
+    "pydantic>=2.0,<3.0",
+    "pydantic-settings>=2.0,<3.0",
+    # CLI
+    "typer>=0.12,<0.13",
+    # Visualization
+    "matplotlib>=3.9,<4.0",              # static viz + FuncAnimation → .webm
+    "plotly",                            # interactive HTML charts
+    # Scraper
+    "httpx>=0.27",
+    "selectolax>=0.3",
+    "tenacity>=8.0",
+    # Runtime guards
+    "psutil>=5.9",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0",
+    "hypothesis>=6.0",
+    "ruff>=0.4",
+    "mypy>=1.10",
+]
+
+[project.scripts]
+driftscope = "driftscope.cli:app"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/driftscope"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "N", "W"]
+
+[tool.mypy]
+strict = true
+python_version = "3.10"
+mypy_path = "src"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-v"
+markers = [
+    "slow: testy wymagające dłuższego czasu (overnight)",
+    "requires_artifacts: testy wymagające wygenerowanych artefaktów",
+]

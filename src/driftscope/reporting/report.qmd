@@ -1,0 +1,19 @@
+---
+title: "DriftScope — Stationarity Audit Report"
+subtitle: "EuroJackpot discrete stream analysis"
+format:
+  html:
+    embed-resources: true
+    theme: cosmo
+  pdf:
+    documentclass: article
+jupyter: python3
+---
+
+<!-- Stub (W7/W8) — Quarto source dla reproducible report. -->
+<!-- Python chunks: Polars + Plotly figury embedded. -->
+<!-- Matplotlib → PDF appendix. -->
+
+# DriftScope Report
+
+*Stub — implementacja w W7.*

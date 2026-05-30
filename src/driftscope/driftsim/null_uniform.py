@@ -42,8 +42,8 @@ _REGIME_ANCHOR_FRIDAY: dict[str, date] = {
 Regime = Literal["R1", "R2", "R3"]
 
 
-def _synthetic_dates(n_draws: int, regime: Regime) -> list[date]:
-    """Monotoniczne daty syntetyczne dla rezimu.
+def synthetic_dates(n_draws: int, regime: Regime) -> list[date]:
+    """Monotoniczne daty syntetyczne dla rezimu (wspoldzielone z planted_signals).
 
     R1/R2: jedno losowanie/tydzien (piatek). R3: dwa/tydzien (wtorek + piatek),
     co tworzy realna etykiete dnia potrzebna dla signal #4 (weekly seasonality).
@@ -68,6 +68,16 @@ def _synthetic_dates(n_draws: int, regime: Regime) -> list[date]:
     return dates[:n_draws]
 
 
+def sample_euron(regime: Regime, rng: np.random.Generator) -> tuple[int, int]:
+    """Losuje 2 euronumery (bez zwracania, rosnaco) z puli rezimu.
+
+    Wspoldzielone z planted_signals: sygnaly dotykaja puli glownej, euron pozostaje
+    nullowy. +1 bo rng.choice zwraca indeksy 0-based, a liczby sa 1-based.
+    """
+    euron = np.sort(rng.choice(EURON_POOL_SIZE[regime], size=_EURON_DRAW, replace=False) + 1)
+    return int(euron[0]), int(euron[1])
+
+
 def generate_uniform_draws(
     n_draws: int,
     regime: Regime,
@@ -76,7 +86,7 @@ def generate_uniform_draws(
     """Generuje `n_draws` losowan i.i.d. uniform dla danego rezimu.
 
     Kazde losowanie: 5 z 50 (bez zwracania, rosnaco) + 2 z puli euron rezimu
-    (bez zwracania, rosnaco). Daty syntetyczne (zob. `_synthetic_dates`).
+    (bez zwracania, rosnaco). Daty syntetyczne (zob. `synthetic_dates`).
 
     Determinizm: w pelni okreslony przez `rng`. Reprodukowalny strumien:
         from driftscope.core.seeds import make_worker_seeds
@@ -99,14 +109,13 @@ def generate_uniform_draws(
     if n_draws <= 0:
         raise ValueError(f"n_draws musi byc > 0, otrzymano {n_draws}")
 
-    euron_high = EURON_POOL_SIZE[regime]
-    dates = _synthetic_dates(n_draws, regime)
+    dates = synthetic_dates(n_draws, regime)
     records: list[DrawRecord] = []
 
     for draw_date in dates:
         # +1 bo rng.choice zwraca indeksy 0-based, a liczby sa 1-based.
         main = np.sort(rng.choice(_MAIN_POOL_SIZE, size=_MAIN_DRAW, replace=False) + 1)
-        euron = np.sort(rng.choice(euron_high, size=_EURON_DRAW, replace=False) + 1)
+        euron_1, euron_2 = sample_euron(regime, rng)
         records.append(
             DrawRecord(
                 draw_date=draw_date,
@@ -115,8 +124,8 @@ def generate_uniform_draws(
                 main_3=int(main[2]),
                 main_4=int(main[3]),
                 main_5=int(main[4]),
-                euron_1=int(euron[0]),
-                euron_2=int(euron[1]),
+                euron_1=euron_1,
+                euron_2=euron_2,
             )
         )
 

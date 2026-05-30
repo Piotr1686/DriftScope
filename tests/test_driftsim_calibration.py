@@ -14,8 +14,16 @@ from driftscope.driftsim.null_uniform import (
     EURON_POOL_SIZE,
     generate_uniform_draws,
 )
+from driftscope.driftsim.planted_signals import (
+    EFFECT_SIZES,
+    PLANTED_MAIN,
+    PLANTED_PAIR,
+    enumerate_scenarios,
+    generate_planted_draws,
+)
 
 REGIMES = ["R1", "R2", "R3"]
+SIGNALS = list(EFFECT_SIZES.keys())
 
 
 def _rng(base_seed: int = 42, offset: int = 0) -> np.random.Generator:
@@ -138,6 +146,126 @@ def test_invalid_regime_raises() -> None:
 def test_nonpositive_n_raises() -> None:
     with pytest.raises(ValueError, match="n_draws"):
         generate_uniform_draws(0, "R1", _rng())
+
+
+# ===========================================================================
+# planted_signals (W2)
+# ===========================================================================
+
+def test_enumerate_scenarios_count() -> None:
+    """21 scenariuszy/rezim = 5 sygnalow × 4 effect + 1 null (§6)."""
+    scen = enumerate_scenarios()
+    assert len(scen) == 21
+    assert ("null", None) in scen
+    assert sum(1 for s, _ in scen if s != "null") == 20
+    assert len(scen) * 3 == 63  # × 3 rezimy = 63 unikalne
+
+
+@pytest.mark.parametrize("signal", SIGNALS)
+def test_planted_structurally_valid(signal: str) -> None:
+    """Plant na max effect: rekordy strukturalnie poprawne (R3 ma wszystkie sygnaly)."""
+    effect = EFFECT_SIZES[signal][-1]
+    draws = generate_planted_draws(300, "R3", signal, effect, _rng())  # type: ignore[arg-type]
+    assert len(draws) == 300
+    dates = [d.draw_date for d in draws]
+    assert dates == sorted(dates)
+    high = EURON_POOL_SIZE["R3"]
+    for d in draws:
+        assert len(set(d.main_numbers)) == 5
+        assert d.main_numbers == sorted(d.main_numbers)
+        assert all(1 <= n <= 50 for n in d.main_numbers)
+        assert len(set(d.euronumbers)) == 2
+        assert all(1 <= e <= high for e in d.euronumbers)
+
+
+@pytest.mark.parametrize("signal", SIGNALS)
+def test_planted_determinism(signal: str) -> None:
+    """Ten sam seed → bit-identyczny plant (DoD-6)."""
+    effect = EFFECT_SIZES[signal][-1]
+    a = generate_planted_draws(120, "R3", signal, effect, _rng(offset=0))  # type: ignore[arg-type]
+    b = generate_planted_draws(120, "R3", signal, effect, _rng(offset=0))  # type: ignore[arg-type]
+    assert [d.model_dump() for d in a] == [d.model_dump() for d in b]
+
+
+# --- Guard signal #4 (preregistration_v2 §6) ---
+
+@pytest.mark.parametrize("regime", ["R1", "R2"])
+def test_seasonality_degenerates_to_null(regime: str) -> None:
+    """seasonality poza R3 = czysty null (ten sam seed → identyczny strumien)."""
+    planted = generate_planted_draws(200, regime, "seasonality", 0.10, _rng(offset=0))  # type: ignore[arg-type]
+    null = generate_uniform_draws(200, regime, _rng(offset=0))  # type: ignore[arg-type]
+    assert [d.model_dump() for d in planted] == [d.model_dump() for d in null]
+
+
+def test_seasonality_active_in_r3() -> None:
+    """seasonality w R3 NIE jest nullem (kontrast Tue/Fri faktycznie wstrzykniety)."""
+    planted = generate_planted_draws(200, "R3", "seasonality", 0.10, _rng(offset=0))
+    null = generate_uniform_draws(200, "R3", _rng(offset=0))
+    assert [d.model_dump() for d in planted] != [d.model_dump() for d in null]
+
+
+# --- Sygnal faktycznie obecny (sanity, NIE pelna kalibracja power) ---
+
+def _planted_count(draws: list, number: int) -> int:
+    return sum(number in d.main_numbers for d in draws)
+
+
+def test_freq_shift_boosts_target() -> None:
+    """freq_shift δ=0.10: liczba planted czesciej niz uniform (≈n·5/50)."""
+    draws = generate_planted_draws(4000, "R2", "freq_shift", 0.10, _rng())
+    uniform_expected = 4000 * 5 / 50  # = 400
+    assert _planted_count(draws, PLANTED_MAIN) > 2 * uniform_expected
+
+
+def test_trend_grows_over_time() -> None:
+    """trend β=0.10: liczba planted czestsza w 2. polowie niz w 1."""
+    draws = generate_planted_draws(4000, "R2", "trend", 0.10, _rng())
+    half = len(draws) // 2
+    first = _planted_count(draws[:half], PLANTED_MAIN)
+    second = _planted_count(draws[half:], PLANTED_MAIN)
+    assert second > first
+
+
+def test_autocorr_increases_recurrence() -> None:
+    """autocorr ρ=0.20: wyzszy odsetek kolejnych losowan dzielacych liczbe niz null."""
+    def shared_fraction(draws: list) -> float:
+        hits = sum(
+            bool(set(draws[i].main_numbers) & set(draws[i - 1].main_numbers))
+            for i in range(1, len(draws))
+        )
+        return hits / (len(draws) - 1)
+
+    planted = generate_planted_draws(2000, "R2", "autocorr", 0.20, _rng(offset=0))
+    null = generate_uniform_draws(2000, "R2", _rng(offset=0))
+    assert shared_fraction(planted) > shared_fraction(null)
+
+
+def test_pair_corr_increases_cooccurrence() -> None:
+    """pair_corr lift=2.0: para planted wspolwystepuje czesciej niz w nullu."""
+    def cooc(draws: list) -> int:
+        i, j = PLANTED_PAIR
+        return sum(i in d.main_numbers and j in d.main_numbers for d in draws)
+
+    planted = generate_planted_draws(8000, "R2", "pair_corr", 2.0, _rng(offset=0))
+    null = generate_uniform_draws(8000, "R2", _rng(offset=0))
+    assert cooc(planted) > cooc(null)
+
+
+# --- Walidacja wejscia ---
+
+def test_planted_invalid_signal_raises() -> None:
+    with pytest.raises(ValueError, match="Nieznany sygnal"):
+        generate_planted_draws(10, "R2", "ghost", 0.1, _rng())  # type: ignore[arg-type]
+
+
+def test_planted_invalid_effect_raises() -> None:
+    with pytest.raises(ValueError, match="spoza siatki"):
+        generate_planted_draws(10, "R2", "freq_shift", 0.99, _rng())
+
+
+def test_planted_nonpositive_n_raises() -> None:
+    with pytest.raises(ValueError, match="n_draws"):
+        generate_planted_draws(0, "R2", "freq_shift", 0.10, _rng())
 
 
 # ---------------------------------------------------------------------------

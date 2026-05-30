@@ -125,7 +125,8 @@ driftscope/
 │   │   └── regime_split.py     # 2014/2022 split logic
 │   ├── methodology/
 │   │   ├── preregistration_v1.md  # SUPERSEDED przez v2 (history)
-│   │   ├── preregistration_v2.md  # ACTIVE — frozen choices + revision log
+│   │   ├── preregistration_v2.md  # SUPERSEDED przez v3 (history)
+│   │   ├── preregistration_v3.md  # ACTIVE — frozen choices + revision log
 │   │   ├── h1_classical.py     # ADF, KPSS, Bayesian online CP, Welch, ACF
 │   │   ├── k4_mmd.py           # Gaussian RBF on frequency vectors
 │   │   ├── permutation.py      # shuffle test core (Numba selektywnie)
@@ -170,7 +171,7 @@ driftscope/
     └── app.py
 ```
 
-**Preregistration versioning:** `preregistration_v2.md` to **active** wersja (`v1` superseded [2026-05-29] — zob. v2 §0 revision_reason). Każda metodologiczna korekta po Decision Gate tworzy `preregistration_v{N}.md` z polem `revision_reason: <text>`. Symlink/copy ostatniej jako aktywnej jest opcjonalna; explicit numbering wystarczy.
+**Preregistration versioning:** `preregistration_v3.md` to **active** wersja (`v1`→`v2` superseded [2026-05-29], `v2`→`v3` [2026-05-30] — pinowanie siatek β/c §6; zob. v3 §0 revision_reason). Każda metodologiczna korekta po Decision Gate tworzy `preregistration_v{N}.md` z polem `revision_reason: <text>`. Symlink/copy ostatniej jako aktywnej jest opcjonalna; explicit numbering wystarczy.
 
 **Schemat `data/seed/eurojackpot_history.csv` (ISO 8601 daty, UTF-8, header w pierwszej linii):**
 

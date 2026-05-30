@@ -7,19 +7,17 @@ Euronumery i kalendarz pozostaja nullowe — sygnal jest izolowany w jednym wymi
 5 typow sygnalu × 4 effect sizes = 20 scenariuszy + 1 null = 21 datasetow/rezim
 (× 3 rezimy = 63 unikalne; preregistration_v2 §6).
 
-Sygnaly (§6):
-  1. freq_shift  — p_k = 1/50 + δ      δ ∈ {0.01,0.02,0.05,0.10}   (PINNED §6)
-  2. autocorr    — boost recurrence ρ  ρ ∈ {0.05,0.10,0.15,0.20}   (PINNED §6)
-  3. trend       — p_k(t)=1/50+β·t/T   β ∈ {0.01,0.02,0.05,0.10}   (⚠ PROWIZORYCZNE)
-  4. seasonality — kontrast Tue/Fri c  c ∈ {0.01,0.02,0.05,0.10}   (⚠ PROWIZORYCZNE)
+Sygnaly (preregistration_v3 §6 — wszystkie siatki PINNED):
+  1. freq_shift  — p_k = 1/50 + δ      δ ∈ {0.01,0.02,0.05,0.10}
+  2. autocorr    — boost recurrence ρ  ρ ∈ {0.05,0.10,0.15,0.20}
+  3. trend       — p_k(t)=1/50+β·t/T   β ∈ {0.01,0.02,0.05,0.10}
+  4. seasonality — kontrast Tue/Fri c  c ∈ {0.01,0.02,0.05,0.10}
                    GUARD: tylko R3; w R1/R2 degeneruje do null (§6).
-  5. pair_corr   — lift wspolwystapien lift ∈ {1.1,1.2,1.5,2.0}    (PINNED §6)
+  5. pair_corr   — lift wspolwystapien lift ∈ {1.1,1.2,1.5,2.0}
 
-⚠ UWAGA METODOLOGICZNA: §6 v2 pinuje siatki dla δ/ρ/lift, ale dla trend (β) i
-seasonality (c) podaje tylko "4 effect sizes" / "rozne p" bez wartosci. Siatki β i c
-sa tu PROWIZORYCZNE (dobrane analogicznie do freq_shift, by koncowa magnituda byla
-porownywalna). Decyzja usera 2026-05-30: ratyfikowac w preregistration_v4.md PRZED
-kalibracja W3 (v3 nie istnieje — nastepna realna rewizja to v4).
+Siatki β (trend) i c (seasonality) zostaly doprecyzowane w preregistration_v3
+(§0/§6, 2026-05-30) — v2 zostawial je nie-pinowane; v3 ratyfikuje wartosci powyzej
+jako rewizje czysta PRZED kalibracja W3.
 """
 from __future__ import annotations
 
@@ -37,13 +35,13 @@ from driftscope.driftsim.null_uniform import (
 
 SignalType = Literal["freq_shift", "autocorr", "trend", "seasonality", "pair_corr"]
 
-# Siatki effect sizes per sygnal (preregistration_v2 §6). Patrz uwaga metodologiczna.
+# Siatki effect sizes per sygnal (preregistration_v3 §6 — wszystkie PINNED).
 EFFECT_SIZES: dict[SignalType, tuple[float, ...]] = {
-    "freq_shift": (0.01, 0.02, 0.05, 0.10),   # δ    — PINNED §6
-    "autocorr": (0.05, 0.10, 0.15, 0.20),     # ρ    — PINNED §6
-    "trend": (0.01, 0.02, 0.05, 0.10),        # β    — PROWIZORYCZNE (prereg v4)
-    "seasonality": (0.01, 0.02, 0.05, 0.10),  # c    — PROWIZORYCZNE (prereg v4)
-    "pair_corr": (1.1, 1.2, 1.5, 2.0),        # lift — PINNED §6
+    "freq_shift": (0.01, 0.02, 0.05, 0.10),   # δ    (PINNED od v2)
+    "autocorr": (0.05, 0.10, 0.15, 0.20),     # ρ    (PINNED od v2)
+    "trend": (0.01, 0.02, 0.05, 0.10),        # β    (PINNED w v3)
+    "seasonality": (0.01, 0.02, 0.05, 0.10),  # c    (PINNED w v3)
+    "pair_corr": (1.1, 1.2, 1.5, 2.0),        # lift (PINNED od v2)
 }
 
 _MAIN_POOL_SIZE = 50
@@ -122,7 +120,7 @@ def generate_planted_draws(
 ) -> list[DrawRecord]:
     """Generuje `n_draws` losowan z wstrzyknietym sygnalem `signal` o `effect_size`.
 
-    Pula glowna nosi sygnal; euron i daty sa nullowe (preregistration_v2 §3/§6).
+    Pula glowna nosi sygnal; euron i daty sa nullowe (preregistration_v3 §3/§6).
     Determinizm w pelni przez `rng` (DoD-6).
 
     GUARD signal #4: `signal="seasonality"` w R1/R2 degeneruje do czystego nullu

@@ -1,30 +1,35 @@
-# preregistration_v2.md — DriftScope Methodology Pre-registration
+# preregistration_v3.md — DriftScope Methodology Pre-registration
 
-**Status:** SUPERSEDED przez preregistration_v3.md (2026-05-30 — pinowanie siatek β/c §6). Zachowany jako history.
-**Wersja:** v2
-**Data zamrozenia:** przed W1 (projekt na W0 — rewizja czysta, przed analiza real-data)
-**Supersedes:** preregistration_v1.md
+**Status:** ACTIVE (zastepuje v2; wersja zamrozona po W2, przed kalibracja W3)
+**Wersja:** v3
+**Data zamrozenia:** 2026-05-30 (W2 zamkniete; rewizja czysta — PRZED kalibracja real-data i Decision Gate)
+**Supersedes:** preregistration_v2.md (ktora superseduje v1)
 
 > Ten plik jest czescią architectural contract (PROJECT_BRIEF.md).
-> Kazda korekta metodologiczna po Decision Gate tworzy preregistration_v{N+1}.md
+> Kazda korekta metodologiczna tworzy preregistration_v{N+1}.md
 > z polem `revision_reason: <text>`.
 
 ---
 
-## §0. Revision reason (v1 → v2)
+## §0. Revision reason (v2 → v3)
 
-`revision_reason:` Piec zmian metodologicznych wprowadzonych na W0, PRZED jakakolwiek analiza real-data (rewizja czysta):
+`revision_reason:` Jedna zmiana, czysta (PRZED jakakolwiek kalibracja DriftSim):
 
-1. **Korekta change-pointu 2014-10-08 → 2014-10-10.** 8 pazdziernika 2014 to byla sroda; pierwsze losowanie z poszerzona pula euronumerow (1-10) odbylo sie w piatek 10 pazdziernika 2014 (potwierdzone 3 niezaleznymi zrodlami). 2014-10-08 byla data komunikatu regulacyjnego, NIE data wejscia zmiany w zycie.
-2. **Reframe DoD-1 na positive/negative control.** Change-pointy 2014/2022 sa ground truth WYLACZNIE dla pod-procesu euronumerow (rozszerzenie support 8→10→12). Glowna pula 1-50 nie zmienila sie → sluzy jako wbudowany negative control w tym samym realnym zbiorze.
-3. **Nowy test family: recurrence / gap analysis** (zob. §5b). Gap goodness-of-fit kalibrowany permutacyjnie (analityczny KS niewazny dla rozkladow dyskretnych).
-4. **Family B FDR: BH → Benjamini-Yekutieli**, 300 → 450 hipotez (dodany gap test; BY ze wzgledu na zaleznosc zliczen 5/50 i gapow).
-5. **Synchronizacja BOCPD z kodem: α=1 → α=0.1, hazard 1/250 → 1/200 (§2).** v1 nosil
-   stale α=1 i hazard 1/250, ale faktyczna zaimplementowana i przetestowana decyzja
-   (MEMORY.md 2026-05-26, uzasadniona empirycznie) to α=0.1, hazard=0.005. To korekta
-   transkrypcji dokumentu do JUZ-podjetej decyzji, NIE zmiana metodologii.
+1. **Pinowanie siatek effect-size dla signal #3 (trend β) i signal #4 (seasonality c).**
+   §6 v2 pinowal siatki tylko dla 3 z 5 sygnalow (freq_shift δ, autocorr ρ, pair_corr
+   lift), a dla trend podawal jedynie "β dla 4 effect sizes" i dla seasonality "rozne p"
+   — bez konkretnych wartosci. Implementacja `planted_signals.py` (W2) wymagala
+   konkretnych liczb; uzyto siatek prowizorycznych, ktore TA rewizja ratyfikuje:
+   - **trend:** β ∈ {0.01, 0.02, 0.05, 0.10} — analogicznie do freq_shift, by koncowa
+     magnituda przy t=T byla porownywalna z freq_shift (p_planted(T) = 1/50 + β).
+   - **seasonality:** c ∈ {0.01, 0.02, 0.05, 0.10}, kontrast realizowany jako +c na
+     liczbie planted w piatki i −c we wtorki (clip > 0); analogiczna skala do δ.
 
-Rozszerzenia information-theoretic (LZ76/MDL) SWIADOMIE poza preregistracja — stretch v2, NIE filar bramkujacy. DoD-4 pozostaje 3/3 (H1/MMD/DriftSim).
+   Rewizja czysta: nastapila PRZED kalibracja W3 (sensitivity/specificity), wiec wybor
+   siatek nie jest informowany wynikami na danych. δ/ρ/lift bez zmian wzgledem v2.
+
+Rozszerzenia information-theoretic (LZ76/MDL) nadal SWIADOMIE poza preregistracja —
+stretch, NIE filar bramkujacy. DoD-4 pozostaje 3/3 (H1/MMD/DriftSim).
 
 ---
 
@@ -45,7 +50,7 @@ w kazdym rezimie:
 ## §1b. Control design (pre-registered)
 
 - **Positive control:** strumien euronumerow. Znana zmiana support w 2014-10-10 (8→10) i 2022-03-25 (10→12). Detektor MUSI zapalic — sanity check, ze dziala w ogole.
-- **Negative control:** strumien glownych liczb 1-50. Brak znanej zmiany regul w 2014/2022. Detektor NIE powinien rankowac CP w tych datach; spurious CP = hallucination signal.
+- **Negative control:** strumien glownych liczb 1-50. Brak znanej zmiany regul w 2014/2022. Detektor NIE powinien rankowac CP w tych datach; spurious CP = halucynacja.
 
 Oba strumienie pochodza z TEGO SAMEGO realnego zbioru — kontrola wbudowana, nie syntetyczna.
 
@@ -117,13 +122,13 @@ Czas (liczba losowan) miedzy kolejnymi wystapieniami danej liczby. Pod nullem un
 
 ## §6. DriftSim — planted signals (pre-registered)
 
-5 typow sygnalu × 4 effect sizes = 20 scenarios per rezim + 1 null = **21 datasetow per rezim** (× 3 = 63 unikalne):
+5 typow sygnalu × 4 effect sizes = 20 scenarios per rezim + 1 null = **21 datasetow per rezim** (× 3 = 63 unikalne). Sygnal izolowany w puli GLOWNEJ (Δ⁴⁹); euronumery i kalendarz pozostaja nullowe. Liczba noszaca sygnal #1/#3/#4 jest ustalona (reprodukowalnosc); para dla #5 ustalona.
 
-1. **Frequency shift** — p_k = 1/50 + δ, δ ∈ {0.01, 0.02, 0.05, 0.10}
-2. **Autocorrelation lag-1** — P(x_t=k | x_{t-1}=k) = 1/50 + ρ, ρ ∈ {0.05, 0.10, 0.15, 0.20}
-3. **Linear trend** — p_k(t) = p_k + β·(t/T), β dla 4 effect sizes
-4. **Weekly seasonality** — rozne p dla wtorek vs piatek (cycle = 2 losowania). **GUARD: tylko R3** — EuroJackpot losowal wylacznie w piatki do marca 2022; wtorki dodano w R3. W R1/R2 kontrast Tue/Fri nie istnieje → scenariusz degeneruje do uniform null (zajmuje slot datasetu, pelni role dodatkowego negative control; count 63 zachowany).
-5. **Pair correlation** — liczby i,j wspolwystepuja czesciej, lift ∈ {1.1, 1.2, 1.5, 2.0}
+1. **Frequency shift** — p_k = 1/50 + δ, δ ∈ {0.01, 0.02, 0.05, 0.10}  *(PINNED od v2)*
+2. **Autocorrelation lag-1** — boost wag liczb z poprzedniego losowania o ρ, ρ ∈ {0.05, 0.10, 0.15, 0.20}  *(PINNED od v2)*
+3. **Linear trend** — p_k(t) = 1/50 + β·(t/T), **β ∈ {0.01, 0.02, 0.05, 0.10}**  *(PINNED w v3 — §0)*
+4. **Weekly seasonality** — kontrast wtorek vs piatek na liczbie planted: +c w piatki, −c we wtorki (clip > 0), **c ∈ {0.01, 0.02, 0.05, 0.10}**  *(PINNED w v3 — §0)*. **GUARD: tylko R3** — EuroJackpot losowal wylacznie w piatki do marca 2022; wtorki dodano w R3. W R1/R2 kontrast Tue/Fri nie istnieje → scenariusz degeneruje do uniform null (zajmuje slot datasetu, pelni role dodatkowego negative control; count 63 zachowany).
+5. **Pair correlation** — liczby i,j wspolwystepuja czesciej, lift ∈ {1.1, 1.2, 1.5, 2.0}  *(PINNED od v2)*
 
 **Permutacja stratyfikowana (R3):** w rezimie z dwoma dniami losowan permutacja zachowuje etykiete dnia (Tue/Fri), zeby null nie konfundowal signal #4.
 
@@ -131,4 +136,5 @@ Czas (liczba losowan) miedzy kolejnymi wystapieniami danej liczby. Pod nullem un
 
 ## §7. Revision Log
 
-- **v1 → v2** [2026-05-29]: zob. §0 revision_reason. Piec zmian czystych (przed real-data): korekta daty 2014-10-10, control design positive/negative, recurrence test family, Family B BH → Benjamini-Yekutieli (300 → 450 hipotez), synchronizacja BOCPD α=0.1/hazard=0.005 z kodem (korekta transkrypcji).
+- **v1 → v2** [2026-05-29]: zob. v2 §0. Piec zmian czystych (przed real-data): korekta daty 2014-10-10, control design positive/negative, recurrence test family, Family B BH → Benjamini-Yekutieli (300 → 450 hipotez), synchronizacja BOCPD α=0.1/hazard=0.005 z kodem (korekta transkrypcji).
+- **v2 → v3** [2026-05-30]: zob. §0 revision_reason. Jedna zmiana czysta (przed kalibracja): pinowanie siatek effect-size dla signal #3 (trend β ∈ {0.01,0.02,0.05,0.10}) i signal #4 (seasonality c ∈ {0.01,0.02,0.05,0.10}), ktore v2 §6 zostawial niedoprecyzowane. Doprecyzowano tez mechanizm seasonality (±c Fri/Tue na liczbie planted). δ/ρ/lift bez zmian.

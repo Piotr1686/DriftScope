@@ -157,12 +157,13 @@ def calibrate_all(
     Ciezki (artifact generation, NIE unit test). Klucz: (signal|"null", regime).
     """
     out: dict[tuple[str, str], dict[float, float] | float] = {}
-    for regime in ("R1", "R2", "R3"):
+    regimes: tuple[Regime, ...] = ("R1", "R2", "R3")
+    for regime in regimes:
         for signal in EFFECT_SIZES:
             out[(signal, regime)] = calibration_curve(
-                signal, regime, detector, n_trials, base_seed=base_seed  # type: ignore[arg-type]
+                signal, regime, detector, n_trials, base_seed=base_seed
             )
         out[("null", regime)] = false_positive_rate(
-            regime, detector, n_trials, base_seed=base_seed  # type: ignore[arg-type]
+            regime, detector, n_trials, base_seed=base_seed
         )
     return out

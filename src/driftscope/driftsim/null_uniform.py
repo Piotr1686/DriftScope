@@ -1,0 +1,123 @@
+"""Honest null generator — uczciwy baseline DriftSim (W2).
+
+Generuje strumien losowan EuroJackpot pod H0: stacjonarny, uniform, i.i.d.
+w danym rezimie (preregistration_v2 §1). Stanowi fundament DriftSim: planted
+signals (`planted_signals.py`) = ten null + wstrzykniety sygnal.
+
+Czysty modul: zna tylko `DrawRecord` i RNG. Nie zna ingestion ani reporting.
+
+Pule (preregistration_v2 §1):
+- R1: 5/50 + 2/8   (2012-03-23 → 2014-10-03)
+- R2: 5/50 + 2/10  (2014-10-10 → 2022-03-18)
+- R3: 5/50 + 2/12  (2022-03-25 → obecnie; dwa losowania/tydzien: wtorek + piatek)
+
+Daty sa SYNTETYCZNE (tygodniowe od kotwicy rezimu) — null nie modeluje real-data,
+tylko proces generatywny. Etykieta dnia (wtorek/piatek) istnieje WYLACZNIE w R3
+(guard signal #4, preregistration_v2 §6): w R1/R2 wszystkie losowania to piatki.
+"""
+from __future__ import annotations
+
+from datetime import date, timedelta
+from typing import Literal
+
+import numpy as np
+
+from driftscope.core.types import DrawRecord
+
+# Rozmiar puli euronumerow per rezim (gorna granica wlacznie; preregistration_v2 §1)
+EURON_POOL_SIZE: dict[str, int] = {"R1": 8, "R2": 10, "R3": 12}
+
+_MAIN_POOL_SIZE = 50  # pula glowna 1-50 — niezmienna we wszystkich rezimach (negative control)
+_MAIN_DRAW = 5        # 5 liczb glownych bez zwracania
+_EURON_DRAW = 2       # 2 euronumery bez zwracania
+
+# Kotwice synthetic — piatki rozpoczynajace kazdy rezim (dowolne, byle monotoniczne).
+# R3 generuje pary wtorek/piatek (od 2022 EuroJackpot losuje dwa razy w tygodniu).
+_REGIME_ANCHOR_FRIDAY: dict[str, date] = {
+    "R1": date(2012, 3, 23),   # piatek
+    "R2": date(2014, 10, 10),  # piatek
+    "R3": date(2022, 3, 25),   # piatek (R3: dodajemy wtorki)
+}
+
+Regime = Literal["R1", "R2", "R3"]
+
+
+def _synthetic_dates(n_draws: int, regime: Regime) -> list[date]:
+    """Monotoniczne daty syntetyczne dla rezimu.
+
+    R1/R2: jedno losowanie/tydzien (piatek). R3: dwa/tydzien (wtorek + piatek),
+    co tworzy realna etykiete dnia potrzebna dla signal #4 (weekly seasonality).
+    """
+    anchor_friday = _REGIME_ANCHOR_FRIDAY[regime]
+    dates: list[date] = []
+
+    if regime == "R3":
+        # Para wtorek/piatek w kazdym tygodniu. Wtorek = piatek - 3 dni.
+        first_tuesday = anchor_friday - timedelta(days=3)
+        week = 0
+        while len(dates) < n_draws:
+            tuesday = first_tuesday + timedelta(weeks=week)
+            dates.append(tuesday)
+            if len(dates) < n_draws:
+                dates.append(tuesday + timedelta(days=3))  # piatek
+            week += 1
+    else:
+        for i in range(n_draws):
+            dates.append(anchor_friday + timedelta(weeks=i))
+
+    return dates[:n_draws]
+
+
+def generate_uniform_draws(
+    n_draws: int,
+    regime: Regime,
+    rng: np.random.Generator,
+) -> list[DrawRecord]:
+    """Generuje `n_draws` losowan i.i.d. uniform dla danego rezimu.
+
+    Kazde losowanie: 5 z 50 (bez zwracania, rosnaco) + 2 z puli euron rezimu
+    (bez zwracania, rosnaco). Daty syntetyczne (zob. `_synthetic_dates`).
+
+    Determinizm: w pelni okreslony przez `rng`. Reprodukowalny strumien:
+        from driftscope.core.seeds import make_worker_seeds
+        seq = make_worker_seeds(BASE_SEED, 1)[0]
+        draws = generate_uniform_draws(n, "R2", np.random.default_rng(seq))
+
+    Args:
+        n_draws: liczba losowan do wygenerowania (> 0).
+        regime: "R1" | "R2" | "R3" — wyznacza pule euronumerow i kalendarz.
+        rng: generator NumPy (jedyne zrodlo losowosci).
+
+    Returns:
+        Lista `n_draws` rekordow `DrawRecord` w porzadku chronologicznym.
+
+    Raises:
+        ValueError: gdy `regime` nieznany lub `n_draws` <= 0.
+    """
+    if regime not in EURON_POOL_SIZE:
+        raise ValueError(f"Nieznany rezim: {regime!r} (oczekiwano R1/R2/R3)")
+    if n_draws <= 0:
+        raise ValueError(f"n_draws musi byc > 0, otrzymano {n_draws}")
+
+    euron_high = EURON_POOL_SIZE[regime]
+    dates = _synthetic_dates(n_draws, regime)
+    records: list[DrawRecord] = []
+
+    for draw_date in dates:
+        # +1 bo rng.choice zwraca indeksy 0-based, a liczby sa 1-based.
+        main = np.sort(rng.choice(_MAIN_POOL_SIZE, size=_MAIN_DRAW, replace=False) + 1)
+        euron = np.sort(rng.choice(euron_high, size=_EURON_DRAW, replace=False) + 1)
+        records.append(
+            DrawRecord(
+                draw_date=draw_date,
+                main_1=int(main[0]),
+                main_2=int(main[1]),
+                main_3=int(main[2]),
+                main_4=int(main[3]),
+                main_5=int(main[4]),
+                euron_1=int(euron[0]),
+                euron_2=int(euron[1]),
+            )
+        )
+
+    return records

@@ -10,6 +10,13 @@ import pytest
 from scipy.stats import chisquare
 
 from driftscope.core.seeds import make_worker_seeds
+from driftscope.driftsim.calibration import (
+    REGIME_N,
+    calibration_curve,
+    chi2_main_uniformity,
+    estimate_rejection_rate,
+    false_positive_rate,
+)
 from driftscope.driftsim.null_uniform import (
     EURON_POOL_SIZE,
     generate_uniform_draws,
@@ -268,15 +275,63 @@ def test_planted_nonpositive_n_raises() -> None:
         generate_planted_draws(0, "R2", "freq_shift", 0.10, _rng())
 
 
-# ---------------------------------------------------------------------------
-# W3 — planted signal detection (stub, Decision Gate W5)
-# ---------------------------------------------------------------------------
+# ===========================================================================
+# calibration (W3) — sensitivity/specificity Monte Carlo
+# ===========================================================================
 
-@pytest.mark.skip(reason="Implementacja w W3 (planted_signals.py)")
-def test_planted_freq_shift_detected() -> None:
-    pass
+def test_chi2_detector_basic() -> None:
+    """chi2_main_uniformity: nie odrzuca na nullu, odrzuca na silnym freq_shift."""
+    null = generate_uniform_draws(400, "R2", _rng())
+    assert chi2_main_uniformity(null).reject_h0 is False
+    planted = generate_planted_draws(400, "R2", "freq_shift", 0.10, _rng())
+    assert chi2_main_uniformity(planted).reject_h0 is True
 
 
-@pytest.mark.skip(reason="Implementacja w W3 (planted_signals.py)")
-def test_null_uniform_no_false_signal() -> None:
-    pass
+def test_regime_n_matches_w0() -> None:
+    """Domyslne n kalibracji = realne liczby z seed CSV (W0)."""
+    assert REGIME_N == {"R1": 133, "R2": 389, "R3": 436}
+
+
+@pytest.mark.parametrize("regime", REGIMES)
+def test_specificity_fpr_near_alpha(regime: str) -> None:
+    """FPR na nullu ≈ α=0.05 (specificity ≈ 0.95); luzny gorny limit na MC error."""
+    fpr = false_positive_rate(regime, n_trials=200)
+    assert fpr <= 0.12  # α=0.05 + zapas na blad Monte Carlo (200 prob)
+
+
+def test_freq_shift_power_passes_gate() -> None:
+    """freq_shift δ=0.10 w R2: power > 70% (kryterium Decision Gate W5)."""
+    power = estimate_rejection_rate("freq_shift", 0.10, "R2", n_trials=200)
+    assert power > 0.70
+
+
+def test_power_increases_with_effect() -> None:
+    """Power rosnie z effect-size (δ=0.01 sub-threshold < δ=0.10)."""
+    low = estimate_rejection_rate("freq_shift", 0.01, "R2", n_trials=150)
+    high = estimate_rejection_rate("freq_shift", 0.10, "R2", n_trials=150)
+    assert high > low
+
+
+def test_chi2_blind_to_dependence_signal() -> None:
+    """chi² (marginalny) jest ~slepy na autocorr — power ≈ FPR, << freq_shift.
+
+    Uczciwy wynik kalibracji: sygnaly zaleznosciowe wymagaja wlasnych testow (W4/W6).
+    """
+    autocorr_power = estimate_rejection_rate("autocorr", 0.20, "R2", n_trials=150)
+    freq_power = estimate_rejection_rate("freq_shift", 0.10, "R2", n_trials=150)
+    assert autocorr_power < 0.30
+    assert autocorr_power < freq_power
+
+
+def test_estimate_determinism() -> None:
+    """Ten sam base_seed → identyczna estymata (DoD-6)."""
+    a = estimate_rejection_rate("freq_shift", 0.05, "R2", n_trials=60, base_seed=7)
+    b = estimate_rejection_rate("freq_shift", 0.05, "R2", n_trials=60, base_seed=7)
+    assert a == b
+
+
+def test_calibration_curve_shape() -> None:
+    """calibration_curve zwraca power per effect z siatki §6, w [0,1]."""
+    curve = calibration_curve("freq_shift", "R2", n_trials=8)
+    assert set(curve.keys()) == set(EFFECT_SIZES["freq_shift"])
+    assert all(0.0 <= p <= 1.0 for p in curve.values())

@@ -275,6 +275,7 @@ def mmd_uniform_detector(
     alpha: float = DEFAULT_ALPHA,
     ref_regime: Regime = "R2",
     base_seed: int = 20260531,
+    bandwidth_mult: float = 1.0,
 ) -> Detector:
     """Fabryka detektora MMD zgodnego z interfejsem `calibration.Detector`.
 
@@ -302,8 +303,14 @@ def mmd_uniform_detector(
     `draws` daja identyczny p-value; rozne `draws` → niezalezne strumienie. Seed z hash
     obserwacji nie wprowadza biasu: referencja pozostaje uniform niezaleznie od seeda,
     a odwzorowanie seed→probka jest nieskorelowane z odchyleniem obserwacji.
+
+    `bandwidth_mult` (spec curve §4): mnoznik bandwidth wzgledem median heuristic
+    (σ = bandwidth_mult · median_heuristic(X)). 1.0 = domyslna heurystyka; {0.5, 2.0}
+    to punkty spec curve. Anti-leakage zachowane (heurystyka liczona tylko na X).
     """
     actual_step = window if step is None else step
+    if bandwidth_mult <= 0.0:
+        raise ValueError(f"bandwidth_mult musi byc > 0, otrzymano {bandwidth_mult}")
     if actual_step < window:
         raise ValueError(
             f"step={actual_step} < window={window}: okna nakladajace sie lamia "
@@ -327,9 +334,19 @@ def mmd_uniform_detector(
         reference = generate_uniform_draws(n, ref_regime, rng)
         x = sliding_frequency_vectors(draws, window, actual_step)
         y = sliding_frequency_vectors(reference, window, actual_step)
-        result = mmd_permutation_test(x, y, n_perm=n_perm, rng=rng, alpha=alpha)
+        bandwidth = bandwidth_mult * median_heuristic(x)  # anti-leakage: σ tylko z X
+        result = mmd_permutation_test(
+            x, y, n_perm=n_perm, rng=rng, alpha=alpha, bandwidth=bandwidth
+        )
         return result.model_copy(
-            update={"metadata": {**result.metadata, "window": window, "step": actual_step}}
+            update={
+                "metadata": {
+                    **result.metadata,
+                    "window": window,
+                    "step": actual_step,
+                    "bandwidth_mult": bandwidth_mult,
+                }
+            }
         )
 
     return detector

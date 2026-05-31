@@ -49,6 +49,18 @@ czysta komorke Disagreement Protocol — JEDYNY detektor lapiacy ten sygnal. Pow
   below floor (finding pierwotny W6, naprawiony w v5; analog W0 dla δ=0.01).
 Uzycie: `estimate_rejection_rate("pair_corr", 0.10, "R3", detector=cooccurrence_detector())`.
 
+Detektor W6 (`recurrence.recurrence_detector`): test TEMPORALNY — gap GoF (KS gapow vs
+Geometric(q=0.1), permutacyjnie kalibrowany draw-order shuffle, max_k omnibus + lokalizacja
+liczby). Trzecia rodzina (recurrence) obok marginalnej (chi²/MMD) i lacznej (co-occurrence).
+Kluczowa wlasciwosc: shuffle zachowuje LICZNOSC → WARUNKUJE na marginesie. Profil
+(zwalidowany, n_trials=40/n_perm=99):
+- WYKRYWA autocorr (clumping): R3 ρ=0.20 → 0.78, R2 ρ=0.10 → 0.50; rosnie z ρ.
+- czesciowo seasonality (R3 0.10 → 0.38, periodycznosc).
+- SLEPY na freq_shift (0.03) i trend (0.10) — marginal/drift skonditionowany przez shuffle;
+  SLEPY na pair_corr (0.00) — nie-temporalny. FPR(null)=0.05.
+Komplementarny: jedyny czysto temporalny; per-liczba KS p-values zasilaja Family B FDR (§5).
+Uzycie: `estimate_rejection_rate("autocorr", 0.20, "R3", detector=recurrence_detector())`.
+
 Domyslne n per rezim = realne liczby losowan z seed CSV (W0, MEMORY.md 2026-05-26):
 R1=133, R2=389, R3=436 — kalibracja odzwierciedla faktyczna moc na danych.
 """

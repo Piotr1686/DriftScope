@@ -22,6 +22,20 @@ Empiryczny wynik kalibracji (zwalidowany testem) — co chi² wykrywa, a co nie:
 Harness jest detector-agnostyczny: kolejne testy (MMD W4, recurrence/co-occurrence
 W6) wepna sie tym samym interfejsem `Detector`.
 
+Detektor W4 (`k4_mmd.mmd_uniform_detector`): MMD² (Gaussian RBF na frequency vectors
+Δ⁴⁹ per okno) obserwacji vs swiezo wygenerowany uniform reference; okna NIENAKLADAJACE
+sie (warunek wymienialnosci permutacyjnej). Empiryczny wynik kalibracji (zwalidowany,
+window=25, 2026-05-31):
+- WYKRYWA freq_shift (~1.0), trend (R2/R3 ~1.0; R1 ~0.31), autocorr (R2/R3 0.68/0.82;
+  R1 slaby ~0.26), seasonality (R3 ~0.88; R1/R2 = null wg guard #4).
+- SLEPY na pair_corr (power ≈ FPR ~0.05 we wszystkich rezimach) — TAK SAMO jak chi².
+  Marginalny wektor czestosci nie niesie informacji o joint → ani chi², ani MMD nie
+  lapia wspolwystapien. **Wniosek: dedykowany test wspolwystapien (W6) jest KONIECZNY,
+  nie opcjonalny** (odpowiada na otwarte pytanie z W3).
+- R1 (n=133) jest na granicy danych dla MMD okiennego (5 okien) — power systematycznie
+  nizsza niz R2/R3.
+Uzycie: `estimate_rejection_rate(sig, eff, reg, detector=mmd_uniform_detector(window=25))`.
+
 Domyslne n per rezim = realne liczby losowan z seed CSV (W0, MEMORY.md 2026-05-26):
 R1=133, R2=389, R3=436 — kalibracja odzwierciedla faktyczna moc na danych.
 """

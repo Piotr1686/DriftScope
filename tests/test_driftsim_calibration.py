@@ -247,15 +247,24 @@ def test_autocorr_increases_recurrence() -> None:
     assert shared_fraction(planted) > shared_fraction(null)
 
 
-def test_pair_corr_increases_cooccurrence() -> None:
-    """pair_corr lift=2.0: para planted wspolwystepuje czesciej niz w nullu."""
+def test_pair_corr_increases_cooccurrence_preserving_margins() -> None:
+    """pair_corr p=0.10: para planted wspolwystepuje czesciej, ALE marginesy ~uniform (v5).
+
+    Nowy mechanizm (margin-preserving): podnosi joint (7,13) bez zmiany marginesow —
+    czysty sygnal joint, na ktory chi²/MMD sa dowodliwie slepe.
+    """
     def cooc(draws: list) -> int:
         i, j = PLANTED_PAIR
         return sum(i in d.main_numbers and j in d.main_numbers for d in draws)
 
-    planted = generate_planted_draws(8000, "R2", "pair_corr", 2.0, _rng(offset=0))
+    planted = generate_planted_draws(8000, "R2", "pair_corr", 0.10, _rng(offset=0))
     null = generate_uniform_draws(8000, "R2", _rng(offset=0))
     assert cooc(planted) > cooc(null)
+
+    # Margines liczb pary ~ uniform (0.1): konstrukcja kompensuje przez "force-brak-obu".
+    i, j = PLANTED_PAIR
+    margin_i = sum(i in d.main_numbers for d in planted) / len(planted)
+    assert margin_i == pytest.approx(0.1, abs=0.015)
 
 
 # --- Walidacja wejscia ---
@@ -313,15 +322,16 @@ def test_power_increases_with_effect() -> None:
 
 
 def test_chi2_blind_to_pair_correlation() -> None:
-    """chi² (marginalny) jest ~slepy na pair_corr — power ≈ FPR << freq_shift.
+    """chi² (marginalny) jest slepy na pair_corr — power ≈ FPR << freq_shift.
 
-    pair_corr zmienia tylko wspolwystapienia jednej pary (joint), marginal ~uniform.
-    Uczciwy wynik kalibracji: ten sygnal wymaga dedykowanego testu wspolwystapien (W6).
+    Nowy mechanizm pair_corr (v5) zachowuje marginesy DOKLADNIE → chi² jest dowodliwie
+    slepy nawet przy najsilniejszym p=0.10 (caly sygnal jest w wymiarze joint). Wykrywa go
+    tylko dedykowany test wspolwystapien (§5c, W6 — zob. test_cooccurrence).
     (autocorr i seasonality chi² JEDNAK wykrywa — przez nadmierna dyspersje zliczen.)
     """
-    pair_power = estimate_rejection_rate("pair_corr", 2.0, "R2", n_trials=150)
+    pair_power = estimate_rejection_rate("pair_corr", 0.10, "R2", n_trials=150)
     freq_power = estimate_rejection_rate("freq_shift", 0.10, "R2", n_trials=150)
-    assert pair_power < 0.30
+    assert pair_power < 0.15
     assert pair_power < freq_power
 
 

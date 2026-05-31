@@ -13,11 +13,19 @@ Sygnaly (preregistration_v3 §6 — wszystkie siatki PINNED):
   3. trend       — p_k(t)=1/50+β·t/T   β ∈ {0.01,0.02,0.05,0.10}
   4. seasonality — kontrast Tue/Fri c  c ∈ {0.01,0.02,0.05,0.10}
                    GUARD: tylko R3; w R1/R2 degeneruje do null (§6).
-  5. pair_corr   — lift wspolwystapien lift ∈ {1.1,1.2,1.5,2.0}
+  5. pair_corr   — forced-frac p        p ∈ {0.01,0.02,0.05,0.10}
+                   MARGINESY ZACHOWANE (czysty sygnal joint; §6 — re-design v5).
 
 Siatki β (trend) i c (seasonality) zostaly doprecyzowane w preregistration_v3
 (§0/§6, 2026-05-30) — v2 zostawial je nie-pinowane; v3 ratyfikuje wartosci powyzej
 jako rewizje czysta PRZED kalibracja W3.
+
+Mechanizm pair_corr przeprojektowany w preregistration_v5 (W6, 2026-05-31): parametr
+to teraz forced-fraction p (NIE mnoznik lift), a konstrukcja ZACHOWUJE marginesy (zob.
+`_sample_pair_corr`). Stary mechanizm (lift, "force pare + 3 uniform") przeciekal do
+marginesow (P(planted)=0.1+0.9·p) i dawal forced-frac 0.0008..0.0082 — ponizej progu
+detekcji kazdego testu (finding W6). Nowy izoluje sygnal w wymiarze JOINT: chi²/MMD
+dowodliwie slepe (marginesy uniform), test wspolwystapien (§5c) lapie.
 """
 from __future__ import annotations
 
@@ -41,7 +49,7 @@ EFFECT_SIZES: dict[SignalType, tuple[float, ...]] = {
     "autocorr": (0.05, 0.10, 0.15, 0.20),     # ρ    (PINNED od v2)
     "trend": (0.01, 0.02, 0.05, 0.10),        # β    (PINNED w v3)
     "seasonality": (0.01, 0.02, 0.05, 0.10),  # c    (PINNED w v3)
-    "pair_corr": (1.1, 1.2, 1.5, 2.0),        # lift (PINNED od v2)
+    "pair_corr": (0.01, 0.02, 0.05, 0.10),    # forced-frac p, margin-preserving (v5)
 }
 
 _MAIN_POOL_SIZE = 50
@@ -51,8 +59,13 @@ _MAIN_DRAW = 5
 PLANTED_MAIN = 7          # sygnaly #1, #3, #4 modyfikuja te liczbe
 PLANTED_PAIR = (7, 13)    # sygnal #5: ta para wspolwystepuje czesciej
 
+# Pula 48 liczb poza para (1-based) — uzywana przy wymuszaniu pary i kompensacji marginesu.
+_PAIR_OTHERS = np.array(
+    [k for k in range(1, _MAIN_POOL_SIZE + 1) if k not in PLANTED_PAIR], dtype=np.int64
+)
+
 # Bazowe P(obie liczby pary w jednym losowaniu 5/50) pod nullem:
-#   C(48,3)/C(50,5) = (5·4)/(50·49) = 20/2450
+#   C(48,3)/C(50,5) = (5·4)/(50·49) = 20/2450 ≈ 0.00816
 _PAIR_BASE_PROB = (_MAIN_DRAW * (_MAIN_DRAW - 1)) / (_MAIN_POOL_SIZE * (_MAIN_POOL_SIZE - 1))
 
 _WEEKDAY_FRIDAY = 4
@@ -94,19 +107,27 @@ def _weights_for(
     return w
 
 
-def _sample_pair_corr(effect: float, rng: np.random.Generator) -> np.ndarray:
-    """Sygnal #5: z prawdopodobienstwem p_force wymusza pare PLANTED_PAIR.
+def _sample_pair_corr(forced_frac: float, rng: np.random.Generator) -> np.ndarray:
+    """Sygnal #5 (margin-preserving): podnosi wspolwystapienie PLANTED_PAIR, NIE marginesy.
 
-    lift = docelowy mnoznik P(obie liczby pary). p_force ≈ (lift-1)·P_base
-    (przyrost prawdopodobienstwa wspolwystapienia ponad null).
+    Mieszanka 3-komponentowa (forced_frac = p ∈ [0, 0.1], preregistration_v5 §6):
+      - z p:       wymus pare {i,j} + 3 liczby z pozostalych 48,
+      - z 9p:      wymus BRAK obu i,j (5 liczb z pozostalych 48) — kompensata marginesu,
+      - z (1−10p): zwykly uniform 5/50.
+    Wagi gwarantuja P(i)=P(j)=P(dowolnej innej)=0.1 DOKLADNIE (margines uniform), podczas
+    gdy P(i,j razem) rosnie z ~0.00816 do 0.918·p+0.00816 (np. ~6.6× przy p=0.05). Dzieki
+    temu sygnal jest izolowany w wymiarze JOINT: chi²/MMD (marginalne) slepe, test
+    wspolwystapien (§5c) lapie. Konstrukcja wymaga p ≤ 0.1 (wtedy 1−10p ≥ 0).
     """
-    p_force = min(max((effect - 1.0) * _PAIR_BASE_PROB, 0.0), 1.0)
     i, j = PLANTED_PAIR
-    if rng.random() < p_force:
-        # Wymus pare + 3 pozostale liczby z reszty puli (rosnaco).
-        rest_pool = [k for k in range(1, _MAIN_POOL_SIZE + 1) if k not in (i, j)]
-        extra = rng.choice(rest_pool, size=_MAIN_DRAW - 2, replace=False)
+    r = rng.random()
+    if r < forced_frac:
+        # Wymus pare + 3 z pozostalych 48.
+        extra = rng.choice(_PAIR_OTHERS, size=_MAIN_DRAW - 2, replace=False)
         return np.sort(np.array([i, j, *extra]))
+    if r < 10.0 * forced_frac:
+        # Wymus brak obu (5 z pozostalych 48) — utrzymuje margines i,j na 0.1.
+        return np.sort(rng.choice(_PAIR_OTHERS, size=_MAIN_DRAW, replace=False))
     # Zwykle losowanie uniform 5/50.
     return np.sort(rng.choice(_MAIN_POOL_SIZE, size=_MAIN_DRAW, replace=False) + 1)
 

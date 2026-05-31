@@ -36,6 +36,19 @@ window=25, 2026-05-31):
   nizsza niz R2/R3.
 Uzycie: `estimate_rejection_rate(sig, eff, reg, detector=mmd_uniform_detector(window=25))`.
 
+Detektor W6 (`cooccurrence.cooccurrence_detector`): test struktury LACZNEJ par —
+max-pair standaryzowane wspolwystapienie z nullem curveball (zachowuje OBA marginesy,
+lamie parowanie). Domyka luke pair_corr, na ktora chi²/MMD sa slepe. Po przeprojektowaniu
+mechanizmu pair_corr na MARGIN-PRESERVING (forced-frac p, marginesy uniform — §6/v5) daje
+czysta komorke Disagreement Protocol — JEDYNY detektor lapiacy ten sygnal. Power
+(n_trials=50, n_perm=99):
+- p=0.01/0.02/0.05/0.10 → R1: .06/.08/.80/1.0 · R2: .06/.40/1.0/1.0 · R3: .08/.36/1.0/1.0.
+- Przy p=0.10: chi²=0.06, MMD=0.03 (oba FPR floor — marginesy zachowane → dowodliwie
+  slepe). cooc FPR(null R3)=0.03. Decision Gate (>70%) spelniony dla p ≥ 0.05 wszedzie.
+- Stary mechanizm (lift) przeciekal do marginesow i dawal forced-frac 0.0008..0.0082 =
+  below floor (finding pierwotny W6, naprawiony w v5; analog W0 dla δ=0.01).
+Uzycie: `estimate_rejection_rate("pair_corr", 0.10, "R3", detector=cooccurrence_detector())`.
+
 Domyslne n per rezim = realne liczby losowan z seed CSV (W0, MEMORY.md 2026-05-26):
 R1=133, R2=389, R3=436 — kalibracja odzwierciedla faktyczna moc na danych.
 """

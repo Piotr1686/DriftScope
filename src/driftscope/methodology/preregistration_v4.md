@@ -1,6 +1,6 @@
 # preregistration_v4.md — DriftScope Methodology Pre-registration
 
-**Status:** ACTIVE (zastepuje v3; rewizja MIESZANA — zob. §0)
+**Status:** SUPERSEDED przez v5 [2026-05-31] (history; zastepowala v3; rewizja MIESZANA — zob. §0)
 **Wersja:** v4
 **Data zamrozenia:** 2026-05-31 (po kalibracji W4 K4-MMD, PRZED W5 Decision Gate i W6)
 **Supersedes:** preregistration_v3.md (ktora superseduje v2, v1)

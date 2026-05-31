@@ -147,7 +147,9 @@ DriftScope/
 │   │   ├── preregistration_v1.md     # SUPERSEDED przez v2 (history)
 │   │   ├── preregistration_v2.md     # SUPERSEDED przez v3 (history)
 │   │   ├── preregistration_v3.md     # SUPERSEDED przez v4 (history)
-│   │   ├── preregistration_v4.md     # ACTIVE — frozen choices + revision log
+│   │   ├── preregistration_v4.md     # SUPERSEDED przez v5 (history)
+│   │   ├── preregistration_v5.md     # ACTIVE — frozen choices + revision log
+│   │   ├── cooccurrence.py           # test wspolwystapien par (§5c, curveball null)
 │   │   ├── h1_classical.py           # ADF, KPSS, Bayesian CP, Welch, ACF
 │   │   ├── k4_mmd.py                 # Gaussian RBF na freq vectors (Δ⁴⁹)
 │   │   ├── permutation.py            # shuffle test + @njit(cache=True) hot loop

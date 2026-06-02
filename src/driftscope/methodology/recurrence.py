@@ -33,11 +33,10 @@ Zasila Family B FDR (§5).
 from __future__ import annotations
 
 import hashlib
-from typing import Callable
 
 import numpy as np
 
-from driftscope.core.types import DrawRecord, TestResult
+from driftscope.core.types import Detector, DrawRecord, TestResult
 
 _MAIN_POOL_SIZE = 50
 _MAIN_DRAW = 5
@@ -45,8 +44,6 @@ _Q_MAIN = _MAIN_DRAW / _MAIN_POOL_SIZE  # 0.1 — P(liczba w jednym losowaniu) p
 
 DEFAULT_N_PERM = 999
 DEFAULT_ALPHA = 0.05
-
-Detector = Callable[[list[DrawRecord]], TestResult]
 
 
 # ---------------------------------------------------------------------------

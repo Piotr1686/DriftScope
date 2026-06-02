@@ -66,21 +66,17 @@ R1=133, R2=389, R3=436 — kalibracja odzwierciedla faktyczna moc na danych.
 """
 from __future__ import annotations
 
-from typing import Callable
-
 import numpy as np
 from scipy.stats import chisquare
 
 from driftscope.core.seeds import make_worker_seeds
-from driftscope.core.types import DrawRecord, TestResult
+from driftscope.core.types import Detector, DrawRecord, TestResult
 from driftscope.driftsim.null_uniform import Regime, generate_uniform_draws
 from driftscope.driftsim.planted_signals import (
     EFFECT_SIZES,
     SignalType,
     generate_planted_draws,
 )
-
-Detector = Callable[[list[DrawRecord]], TestResult]
 
 _MAIN_POOL_SIZE = 50
 

@@ -30,12 +30,11 @@ njit hot loop, brak importu sklearn na sciezce goracej i zero ryzyka regresji li
 from __future__ import annotations
 
 import hashlib
-from typing import Callable
 
 import numpy as np
 from numba import njit
 
-from driftscope.core.types import DrawRecord, TestResult
+from driftscope.core.types import Detector, DrawRecord, TestResult
 from driftscope.driftsim.null_uniform import Regime, generate_uniform_draws
 
 _MAIN_POOL_SIZE = 50  # pula glowna 1-50 → frequency vector p ∈ Δ⁴⁹
@@ -46,8 +45,6 @@ _MAIN_POOL_SIZE = 50  # pula glowna 1-50 → frequency vector p ∈ Δ⁴⁹
 DEFAULT_WINDOW = 200
 DEFAULT_N_PERM = 999
 DEFAULT_ALPHA = 0.05
-
-Detector = Callable[[list[DrawRecord]], TestResult]
 
 
 # ---------------------------------------------------------------------------

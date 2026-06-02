@@ -17,18 +17,15 @@ Monte Carlo (E[FPR] ≤ α). Determinizm (DoD-6): detektor czysta funkcja `draws
 from __future__ import annotations
 
 import hashlib
-from typing import Callable
 
 import numpy as np
 from numba import njit
 
-from driftscope.core.types import DrawRecord, TestResult
+from driftscope.core.types import Detector, DrawRecord, TestResult
 
 _MAIN_DRAW = 5
 DEFAULT_N_PERM = 999
 DEFAULT_ALPHA = 0.05
-
-Detector = Callable[[list[DrawRecord]], TestResult]
 
 
 def permutation_pvalue(observed: float, null_stats: np.ndarray) -> float:

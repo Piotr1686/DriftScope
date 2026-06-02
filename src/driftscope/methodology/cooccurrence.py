@@ -49,12 +49,11 @@ Numba (Os 3): curveball hot loop w `@njit(cache=True)`.
 from __future__ import annotations
 
 import hashlib
-from typing import Callable
 
 import numpy as np
 from numba import njit
 
-from driftscope.core.types import DrawRecord, TestResult
+from driftscope.core.types import Detector, DrawRecord, TestResult
 
 _MAIN_POOL_SIZE = 50  # pula glowna 1-50
 _MAIN_DRAW = 5        # 5 liczb na losowanie (suma wiersza incydencji)
@@ -66,8 +65,6 @@ DEFAULT_ALPHA = 0.05
 DEFAULT_BURN_FACTOR = 5   # burn-in = BURN_FACTOR * n_draws (min DEFAULT_BURN_MIN)
 DEFAULT_BURN_MIN = 1000
 DEFAULT_THIN_FACTOR = 1   # thinning = THIN_FACTOR * n_draws wymian miedzy probkami
-
-Detector = Callable[[list[DrawRecord]], TestResult]
 
 
 # ---------------------------------------------------------------------------

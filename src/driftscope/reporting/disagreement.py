@@ -21,14 +21,10 @@ Modul jest reporting-only (NIE methodology/) → nie podlega dyscyplinie prereg 
 """
 from __future__ import annotations
 
-from collections.abc import Callable, Mapping
+from collections.abc import Mapping
 from dataclasses import dataclass
 
-from driftscope.core.types import DrawRecord, TestResult
-
-# Reuse interfejsu detektora z driftsim.calibration (zadeklarowany lokalnie, zeby
-# reporting nie ciagnal ciezkich importow numba z calibration).
-Detector = Callable[[list[DrawRecord]], TestResult]
+from driftscope.core.types import Detector, DrawRecord, TestResult
 
 # Trzy filary DoD-4 — kolejnosc kanoniczna (stabilna dla raportow).
 PILLARS: tuple[str, str, str] = ("h1", "mmd", "cooccurrence")

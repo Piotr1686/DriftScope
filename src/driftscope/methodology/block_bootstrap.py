@@ -18,12 +18,11 @@ Determinizm (DoD-6): detektor czysta funkcja `draws` (seed z hash). njit hot loo
 from __future__ import annotations
 
 import hashlib
-from typing import Callable
 
 import numpy as np
 from numba import njit
 
-from driftscope.core.types import DrawRecord, TestResult
+from driftscope.core.types import Detector, DrawRecord, TestResult
 from driftscope.methodology.permutation import _main_matrix, _mean_lag1_overlap, permutation_pvalue
 
 _MAIN_DRAW = 5
@@ -31,8 +30,6 @@ BLOCK_SIZES: tuple[int, ...] = (5, 10, 20)  # pre-registered
 DEFAULT_N_BOOT = 999
 DEFAULT_ALPHA = 0.05
 _DEFAULT_BLOCK = 10
-
-Detector = Callable[[list[DrawRecord]], TestResult]
 
 
 @njit(cache=True)

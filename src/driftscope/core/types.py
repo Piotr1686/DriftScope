@@ -1,6 +1,7 @@
-"""Pydantic modele danych: DrawRecord, RegimeSpec, TestResult."""
+"""Pydantic modele danych: DrawRecord, RegimeSpec, TestResult + alias Detector."""
 from __future__ import annotations
 
+from collections.abc import Callable
 from datetime import date
 from typing import Any
 
@@ -60,3 +61,9 @@ class TestResult(BaseModel):
     reject_h0: bool
     regime: str | None = None
     metadata: dict[str, Any] = {}
+
+
+# Wspolny interfejs detektora (harness calibration DETECTOR-AGNOSTYCZNY): czysta funkcja
+# strumienia losowan → TestResult. Jedno zrodlo prawdy dla calibration / methodology /
+# reporting (zamiast lokalnych re-deklaracji w kazdym module).
+Detector = Callable[[list[DrawRecord]], TestResult]

@@ -95,6 +95,26 @@ def run_kpss(series: np.ndarray, label: str = "") -> TestResult:
 # BOCPD — Bayesian Online Change Point Detection
 # ---------------------------------------------------------------------------
 
+# Skalibrowane progi reject_h0 = 95. percentyl rozkladu max(cp_prob[warmup:]) pod
+# nullem uniform-iid (FPR ~= 0.05). Wyznaczone: scripts/calibrate_bocpd_threshold.py
+# (BASE_SEED=42, 200 trials, R3, hazard=0.005, alpha=0.1, warmup=N//K). Prog zalezy
+# od (N, K): wieksza pula symboli = wyzszy poziom szumu w cp_prob pod nullem.
+# NIEzalezny od dlugosci serii (max to wczesny transient, identyczny dla n=436/n=958).
+#
+# WARM-UP (preregistration_v6 §0): max(cp_prob) liczymy POMIJAJAC pierwsze
+# warmup = N // K losowan. BOCPD potrzebuje "zobaczyc" alfabet — zanim pula symboli
+# zostanie pokryta, KAZDE losowanie wnosi nowe symbole → sztuczny spike cp_prob
+# (transient burn-in, argmax~=4-7). To artefakt, NIE change-point: na realnych danych
+# pole main (negative control) mialo JEDYNY ponadprogowy peak wlasnie w idx=7 (burn-in),
+# 2. peak juz 0.208. Wykluczenie warm-up daje czysty negative control (main: 0.770→0.208,
+# brak reject) i nie rusza positive control euron (peaki 2014/2022 sa mid-series).
+# Stary magiczny prog 0.3 (bez warm-up) dawal FPR=0.07 (euron) i FPR=0.77 (main).
+_BOCPD_REJECT_THRESHOLD: dict[str, float] = {
+    "euron": 0.33,  # N=12, K=2, warmup=6;  p95 null = 0.329
+    "main": 0.70,   # N=50, K=5, warmup=10; p95 null = 0.699
+}
+
+
 def _bocpd_dirichlet(
     obs_indices_list: list[list[int]],
     n_symbols: int,
@@ -168,6 +188,7 @@ def run_bocpd(
     alpha: float = 0.1,
     hazard: float = 0.005,
     top_k: int = 5,
+    warmup: int | None = None,
 ) -> TestResult:
     """BOCPD Adams-MacKay 2007 — detekcja change-pointów w rozkładzie symboli.
 
@@ -175,6 +196,12 @@ def run_bocpd(
     alpha=0.1: świadoma decyzja (MEMORY.md 2026-05-26) — α=1 osłabia sygnał przy
     zmianie puli; α=0.1 daje cp_prob>0.4 przy pierwszym niewidzianym symbolu.
     p_value = 1 - max(cp_prob): bayesowska posterior, nie frequentist.
+    reject_h0: max(cp_prob[warmup:]) > prog per-pole skalibrowany na FPR~=0.05 pod
+    nullem uniform-iid (zob. `_BOCPD_REJECT_THRESHOLD`; ważny dla alpha=0.1, hazard=0.005).
+
+    warmup: liczba początkowych losowań pomijanych przy detekcji (preregistration_v6 §0).
+    None → N // K (jeden nominalny przebieg przez pulę): pomija transient burn-in,
+    w którym cp_prob sztucznie rośnie, bo pula symboli nie została jeszcze "zobaczona".
     """
     if field == "euron":
         n_symbols, k_per_draw = 12, 2
@@ -187,23 +214,30 @@ def run_bocpd(
         obs_list, n_symbols, k_per_draw, alpha, hazard
     )
 
-    # Lokalne maksima cp_probs = kandydaci na change-pointy
+    # Warm-up: pomijamy transient burn-in (cp_prob[:warmup]). Clamp by zostawic >=1 punkt.
+    if warmup is None:
+        warmup = n_symbols // k_per_draw
+    warmup = max(0, min(warmup, len(cp_probs) - 1))
+
+    # Lokalne maksima cp_probs = kandydaci na change-pointy (tylko POZA warm-up)
     # distance=5: ~5 losowan ≈ 5 tygodni EuroJackpot (piątek) — pozwala na bliskie szczyty
     peaks, _ = find_peaks(cp_probs, height=0.05, distance=5)
+    peaks = peaks[peaks >= warmup]
     if len(peaks) == 0:
-        peaks = np.array([int(np.argmax(cp_probs))])
+        peaks = np.array([warmup + int(np.argmax(cp_probs[warmup:]))])
 
     top_idx = peaks[np.argsort(cp_probs[peaks])[::-1]][:top_k]
     top_dates = [str(draws[i].draw_date) for i in top_idx]
     top_probs = [float(cp_probs[i]) for i in top_idx]
 
-    max_prob = float(np.max(cp_probs))
+    max_prob = float(np.max(cp_probs[warmup:]))
+    reject_threshold = _BOCPD_REJECT_THRESHOLD[field]
     return TestResult(
         test_name="bocpd_dirichlet_multinomial",
         series_label=f"{field}_counts (N={n_symbols}, K={k_per_draw}, H={hazard})",
         statistic=max_prob,
         p_value=float(1.0 - max_prob),
-        reject_h0=bool(max_prob > 0.3),
+        reject_h0=bool(max_prob > reject_threshold),
         metadata={
             "field": field,
             "hazard": hazard,
@@ -211,9 +245,15 @@ def run_bocpd(
             "n_symbols": n_symbols,
             "k_per_draw": k_per_draw,
             "n_draws": len(draws),
+            "warmup": warmup,
             "top_changepoint_dates": top_dates,
             "top_changepoint_probs": top_probs,
-            "note": "p_value = 1 - max(cp_prob); Bayesian posterior, nie frequentist",
+            "reject_threshold": reject_threshold,
+            "note": (
+                "p_value = 1 - max(cp_prob); Bayesian posterior, nie frequentist. "
+                "reject_h0 gdy max(cp_prob) > prog skalibrowany na FPR~=0.05 pod nullem "
+                "(per-pole; wazny dla alpha=0.1, hazard=0.005)"
+            ),
         },
     )
 

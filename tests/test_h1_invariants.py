@@ -12,8 +12,11 @@ from pathlib import Path
 import numpy as np
 import pytest
 
+from driftscope.core.seeds import make_worker_seeds
 from driftscope.core.types import DrawRecord
+from driftscope.driftsim.null_uniform import generate_uniform_draws
 from driftscope.methodology.h1_classical import (
+    _BOCPD_REJECT_THRESHOLD,
     extract_series,
     run_acf_test,
     run_adf,
@@ -130,9 +133,36 @@ def test_bocpd_no_changepoint_on_uniform() -> None:
     """BOCPD nie powinien wykryć silnego CP gdy pula jest stała przez całą serię."""
     draws = _make_draws(list(range(1, 11)), 300, seed=42)
     result = run_bocpd(draws, field="euron", hazard=0.005)
-    # Uniform series — max cp_prob powinno być bliskie H (= 0.005), zdecydowanie < 0.3
+    # Uniform series — max cp_prob powinno być bliskie H (= 0.005), zdecydowanie < progu
     assert not result.reject_h0, (
         f"Jednorodna seria nie powinna dać reject_h0 (max_prob={result.statistic:.3f})"
+    )
+
+
+@pytest.mark.parametrize(
+    ("field", "fpr_upper"),
+    [("euron", 0.12), ("main", 0.13)],  # 0.05 + ~3 sigma MC error dla 100 trials
+)
+def test_bocpd_fpr_under_null(field: str, fpr_upper: float) -> None:
+    """DoD-2 (rodzina BOCPD): FPR pod nullem uniform-iid ~= alpha=0.05.
+
+    Skalibrowany prog reject_h0 (_BOCPD_REJECT_THRESHOLD) to 95. percentyl rozkladu
+    max(cp_prob[warmup:]) pod nullem → FPR ~= 0.05. Walidacja niezalezna od dlugosci
+    serii (prog kalibrowany na n=436, tutaj n=200 — warm-up=N//K usuwa transient burn-in).
+    """
+    n_trials = 100
+    seeds = make_worker_seeds(42, n_trials)
+    rejects = 0
+    for seq in seeds:
+        rng = np.random.default_rng(seq)
+        draws = generate_uniform_draws(200, "R3", rng)
+        if run_bocpd(draws, field=field).reject_h0:
+            rejects += 1
+
+    fpr = rejects / n_trials
+    assert fpr <= fpr_upper, (
+        f"FPR={fpr:.3f} pod nullem ({field}) przekracza {fpr_upper} "
+        f"(prog={_BOCPD_REJECT_THRESHOLD[field]})"
     )
 
 
@@ -205,4 +235,24 @@ def test_dod_1b_bocpd_covers_known_changepoints() -> None:
     )
     assert found_2022, (
         f"DoD-1b: brak CP blisko 2022-03-25 ±30 dni. Top CP = {top_dates}"
+    )
+
+
+@pytest.mark.skipif(not _SEED_CSV.exists(), reason="Seed CSV niedostępny")
+def test_dod_1b_bocpd_negative_control_main() -> None:
+    """DoD-1b negative control: pole 'main' (1-50) NIE odrzuca H0 na realnych danych.
+
+    Brak znanej zmiany regul puli glownej → BOCPD nie powinien zapalic. Wykluczenie
+    warm-up (preregistration_v6 §0) usuwa transient burn-in, ktory wczesniej dawal
+    spurious reject (max=0.770 w idx=7 = 2012-05-11). Po korekcie max=0.208 << prog 0.70.
+    """
+    from driftscope.ingestion.lotto_scraper import load_seed_csv
+
+    draws = load_seed_csv(_SEED_CSV)
+    result = run_bocpd(draws, field="main", hazard=0.005, top_k=5)
+
+    assert not result.reject_h0, (
+        f"Negative control main NIE powinien odrzucac H0 "
+        f"(max={result.statistic:.3f} > prog={result.metadata['reject_threshold']}). "
+        f"Top CP = {result.metadata['top_changepoint_dates']}"
     )

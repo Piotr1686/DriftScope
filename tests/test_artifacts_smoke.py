@@ -10,10 +10,12 @@ import pytest
 @pytest.mark.skip(reason="Wymaga wygenerowanych artefaktow — uruchom po pipeline")
 def test_driftsim_runs_nonempty() -> None:
     import glob
+
     import polars as pl
     paths = glob.glob("artifacts/driftsim_runs/*.parquet")
     assert len(paths) > 0
-    assert pl.scan_parquet("artifacts/driftsim_runs/*.parquet").select(pl.count()).collect().item() > 0
+    lf = pl.scan_parquet("artifacts/driftsim_runs/*.parquet")
+    assert lf.select(pl.count()).collect().item() > 0
 
 
 @pytest.mark.requires_artifacts

@@ -5,7 +5,6 @@ Tier 2: fetch_draw_by_date() — API lotto.pl (stub, implementacja W1+)
 """
 from __future__ import annotations
 
-import warnings
 from datetime import date
 from pathlib import Path
 

@@ -5,12 +5,11 @@ CPU parallelism via joblib. Odpowiada za Os 0 z Hardware Transcendence Stack.
 
 Uruchomienie: pytest tests/test_environment.py -v
 """
-import sys
 import importlib
+import sys
 
 import numpy as np
 import pytest
-
 
 # ---------------------------------------------------------------------------
 # Python + NumPy wersje

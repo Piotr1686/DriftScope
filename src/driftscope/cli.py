@@ -9,7 +9,9 @@ app = typer.Typer(help="DriftScope — stationarity audit for discrete streams."
 
 @app.command()
 def run(
-    resume: bool = typer.Option(False, "--resume", help="Pominij konfiguracje z istniejacymi shardami"),
+    resume: bool = typer.Option(
+        False, "--resume", help="Pominij konfiguracje z istniejacymi shardami"
+    ),
 ) -> None:
     """Uruchom pelny pipeline DriftScope."""
     raise NotImplementedError("CLI run — implementacja w W1")

@@ -65,7 +65,9 @@ def test_adf_rejects_unit_root_on_white_noise() -> None:
     series = RNG.standard_normal(500)
     result = run_adf(series, label="white_noise")
     assert result.test_name == "adf"
-    assert result.p_value < 0.05, f"ADF p={result.p_value:.4f} — biały szum powinien być stacjonarny"
+    assert result.p_value < 0.05, (
+        f"ADF p={result.p_value:.4f} — biały szum powinien być stacjonarny"
+    )
     assert result.reject_h0
 
 
@@ -77,7 +79,9 @@ def test_adf_no_reject_on_random_walk() -> None:
     assert result.test_name == "adf"
     # Dla n=500 ADF zazwyczaj nie odrzuca dla prawdziwego random walk
     # Tolerancja: p > 0.05 w >90% przypadków; używamy assert "zdecydowanie p > 0.01"
-    assert result.p_value > 0.01, f"ADF zbyt agresywnie odrzuca random walk (p={result.p_value:.4f})"
+    assert result.p_value > 0.01, (
+        f"ADF zbyt agresywnie odrzuca random walk (p={result.p_value:.4f})"
+    )
 
 
 # ---------------------------------------------------------------------------

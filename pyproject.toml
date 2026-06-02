@@ -61,6 +61,14 @@ target-version = "py310"
 [tool.ruff.lint]
 select = ["E", "F", "I", "N", "W"]
 
+[tool.ruff.lint.per-file-ignores]
+# Notacja matematyczna (macierze X/Y/A/B, statystyki T, log_H/log_R/log_1mH z teorii) —
+# celowo wielkie litery zgodne z literatura (Gretton 2012 MMD, Adams-MacKay 2007 BOCPD).
+# CLAUDE.md dopuszcza notacje math w methodology/. Wylaczamy N803 (argumenty) + N806 (zmienne).
+"src/driftscope/methodology/k4_mmd.py" = ["N803", "N806"]
+"src/driftscope/methodology/h1_classical.py" = ["N803", "N806"]
+"tests/test_mmd_properties.py" = ["N803", "N806"]
+
 [tool.mypy]
 strict = true
 python_version = "3.10"

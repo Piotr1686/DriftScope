@@ -16,7 +16,6 @@ from statsmodels.tsa.stattools import adfuller, kpss
 
 from driftscope.core.types import DrawRecord, TestResult
 
-
 # ---------------------------------------------------------------------------
 # Ekstraktory szeregów
 # ---------------------------------------------------------------------------

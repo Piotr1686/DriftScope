@@ -181,6 +181,45 @@ def _bocpd_dirichlet(
     return cp_probs, rl_map
 
 
+def compute_bocpd_curve(
+    draws: list[DrawRecord],
+    field: Literal["main", "euron"] = "euron",
+    alpha: float = 0.1,
+    hazard: float = 0.005,
+    warmup: int | None = None,
+) -> tuple[np.ndarray, np.ndarray, int, float]:
+    """Pełna krzywa BOCPD + parametry detekcji — czysty accessor (reuse reporting/W8).
+
+    Wydzielone z `run_bocpd`: mapuje `field → (n_symbols, K, obs_list)`, odpala
+    `_bocpd_dirichlet`, clampuje warm-up i odczytuje per-pole próg reject. ZERO decyzji
+    metodologicznych ponad to, co robił `run_bocpd` — udostępnia surową krzywą `cp_prob`
+    (długości T), której `TestResult` nie niesie (tylko top-K w metadanych).
+
+    Returns:
+        cp_probs:          (T,) P(R_t = 0 | x_{1:t}) — prob. change-pointu per chwila
+        rl_map:            (T,) MAP run-length per chwila
+        warmup:            liczba pominiętych losowań burn-in (sclampowana do [0, T-1])
+        reject_threshold:  per-pole próg reject (FPR~=0.05 pod nullem uniform-iid)
+    """
+    if field == "euron":
+        n_symbols, k_per_draw = 12, 2
+        obs_list = [[e - 1 for e in d.euronumbers] for d in draws]
+    else:
+        n_symbols, k_per_draw = 50, 5
+        obs_list = [[m - 1 for m in d.main_numbers] for d in draws]
+
+    cp_probs, rl_map = _bocpd_dirichlet(
+        obs_list, n_symbols, k_per_draw, alpha, hazard
+    )
+
+    # Warm-up: pomijamy transient burn-in (cp_prob[:warmup]). Clamp by zostawic >=1 punkt.
+    if warmup is None:
+        warmup = n_symbols // k_per_draw
+    warmup = max(0, min(warmup, len(cp_probs) - 1))
+
+    return cp_probs, rl_map, warmup, _BOCPD_REJECT_THRESHOLD[field]
+
+
 def run_bocpd(
     draws: list[DrawRecord],
     field: Literal["main", "euron"] = "euron",
@@ -202,21 +241,13 @@ def run_bocpd(
     None → N // K (jeden nominalny przebieg przez pulę): pomija transient burn-in,
     w którym cp_prob sztucznie rośnie, bo pula symboli nie została jeszcze "zobaczona".
     """
+    cp_probs, rl_map, warmup, reject_threshold = compute_bocpd_curve(
+        draws, field, alpha, hazard, warmup
+    )
     if field == "euron":
         n_symbols, k_per_draw = 12, 2
-        obs_list = [[e - 1 for e in d.euronumbers] for d in draws]
     else:
         n_symbols, k_per_draw = 50, 5
-        obs_list = [[m - 1 for m in d.main_numbers] for d in draws]
-
-    cp_probs, rl_map = _bocpd_dirichlet(
-        obs_list, n_symbols, k_per_draw, alpha, hazard
-    )
-
-    # Warm-up: pomijamy transient burn-in (cp_prob[:warmup]). Clamp by zostawic >=1 punkt.
-    if warmup is None:
-        warmup = n_symbols // k_per_draw
-    warmup = max(0, min(warmup, len(cp_probs) - 1))
 
     # Lokalne maksima cp_probs = kandydaci na change-pointy (tylko POZA warm-up)
     # distance=5: ~5 losowan ≈ 5 tygodni EuroJackpot (piątek) — pozwala na bliskie szczyty
@@ -230,7 +261,6 @@ def run_bocpd(
     top_probs = [float(cp_probs[i]) for i in top_idx]
 
     max_prob = float(np.max(cp_probs[warmup:]))
-    reject_threshold = _BOCPD_REJECT_THRESHOLD[field]
     return TestResult(
         test_name="bocpd_dirichlet_multinomial",
         series_label=f"{field}_counts (N={n_symbols}, K={k_per_draw}, H={hazard})",

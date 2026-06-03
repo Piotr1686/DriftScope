@@ -1,19 +1,158 @@
 ---
 title: "DriftScope — Stationarity Audit Report"
-subtitle: "EuroJackpot discrete stream analysis"
+subtitle: "EuroJackpot discrete stream: a positive/negative control demonstration"
+date: today
 format:
   html:
     embed-resources: true
     theme: cosmo
+    toc: true
+    code-fold: true
   pdf:
     documentclass: article
 jupyter: python3
 ---
 
-<!-- Stub (W7/W8) — Quarto source dla reproducible report. -->
-<!-- Python chunks: Polars + Plotly figury embedded. -->
-<!-- Matplotlib → PDF appendix. -->
+<!--
+Reproducible Quarto report (W7/W8). Render: `quarto render report.qmd`
+Wymaga: `pip install -e .` (driftscope) + jupyter/ipykernel + quarto CLI.
+Figury generowane w chunku `setup` do figs/ (embed-resources inline'uje je do HTML).
+Logika chunkow zwalidowana standalone (te same wywolania driftscope co w testach).
+-->
 
-# DriftScope Report
+```{python}
+#| label: setup
+#| echo: false
+#| cache: true
+from pathlib import Path
 
-*Stub — implementacja w W7.*
+from driftscope.ingestion.lotto_scraper import load_seed_csv
+from driftscope.pipeline import run_audit
+from driftscope.reporting.plots_static import (
+    plot_bocpd_changepoints,
+    plot_control_comparison,
+)
+
+FIGS = Path("figs")
+FIGS.mkdir(exist_ok=True)
+
+draws = load_seed_csv()
+report = run_audit(draws, n_perm=199)  # n_perm=199: kompromis build-time vs MC error
+
+plot_control_comparison(draws, out_path=FIGS / "control_comparison.png")
+plot_bocpd_changepoints(draws, "euron", out_path=FIGS / "bocpd_euron.png")
+```
+
+# 1. The finding
+
+DriftScope audituje strumienie dyskretne *z założenia uniform* pod kątem
+niestacjonarności. EuroJackpot to flagowy case study z **znanym ground truth**: pula
+euronumerów zmieniała zasady dwukrotnie (2014, 2022), a pula główna 1–50 — nigdy.
+
+Framework daje jednoznaczny werdykt: **potwierdza znane zmiany i milczy tam, gdzie
+zmian nie ma.**
+
+![Positive vs negative control. Górny panel (euron): BOCPD wykrywa zmiany puli
+2014-11-28 i 2022-03-29 ponad progiem reject. Dolny panel (main 1–50): krzywa płaska,
+żaden pik poza warm-upem nie przekracza progu — czysty negative control.](figs/control_comparison.png)
+
+To nie jest „wykryliśmy anomalię". To dowód, że detektor **odpala na prawdziwym sygnale
+i nie halucynuje** — warunek konieczny, by jakiejkolwiek detekcji ufać.
+
+# 2. Method — three independent pillars
+
+Werdykt opiera się na **trzech wzajemnie nie-redundantnych rodzinach** detektorów
+(Disagreement Protocol, preregistration v6 §6.5). Każda widzi inną klasę odchyleń:
+
+| Filar | Rodzina | Co wykrywa | Czego nie widzi |
+|---|---|---|---|
+| **H1** (BOCPD) | temporalna / global | change-pointy w rozkładzie symboli | strukturę par |
+| **MMD** | distributional | odchylenie okiennych częstości od uniform (freq_shift, trend, autocorr) | strukturę par |
+| **Co-occurrence** | joint | nadreprezentację par liczb przy uniform marginesach (`pair_corr`) | sygnał marginalny |
+
+Kluczowa właściwość: `pair_corr` jest widoczny **wyłącznie** dla co-occurrence — chi²/MMD
+są przy zachowanych marginesach dowodliwie ślepe (power ≈ FPR). Trzy filary nie dublują
+się; sygnał klasyfikowany jest wg zgodności: 3/3 · 2/3 · 1/3 · 0/3.
+
+**Decyzja projektowa:** filar H1 reprezentuje BOCPD (skalibrowany per-pole, FPR≈0.05).
+ADF/KPSS/Welch/ACF pełnią rolę diagnostyczną — nie głosują (uniknięcie OR-inflacji FPR
+ze skorelowanych pod-testów).
+
+# 3. Result on real EuroJackpot
+
+```{python}
+#| label: headline
+#| echo: false
+#| output: asis
+print("```")
+print(report.summary())
+print("```")
+```
+
+**Positive control (euron).** BOCPD wykrywa change-pointy pokrywające oba znane ground
+truth — 2014-11-28 (pierwsze losowanie z liczbą 9, 51 dni po zmianie zasad) i 2022-03-29
+(pierwsze losowanie z liczbą 11). Negative control 1–50 pozostaje nietknięty.
+
+![BOCPD na puli euronumerów — pełna krzywa P(change-point). Czerwone markery: piki
+przekraczające próg reject 0.33.](figs/bocpd_euron.png)
+
+**Negative control (main 1–50).** Trzy niezależne filary, jeden werdykt:
+
+```{python}
+#| label: pillar-table
+#| echo: false
+#| output: asis
+print("| Filar | p-value | reject H0 |")
+print("|---|---|---|")
+for pillar, res in report.negative_control.items():
+    print(f"| {pillar} | {res.p_value:.3f} | {res.reject_h0} |")
+print(f"\n**Disagreement: {report.verdict.fraction} — {report.verdict.label}.**")
+```
+
+# 4. Rigor — FDR and the honest watchlist
+
+Marginalny sygnał per-liczba jest kontrolowany rodziną **Family B**: 50 testów
+exact-binomial (`count_k ~ Binomial(n, 5/50)`) skorygowanych **Benjamini-Yekutieli**
+(ważne przy dowolnej strukturze zależności — zliczenia 5/50 są ujemnie skorelowane).
+
+```{python}
+#| label: family-b
+#| echo: false
+#| output: asis
+fb = report.family_b
+print(f"- Rozmiar rodziny: **{report.family_b_size}** hipotez (per-number).")
+print(f"- Metoda: **{fb.method}**, α = {fb.alpha}.")
+print(f"- Odrzucenia (q ≤ α): **{fb.n_reject} / {report.family_b_size}**.")
+print(f"- Najniższe q-value: **{float(fb.q_values.min()):.3f}**.")
+```
+
+**Honest watchlist (DoD-5).** Warstwa adaptacyjna zwraca wzorce „warte monitorowania"
+tylko po przejściu **obu** bramek: FDR (q ≤ α) **oraz** konwergencja ≥1 filar. Gdy żaden
+nie przechodzi — zwraca **None** (honest null), nie pustą listę ani ekstrapolację:
+
+```{python}
+#| label: watchlist
+#| echo: false
+#| output: asis
+status = "None — honest null" if report.watchlist is None else f"{len(report.watchlist)} wpisów"
+print(f"> **Watchlist: {status}.** {report.watchlist_message}")
+```
+
+Na czystym negative control żaden wzorzec nie przechodzi rygoru → framework **nie
+proponuje niczego**. To celowe: brak dowodu jest raportowany jako brak dowodu.
+
+# 5. Reproducibility (DoD-6)
+
+- **Determinizm:** każdy detektor jest czystą funkcją strumienia; RNG seedowany z
+  zawartości danych (⊕ `BASE_SEED`), niezależny od kolejności wywołań.
+- **Manifest:** `scripts/archive.py` generuje deterministyczny SHA-256 manifest seed CSV
+  + artefaktów (cold-machine re-run = bit-identyczny wynik).
+- **Pre-rejestracja:** wszystkie wybory metodologiczne zamrożone w
+  `methodology/preregistration_v6.md`; rewizje z `revision_reason`, rozdzielone na
+  clean / data-informed (dyscyplina §0).
+
+---
+
+*Wygenerowano z `driftscope.pipeline.run_audit` na seed CSV
+(`data/seed/eurojackpot_history.csv`, 958 losowań 2012–2026). Kod chunków = publiczne API
+frameworka, pokryte testami `tests/test_pipeline.py`.*

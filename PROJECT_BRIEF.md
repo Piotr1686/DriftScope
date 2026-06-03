@@ -74,7 +74,7 @@ GitHub renderuje `<video>` natywnie w MD.
 | Config | **Pydantic Settings** v2 + `.env` | 2.x | `core/config.py` |
 | Data validation | **Pydantic** v2 | 2.x | `DrawRecord` z `Field(ge=1, le=50)` (main) / `Field(ge=1, le=12)` (euron). Fail-fast przy ingestion |
 | Runtime guards | **`core/guards.py`** + `psutil` | stdlib + psutil | ~40 LOC: `@with_timeout(seconds)`, `assert_memory_below(gb)` dekoratory dla entry points |
-| CLI | **Typer** | 0.12.x | Type-hinted, `--resume` flag dla checkpointed runs |
+| CLI | **Typer** + pinned `click<8.2` | typer 0.12.x · click 8.1.x | Type-hinted CLI (`driftscope run` → end-to-end audyt). **PIN `click>=8.1,<8.2` [2026-06-03]:** typer 0.12.5 jest niekompatybilny z click ≥8.2 (breaking change w parsowaniu opcji — wszystkie opcje błędnie traktowane jako flagi, `is_bool_flag` nieustawiane → `--n-perm 49` = "unexpected extra argument"). click 8.1.8 przywraca działanie. Alternatywa (bump typer ≥0.15) odrzucona — łamie pin typer<0.13. |
 | Static viz (paper) | **matplotlib** | 3.9.x | Publikowalne, deterministyczne. Animation export → `.webm` via ffmpeg |
 | Interactive viz | **Plotly** (static HTML) | latest | Embed w Quarto report. Streamlit jako W9+ stretch |
 | Report | **Quarto** | 1.5+ | Reproducible markdown→HTML/PDF. Fallback: `jupyter nbconvert` |

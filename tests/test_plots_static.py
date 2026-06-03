@@ -8,6 +8,7 @@ import numpy as np
 
 from driftscope.core.types import DrawRecord
 from driftscope.reporting.plots_static import (
+    animate_bocpd_hook,
     plot_bocpd_changepoints,
     plot_control_comparison,
 )
@@ -100,3 +101,15 @@ def test_plot_control_comparison_default_path(tmp_path: Path, monkeypatch) -> No
 
     assert result == Path("artifacts") / "control_comparison.png"
     assert result.exists()
+
+
+def test_animate_bocpd_hook_saves_file(tmp_path: Path) -> None:
+    """Hook animation zapisuje plik (.webm gdy ffmpeg; .gif fallback). Maly/szybki."""
+    draws = _planted_changepoint_draws()
+    out = tmp_path / "hook.webm"
+
+    result = animate_bocpd_hook(draws, "euron", out_path=out, fps=5, n_frames=6)
+
+    assert result.exists()
+    assert result.stat().st_size > 0
+    assert result.suffix in {".webm", ".gif"}  # .gif = fallback bez ffmpeg

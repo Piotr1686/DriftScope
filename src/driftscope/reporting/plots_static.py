@@ -13,6 +13,9 @@ import matplotlib
 matplotlib.use("Agg")  # headless (Win11/CI-safe) — przed importem pyplot
 
 import matplotlib.pyplot as plt  # noqa: E402
+import numpy as np  # noqa: E402
+from matplotlib.animation import FFMpegWriter, FuncAnimation, PillowWriter  # noqa: E402
+from matplotlib.artist import Artist  # noqa: E402
 from matplotlib.axes import Axes  # noqa: E402
 
 from driftscope.core.types import DrawRecord  # noqa: E402
@@ -130,5 +133,98 @@ def plot_control_comparison(
     out_path = Path(out_path)
     out_path.parent.mkdir(parents=True, exist_ok=True)
     fig.savefig(out_path, dpi=120)
+    plt.close(fig)
+    return out_path
+
+
+def animate_bocpd_hook(
+    draws: list[DrawRecord],
+    field: Literal["main", "euron"] = "euron",
+    out_path: Path | str | None = None,
+    *,
+    fps: int = 20,
+    n_frames: int = 200,
+    codec: str = "libvpx-vp9",
+) -> Path:
+    """Hook animation (W8): sweep krzywej BOCPD lewo→prawo, markery CP „zapalaja sie".
+
+    10-sekundowy hook (domyslnie 200 klatek @ 20 fps): linia sweep przeciaga w prawo
+    odslaniajac cp_prob „w czasie rzeczywistym"; gdy mija wykryty change-point (pik
+    ponad progiem) — marker CP zapala sie na czerwono + adnotacja daty. Dla euron
+    dramatyzuje wykrycie zmian puli 2014/2022 (preregistration_v6, fundament: rl_map
+    z compute_bocpd_curve).
+
+    Format: `.webm` (VP9, codec=libvpx-vp9) gdy ffmpeg dostepny; w przeciwnym razie
+    **fallback `.gif`** (PillowWriter) pod ta sama sciezka z rozszerzeniem .gif.
+
+    out_path: None → `artifacts/hook_{field}.webm`. Zwraca faktycznie zapisana sciezke
+    (moze miec rozszerzenie .gif przy fallbacku).
+    """
+    cp_probs, _rl_map, warmup, threshold = compute_bocpd_curve(draws, field)
+    meta = run_bocpd(draws, field).metadata
+    date_to_idx = {str(d.draw_date): i for i, d in enumerate(draws)}
+    detected = [
+        (date_to_idx[date_str], float(prob), date_str)
+        for date_str, prob in zip(
+            meta["top_changepoint_dates"], meta["top_changepoint_probs"]
+        )
+        if date_str in date_to_idx and prob > threshold
+    ]
+    n = len(cp_probs)
+
+    fig, ax = plt.subplots(figsize=(11, 5))
+    ax.set_xlim(0, n)
+    ax.set_ylim(0, 1)
+    ax.set_xlabel("indeks losowania (czas →)")
+    ax.set_ylabel("P(change-point)")
+    ax.set_title(f"DriftScope — BOCPD wykrywa zmiany puli ({field})", fontsize=11)
+    ax.grid(True, alpha=0.2)
+    if warmup > 0:
+        ax.axvspan(0, warmup, color=_COLOR_CONTROL, alpha=0.25)
+    ax.axhline(threshold, color=_COLOR_CP, ls="--", lw=1.0, alpha=0.7,
+               label=f"prog reject = {threshold:.2f}")
+    ax.legend(loc="upper right", fontsize=8)
+
+    (curve,) = ax.plot([], [], color=_COLOR_REAL, lw=1.4)
+    sweep = ax.axvline(0, color=_COLOR_CONTROL, lw=1.2, alpha=0.8)
+    markers = [ax.plot([], [], "o", color=_COLOR_CP, ms=9, zorder=5)[0] for _ in detected]
+    labels = [
+        ax.annotate("", xy=(0, 0), xytext=(0, 10), textcoords="offset points",
+                    ha="center", fontsize=9, color=_COLOR_CP, fontweight="bold")
+        for _ in detected
+    ]
+
+    reveal = np.linspace(1, n, n_frames).astype(int)
+
+    def update(f: int) -> list[Artist]:
+        k = int(reveal[f])
+        curve.set_data(range(k), cp_probs[:k])
+        sweep.set_xdata([k, k])
+        for (idx, prob, date_str), mk, lab in zip(detected, markers, labels):
+            if k >= idx:
+                mk.set_data([idx], [prob])
+                lab.set_text(date_str)
+                lab.xy = (idx, prob)
+            else:
+                mk.set_data([], [])
+                lab.set_text("")
+        return [curve, sweep, *markers, *labels]
+
+    anim = FuncAnimation(fig, update, frames=n_frames, blit=False)
+
+    if out_path is None:
+        out_path = Path("artifacts") / f"hook_{field}.webm"
+    out_path = Path(out_path)
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+
+    if FFMpegWriter.isAvailable():
+        writer: FFMpegWriter | PillowWriter = FFMpegWriter(
+            fps=fps, codec=codec, bitrate=2400
+        )
+    else:
+        out_path = out_path.with_suffix(".gif")  # fallback bez ffmpeg
+        writer = PillowWriter(fps=fps)
+
+    anim.save(str(out_path), writer=writer)
     plt.close(fig)
     return out_path

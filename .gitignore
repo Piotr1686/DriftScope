@@ -19,3 +19,11 @@ notebooks/*.ipynb
 CLAUDE.md.backup_*
 MEMORY.md.backup_*
 last_session.md.backup_*
+
+# --- Quarto build artifacts ---
+# Figury są inline'owane do docs/*.html (embed-resources), więc źródła build nie są commitowane.
+.quarto/
+src/driftscope/reporting/figs/
+src/driftscope/reporting/report.html
+src/driftscope/reporting/report_files/
+src/driftscope/reporting/*_files/

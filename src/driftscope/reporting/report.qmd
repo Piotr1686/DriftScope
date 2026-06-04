@@ -14,10 +14,11 @@ jupyter: python3
 ---
 
 <!--
-Reproducible Quarto report (W7/W8). Render: `quarto render report.qmd`
-Wymaga: `pip install -e .` (driftscope) + jupyter/ipykernel + quarto CLI.
-Figury generowane w chunku `setup` do figs/ (embed-resources inline'uje je do HTML).
-Logika chunkow zwalidowana standalone (te same wywolania driftscope co w testach).
+Reproducible Quarto report (W7/W8). Render: `quarto render report.qmd --to html`
+Requires: `pip install -e .` (driftscope) + jupyter/ipykernel + quarto CLI.
+Figures are generated in the `setup` chunk into figs/ (embed-resources inlines them
+into the HTML). The seed path is resolved absolutely from the package location so the
+render is independent of quarto's working directory.
 -->
 
 ```{python}
@@ -26,6 +27,8 @@ Logika chunkow zwalidowana standalone (te same wywolania driftscope co w testach
 #| cache: true
 from pathlib import Path
 
+import driftscope
+from driftscope.core.config import settings
 from driftscope.ingestion.lotto_scraper import load_seed_csv
 from driftscope.pipeline import run_audit
 from driftscope.reporting.plots_static import (
@@ -33,11 +36,16 @@ from driftscope.reporting.plots_static import (
     plot_control_comparison,
 )
 
+# settings.data_seed_path is relative to the repo root; resolve it absolutely from the
+# installed package location so the render works regardless of quarto's exec directory.
+ROOT = Path(driftscope.__file__).resolve().parents[2]
+SEED = ROOT / settings.data_seed_path
+
 FIGS = Path("figs")
 FIGS.mkdir(exist_ok=True)
 
-draws = load_seed_csv()
-report = run_audit(draws, n_perm=199)  # n_perm=199: kompromis build-time vs MC error
+draws = load_seed_csv(SEED)
+report = run_audit(draws, n_perm=199)  # n_perm=199: build-time vs MC-error trade-off
 
 plot_control_comparison(draws, out_path=FIGS / "control_comparison.png")
 plot_bocpd_changepoints(draws, "euron", out_path=FIGS / "bocpd_euron.png")
@@ -45,38 +53,40 @@ plot_bocpd_changepoints(draws, "euron", out_path=FIGS / "bocpd_euron.png")
 
 # 1. The finding
 
-DriftScope audituje strumienie dyskretne *z założenia uniform* pod kątem
-niestacjonarności. EuroJackpot to flagowy case study z **znanym ground truth**: pula
-euronumerów zmieniała zasady dwukrotnie (2014, 2022), a pula główna 1–50 — nigdy.
+DriftScope audits discrete streams that are *uniform by design* for non-stationarity.
+EuroJackpot is the flagship case study with a **known ground truth**: the pool of euro
+numbers changed its rules twice (2014, 2022), while the main 1–50 pool never did.
 
-Framework daje jednoznaczny werdykt: **potwierdza znane zmiany i milczy tam, gdzie
-zmian nie ma.**
+The framework delivers an unambiguous verdict: **it confirms the known changes and stays
+silent where there is no change.**
 
-![Positive vs negative control. Górny panel (euron): BOCPD wykrywa zmiany puli
-2014-11-28 i 2022-03-29 ponad progiem reject. Dolny panel (main 1–50): krzywa płaska,
-żaden pik poza warm-upem nie przekracza progu — czysty negative control.](figs/control_comparison.png)
+![Positive vs negative control. Top panel (euron): BOCPD detects the pool changes on
+2014-11-28 and 2022-03-29 above the reject threshold. Bottom panel (main 1–50): the curve
+is flat — no peak outside the warm-up crosses the threshold, a clean negative
+control.](figs/control_comparison.png)
 
-To nie jest „wykryliśmy anomalię". To dowód, że detektor **odpala na prawdziwym sygnale
-i nie halucynuje** — warunek konieczny, by jakiejkolwiek detekcji ufać.
+This is not "we detected an anomaly". It is evidence that the detector **fires on a real
+signal and does not hallucinate** — the necessary condition for trusting any detection at
+all.
 
 # 2. Method — three independent pillars
 
-Werdykt opiera się na **trzech wzajemnie nie-redundantnych rodzinach** detektorów
-(Disagreement Protocol, preregistration v6 §6.5). Każda widzi inną klasę odchyleń:
+The verdict rests on **three mutually non-redundant families** of detectors (the
+Disagreement Protocol, preregistration v6 §6.5). Each sees a different class of deviation:
 
-| Filar | Rodzina | Co wykrywa | Czego nie widzi |
+| Pillar | Family | What it detects | What it is blind to |
 |---|---|---|---|
-| **H1** (BOCPD) | temporalna / global | change-pointy w rozkładzie symboli | strukturę par |
-| **MMD** | distributional | odchylenie okiennych częstości od uniform (freq_shift, trend, autocorr) | strukturę par |
-| **Co-occurrence** | joint | nadreprezentację par liczb przy uniform marginesach (`pair_corr`) | sygnał marginalny |
+| **H1** (BOCPD) | temporal / global | change-points in the symbol distribution | pair structure |
+| **MMD** | distributional | windowed frequencies departing from uniform (freq_shift, trend, autocorr) | pair structure |
+| **Co-occurrence** | joint | over-represented number pairs under uniform margins (`pair_corr`) | marginal signal |
 
-Kluczowa właściwość: `pair_corr` jest widoczny **wyłącznie** dla co-occurrence — chi²/MMD
-są przy zachowanych marginesach dowodliwie ślepe (power ≈ FPR). Trzy filary nie dublują
-się; sygnał klasyfikowany jest wg zgodności: 3/3 · 2/3 · 1/3 · 0/3.
+The key property: `pair_corr` is visible **only** to co-occurrence — chi²/MMD are provably
+blind to it when the margins are preserved (power ≈ FPR). The three pillars do not
+overlap; a signal is classified by agreement: 3/3 · 2/3 · 1/3 · 0/3.
 
-**Decyzja projektowa:** filar H1 reprezentuje BOCPD (skalibrowany per-pole, FPR≈0.05).
-ADF/KPSS/Welch/ACF pełnią rolę diagnostyczną — nie głosują (uniknięcie OR-inflacji FPR
-ze skorelowanych pod-testów).
+**Design decision:** the H1 pillar is represented by BOCPD (calibrated per field,
+FPR≈0.05). ADF/KPSS/Welch/ACF play a diagnostic role — they do not vote (avoiding
+OR-inflation of the FPR from correlated sub-tests).
 
 # 3. Result on real EuroJackpot
 
@@ -84,25 +94,51 @@ ze skorelowanych pod-testów).
 #| label: headline
 #| echo: false
 #| output: asis
+# Composed in English from the structured AuditReport fields (the report owns its
+# presentation; report.summary() is the Polish CLI rendering of the same data).
+pc = report.positive_control
+cps = list(
+    zip(
+        pc.metadata.get("top_changepoint_dates", []),
+        pc.metadata.get("top_changepoint_probs", []),
+    )
+)
+cp_str = ", ".join(f"{d} (p={p:.2f})" for d, p in cps[:3]) or "none"
+neg = " ".join(
+    f"{k}={'reject' if r.reject_h0 else 'ok'}"
+    for k, r in report.negative_control.items()
+)
+wl = "None (honest null)" if report.watchlist is None else f"{len(report.watchlist)} entries"
 print("```")
-print(report.summary())
+print("DriftScope audit — verdict on the stream:")
+print(f"  POSITIVE CONTROL (euron / BOCPD): reject={pc.reject_h0}; top CP: {cp_str}")
+print(
+    f"  NEGATIVE CONTROL (main / 3 pillars): {report.verdict.fraction} "
+    f"({report.verdict.label}); [{neg}]"
+)
+print(
+    f"  Family B (per-number FDR, {report.family_b.method}): "
+    f"{report.family_b.n_reject}/{report.family_b_size} rejections"
+)
+print(f"  WATCHLIST (DoD-5): {wl}")
 print("```")
 ```
 
-**Positive control (euron).** BOCPD wykrywa change-pointy pokrywające oba znane ground
-truth — 2014-11-28 (pierwsze losowanie z liczbą 9, 51 dni po zmianie zasad) i 2022-03-29
-(pierwsze losowanie z liczbą 11). Negative control 1–50 pozostaje nietknięty.
+**Positive control (euron).** BOCPD detects change-points covering both known ground
+truths — 2014-11-28 (the first draw containing the number 9, 51 days after the rule
+change) and 2022-03-29 (the first draw containing the number 11). The 1–50 negative
+control remains untouched.
 
-![BOCPD na puli euronumerów — pełna krzywa P(change-point). Czerwone markery: piki
-przekraczające próg reject 0.33.](figs/bocpd_euron.png)
+![BOCPD on the euro-number pool — the full P(change-point) curve. Red markers: peaks
+crossing the reject threshold 0.33.](figs/bocpd_euron.png)
 
-**Negative control (main 1–50).** Trzy niezależne filary, jeden werdykt:
+**Negative control (main 1–50).** Three independent pillars, one verdict:
 
 ```{python}
 #| label: pillar-table
 #| echo: false
 #| output: asis
-print("| Filar | p-value | reject H0 |")
+print("| Pillar | p-value | reject H0 |")
 print("|---|---|---|")
 for pillar, res in report.negative_control.items():
     print(f"| {pillar} | {res.p_value:.3f} | {res.reject_h0} |")
@@ -111,48 +147,58 @@ print(f"\n**Disagreement: {report.verdict.fraction} — {report.verdict.label}.*
 
 # 4. Rigor — FDR and the honest watchlist
 
-Marginalny sygnał per-liczba jest kontrolowany rodziną **Family B**: 50 testów
-exact-binomial (`count_k ~ Binomial(n, 5/50)`) skorygowanych **Benjamini-Yekutieli**
-(ważne przy dowolnej strukturze zależności — zliczenia 5/50 są ujemnie skorelowane).
+The marginal per-number signal is controlled by the **Family B** family: 50 exact-binomial
+tests (`count_k ~ Binomial(n, 5/50)`) corrected with **Benjamini-Yekutieli** (valid under
+arbitrary dependence structure — the 5/50 counts are negatively correlated).
 
 ```{python}
 #| label: family-b
 #| echo: false
 #| output: asis
 fb = report.family_b
-print(f"- Rozmiar rodziny: **{report.family_b_size}** hipotez (per-number).")
-print(f"- Metoda: **{fb.method}**, α = {fb.alpha}.")
-print(f"- Odrzucenia (q ≤ α): **{fb.n_reject} / {report.family_b_size}**.")
-print(f"- Najniższe q-value: **{float(fb.q_values.min()):.3f}**.")
+print(f"- Family size: **{report.family_b_size}** hypotheses (per-number).")
+print(f"- Method: **{fb.method}**, α = {fb.alpha}.")
+print(f"- Rejections (q ≤ α): **{fb.n_reject} / {report.family_b_size}**.")
+print(f"- Smallest q-value: **{float(fb.q_values.min()):.3f}**.")
 ```
 
-**Honest watchlist (DoD-5).** Warstwa adaptacyjna zwraca wzorce „warte monitorowania"
-tylko po przejściu **obu** bramek: FDR (q ≤ α) **oraz** konwergencja ≥1 filar. Gdy żaden
-nie przechodzi — zwraca **None** (honest null), nie pustą listę ani ekstrapolację:
+**Honest watchlist (DoD-5).** The adaptive layer returns patterns "worth monitoring" only
+after passing **both** gates: FDR (q ≤ α) **and** convergence ≥1 pillar. When none passes,
+it returns **None** (an honest null), not an empty list or an extrapolation:
 
 ```{python}
 #| label: watchlist
 #| echo: false
 #| output: asis
-status = "None — honest null" if report.watchlist is None else f"{len(report.watchlist)} wpisów"
-print(f"> **Watchlist: {status}.** {report.watchlist_message}")
+if report.watchlist is None:
+    n_cand = report.family_b.n_reject
+    print(
+        f"> **Watchlist: None — honest null.** None of the {n_cand} candidate(s) cleared "
+        f"the gate (FDR q ≤ {report.family_b.alpha} AND convergence ≥ 1 pillar). "
+        "No watchlist — the methodology produced no validated signal."
+    )
+else:
+    print(
+        f"> **Watchlist: {len(report.watchlist)} entries.** Patterns that cleared both "
+        "the DoD-3 (FDR) and DoD-4 (convergence) gates, sorted by q-value."
+    )
 ```
 
-Na czystym negative control żaden wzorzec nie przechodzi rygoru → framework **nie
-proponuje niczego**. To celowe: brak dowodu jest raportowany jako brak dowodu.
+On a clean negative control no pattern clears the rigor bar → the framework **proposes
+nothing**. This is deliberate: absence of evidence is reported as absence of evidence.
 
 # 5. Reproducibility (DoD-6)
 
-- **Determinizm:** każdy detektor jest czystą funkcją strumienia; RNG seedowany z
-  zawartości danych (⊕ `BASE_SEED`), niezależny od kolejności wywołań.
-- **Manifest:** `scripts/archive.py` generuje deterministyczny SHA-256 manifest seed CSV
-  + artefaktów (cold-machine re-run = bit-identyczny wynik).
-- **Pre-rejestracja:** wszystkie wybory metodologiczne zamrożone w
-  `methodology/preregistration_v6.md`; rewizje z `revision_reason`, rozdzielone na
-  clean / data-informed (dyscyplina §0).
+- **Determinism:** every detector is a pure function of the stream; the RNG is seeded from
+  the data contents (⊕ `BASE_SEED`), independent of call order.
+- **Manifest:** `scripts/archive.py` produces a deterministic SHA-256 manifest of the seed
+  CSV + artifacts (a cold-machine re-run yields a bit-identical result).
+- **Pre-registration:** all methodological choices are frozen in
+  `methodology/preregistration_v6.md`; revisions carry a `revision_reason`, split into
+  clean / data-informed (the §0 discipline).
 
 ---
 
-*Wygenerowano z `driftscope.pipeline.run_audit` na seed CSV
-(`data/seed/eurojackpot_history.csv`, 958 losowań 2012–2026). Kod chunków = publiczne API
-frameworka, pokryte testami `tests/test_pipeline.py`.*
+*Generated by `driftscope.pipeline.run_audit` on the seed CSV
+(`data/seed/eurojackpot_history.csv`, 958 draws 2012–2026). The chunk code is the
+framework's public API, covered by the tests in `tests/test_pipeline.py`.*

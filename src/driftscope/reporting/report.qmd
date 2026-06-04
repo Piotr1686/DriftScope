@@ -32,6 +32,7 @@ from driftscope.core.config import settings
 from driftscope.ingestion.lotto_scraper import load_seed_csv
 from driftscope.pipeline import run_audit
 from driftscope.reporting.plots_static import (
+    animate_bocpd_hook,
     plot_bocpd_changepoints,
     plot_control_comparison,
 )
@@ -49,6 +50,10 @@ report = run_audit(draws, n_perm=199)  # n_perm=199: build-time vs MC-error trad
 
 plot_control_comparison(draws, out_path=FIGS / "control_comparison.png")
 plot_bocpd_changepoints(draws, "euron", out_path=FIGS / "bocpd_euron.png")
+
+# 10-second hook animation (W8): BOCPD sweep over the euron pool, change-points
+# lighting up as the sweep passes them. .webm (VP9) when ffmpeg is available.
+HOOK = animate_bocpd_hook(draws, "euron", out_path=FIGS / "hook_euron.webm")
 ```
 
 # 1. The finding
@@ -59,6 +64,15 @@ numbers changed its rules twice (2014, 2022), while the main 1–50 pool never d
 
 The framework delivers an unambiguous verdict: **it confirms the known changes and stays
 silent where there is no change.**
+
+<video controls autoplay loop muted playsinline style="width:100%;max-width:1000px;display:block;margin:1rem auto;border-radius:6px;">
+  <source src="figs/hook_euron.webm" type="video/webm">
+  Your browser does not support the video tag.
+</video>
+
+*The BOCPD sweep over the euro-number pool: as the scan moves left→right through time,
+the change-points (2014-11-28, 2022-03-29) light up the moment the posterior crosses the
+reject threshold.*
 
 ![Positive vs negative control. Top panel (euron): BOCPD detects the pool changes on
 2014-11-28 and 2022-03-29 above the reject threshold. Bottom panel (main 1–50): the curve

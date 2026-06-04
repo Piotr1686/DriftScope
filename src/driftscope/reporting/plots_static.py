@@ -53,7 +53,7 @@ def _render_bocpd_panel(
                    label=f"warm-up (n={warmup})")
 
     ax.axhline(threshold, color=_COLOR_CP, ls="--", lw=1.0, alpha=0.7,
-               label=f"prog reject = {threshold:.2f}")
+               label=f"reject threshold = {threshold:.2f}")
 
     # Markery TYLKO dla wykrytych CP (prob > prog) — czyste dla negative control.
     date_to_idx = {str(d.draw_date): i for i, d in enumerate(draws)}
@@ -93,8 +93,8 @@ def plot_bocpd_changepoints(
     out_path: docelowy PNG. None → `artifacts/bocpd_{field}.png` (katalog tworzony w razie braku).
     """
     fig, ax = plt.subplots(figsize=(11, 4.5))
-    _render_bocpd_panel(ax, draws, field, title=f"BOCPD — pole '{field}'")
-    ax.set_xlabel("indeks losowania")
+    _render_bocpd_panel(ax, draws, field, title=f"BOCPD — field '{field}'")
+    ax.set_xlabel("draw index")
     fig.tight_layout()
 
     if out_path is None:
@@ -122,9 +122,9 @@ def plot_control_comparison(
     out_path: None → `artifacts/control_comparison.png`.
     """
     fig, (ax_top, ax_bot) = plt.subplots(2, 1, figsize=(11, 8), sharex=False)
-    _render_bocpd_panel(ax_top, draws, "euron", title="POSITIVE CONTROL — euron (pula 1-8/10/12)")
-    _render_bocpd_panel(ax_bot, draws, "main", title="NEGATIVE CONTROL — main (pula 1-50)")
-    ax_bot.set_xlabel("indeks losowania")
+    _render_bocpd_panel(ax_top, draws, "euron", title="POSITIVE CONTROL — euron (pool 1-8/10/12)")
+    _render_bocpd_panel(ax_bot, draws, "main", title="NEGATIVE CONTROL — main (pool 1-50)")
+    ax_bot.set_xlabel("draw index")
     fig.suptitle("DriftScope — positive vs negative control (BOCPD)", fontsize=12)
     fig.tight_layout()
 
@@ -175,14 +175,14 @@ def animate_bocpd_hook(
     fig, ax = plt.subplots(figsize=(11, 5))
     ax.set_xlim(0, n)
     ax.set_ylim(0, 1)
-    ax.set_xlabel("indeks losowania (czas →)")
+    ax.set_xlabel("draw index (time →)")
     ax.set_ylabel("P(change-point)")
-    ax.set_title(f"DriftScope — BOCPD wykrywa zmiany puli ({field})", fontsize=11)
+    ax.set_title(f"DriftScope — BOCPD detects pool changes ({field})", fontsize=11)
     ax.grid(True, alpha=0.2)
     if warmup > 0:
         ax.axvspan(0, warmup, color=_COLOR_CONTROL, alpha=0.25)
     ax.axhline(threshold, color=_COLOR_CP, ls="--", lw=1.0, alpha=0.7,
-               label=f"prog reject = {threshold:.2f}")
+               label=f"reject threshold = {threshold:.2f}")
     ax.legend(loc="upper right", fontsize=8)
 
     (curve,) = ax.plot([], [], color=_COLOR_REAL, lw=1.4)

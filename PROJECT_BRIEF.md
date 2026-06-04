@@ -129,7 +129,8 @@ driftscope/
 │   │   ├── preregistration_v3.md  # SUPERSEDED przez v4 (history)
 │   │   ├── preregistration_v4.md  # SUPERSEDED przez v5 (history)
 │   │   ├── preregistration_v5.md  # SUPERSEDED przez v6 (history)
-│   │   ├── preregistration_v6.md  # ACTIVE — frozen choices + revision log
+│   │   ├── preregistration_v6.md  # SUPERSEDED przez v7 (history)
+│   │   ├── preregistration_v7.md  # ACTIVE — frozen choices + revision log
 │   │   ├── h1_classical.py     # ADF, KPSS, Bayesian online CP, Welch, ACF
 │   │   ├── k4_mmd.py           # Gaussian RBF on frequency vectors
 │   │   ├── permutation.py      # shuffle test core (Numba selektywnie)
@@ -174,7 +175,7 @@ driftscope/
     └── app.py
 ```
 
-**Preregistration versioning:** `preregistration_v6.md` to **active** wersja (`v1`→`v2` superseded [2026-05-29], `v2`→`v3` [2026-05-30] — pinowanie siatek β/c §6, `v3`→`v4` [2026-05-31] — §3 window 200→25 + §4 spec {100,200,400}→{15,25,40} informowane real-data [disclosed] + §5c co-occurrence pre-rejestrowany, `v4`→`v5` [2026-05-31] — informowane DriftSim: §5c statystyka suma→max-pair + §6 pair_corr re-design margin-preserving/forced-frac {0.01,0.02,0.05,0.10}, `v5`→`v6` [2026-06-02] — regula reject BOCPD §2: prog 0.3→per-pole {euron 0.33/main 0.70} (FPR≈0.05, stary 0.3 dawal FPR=0.77 dla main) + warm-up exclusion N//K; zob. v6 §0 revision_reason). Każda metodologiczna korekta po Decision Gate tworzy `preregistration_v{N}.md` z polem `revision_reason: <text>`. Symlink/copy ostatniej jako aktywnej jest opcjonalna; explicit numbering wystarczy.
+**Preregistration versioning:** `preregistration_v7.md` to **active** wersja (`v1`→`v2` superseded [2026-05-29], `v2`→`v3` [2026-05-30] — pinowanie siatek β/c §6, `v3`→`v4` [2026-05-31] — §3 window 200→25 + §4 spec {100,200,400}→{15,25,40} informowane real-data [disclosed] + §5c co-occurrence pre-rejestrowany, `v4`→`v5` [2026-05-31] — informowane DriftSim: §5c statystyka suma→max-pair + §6 pair_corr re-design margin-preserving/forced-frac {0.01,0.02,0.05,0.10}, `v5`→`v6` [2026-06-02] — regula reject BOCPD §2: prog 0.3→per-pole {euron 0.33/main 0.70} (FPR≈0.05, stary 0.3 dawal FPR=0.77 dla main) + warm-up exclusion N//K, `v6`→`v7` [2026-06-04] — CZYSTA: §5 licznik Family B 450→150 (blad kategorii — chi²/gap/cooc to OMNIBUS, nie per-liczba) + §1c scope per-rezim (neg control + Family B per R1/R2/R3; pos control euron full-stream) + klaryfikacja §5 konwergencja=surowe rejecty; zob. v7 §0 revision_reason). Każda metodologiczna korekta po Decision Gate tworzy `preregistration_v{N}.md` z polem `revision_reason: <text>`. Symlink/copy ostatniej jako aktywnej jest opcjonalna; explicit numbering wystarczy.
 
 **Schemat `data/seed/eurojackpot_history.csv` (ISO 8601 daty, UTF-8, header w pierwszej linii):**
 

@@ -119,42 +119,63 @@ def test_family_b_flags_over_represented_number() -> None:
 # run_audit — orkiestracja (deterministyczna, wstrzykniete filary)
 # ---------------------------------------------------------------------------
 
+# UWAGA: strumienie orkiestracji budowane w obrebie JEDNEGO rezimu (kontrolowane daty).
+# `generate_uniform_draws` kotwiczy daty bez respektu dla granic kalendarzowych (R3 startuje
+# 2022-03-22 = jeszcze R2; R1/R2 z duzym n przekraczaja granice), wiec split rozsypalby je po
+# rezimach. `_make_draws(start_date=date(2022,4,1))` daje czysty R3 (wszystkie daty >= granica).
+_R3_START = date(2022, 4, 1)
+
+
 def test_run_audit_negative_control_honest_null() -> None:
-    """Neg. control 0/3 + uniform main → Family B nic nie odrzuca → watchlist None."""
-    draws = generate_uniform_draws(400, "R3", np.random.default_rng(5))
+    """Neg. control 0/3 (jeden rezim) + uniform main → Family B nic nie odrzuca → watchlist None."""
+    draws = _make_draws(list(range(1, 13)), 400, seed=5, start_date=_R3_START)
     report = run_audit(draws, pillar_detectors=_all_quiet())
 
     assert isinstance(report, AuditReport)
-    assert report.verdict.fraction == "0/3"
+    assert set(report.regime_audits) == {"R3"}          # tylko R3 niepusty
+    assert report.regime_audits["R3"].verdict.fraction == "0/3"
     assert report.family_b.n_reject == 0
     assert report.watchlist is None
     assert "honest null" in report.watchlist_message.lower()
-    assert report.family_b_size == 50
+    assert report.family_b_size == 50                   # 1 rezim × 50 liczb
     assert "POSITIVE CONTROL" in report.summary()
 
 
 def test_run_audit_watchlist_gate_passes_on_strong_signal() -> None:
-    """3/3 + liczba w kazdym losowaniu (Family B reject) → watchlist NIE-None."""
-    draws = generate_uniform_draws(300, "R2", np.random.default_rng(9))
-    forced = [d.model_copy(update={"main_1": 7}) for d in draws]
+    """3/3 + liczba w kazdym losowaniu (Family B reject) → watchlist NIE-None (prefiks rezimu)."""
+    base = _make_draws(list(range(1, 13)), 300, seed=9, start_date=_R3_START)
+    forced = [d.model_copy(update={"main_1": 7}) for d in base]
     report = run_audit(forced, pillar_detectors=_all_reject())
 
-    assert report.verdict.fraction == "3/3"
+    assert report.regime_audits["R3"].verdict.fraction == "3/3"
     assert report.family_b.n_reject >= 1
     assert report.watchlist is not None
-    assert any("number_7" in e.label for e in report.watchlist)
+    assert any(e.label == "R3:number_7" for e in report.watchlist)  # label z prefiksem rezimu
+    assert all(e.regime == "R3" for e in report.watchlist)
     assert all(e.q_value <= 0.05 for e in report.watchlist)
 
 
 def test_run_audit_convergence_gate_blocks_when_no_pillar() -> None:
     """Family B moze odrzucac, ale 0/3 konwergencji → watchlist None (DoD-4 gate)."""
-    draws = generate_uniform_draws(300, "R2", np.random.default_rng(11))
-    forced = [d.model_copy(update={"main_1": 7}) for d in draws]
+    base = _make_draws(list(range(1, 13)), 300, seed=11, start_date=_R3_START)
+    forced = [d.model_copy(update={"main_1": 7}) for d in base]
     report = run_audit(forced, pillar_detectors=_all_quiet())
 
-    assert report.family_b.n_reject >= 1     # DoD-3 zapala
-    assert report.verdict.fraction == "0/3"  # DoD-4 nie
-    assert report.watchlist is None          # gate wymaga OBU
+    assert report.family_b.n_reject >= 1                       # DoD-3 zapala
+    assert report.regime_audits["R3"].verdict.fraction == "0/3"  # DoD-4 nie
+    assert report.watchlist is None                            # gate wymaga OBU
+
+
+def test_run_audit_splits_multiple_regimes() -> None:
+    """Strumien obejmujacy 2 rezimy → regime_audits ma oba klucze; Family B pooled = 50×2."""
+    r2 = _make_draws(list(range(1, 11)), 50, seed=1, start_date=date(2015, 1, 2))   # R2
+    r3 = _make_draws(list(range(1, 13)), 50, seed=2, start_date=_R3_START)          # R3
+    report = run_audit(r2 + r3, pillar_detectors=_all_quiet())
+
+    assert set(report.regime_audits) == {"R2", "R3"}
+    assert report.regime_audits["R2"].n_draws == 50
+    assert report.regime_audits["R3"].n_draws == 50
+    assert report.family_b_size == 100  # 2 rezimy × 50 liczb (pooled, jedna rodzina BY)
 
 
 # ---------------------------------------------------------------------------
@@ -163,8 +184,8 @@ def test_run_audit_convergence_gate_blocks_when_no_pillar() -> None:
 
 @pytest.mark.skipif(not _SEED_CSV.exists(), reason="Seed CSV niedostępny")
 def test_run_audit_on_real_eurojackpot() -> None:
-    """End-to-end na 958 realnych losowaniach: pos control wykrywa 2014/2022,
-    neg control (main) czysty → honest null watchlist. Szybkie detektory (n_perm=99)."""
+    """End-to-end na 958 realnych losowaniach: pos control wykrywa 2014/2022; neg control
+    per-rezim NIE produkuje sygnalu konwergentnego (≥2/3) → honest null. n_perm=99 (szybki)."""
     from driftscope.ingestion.lotto_scraper import load_seed_csv
 
     draws = load_seed_csv(_SEED_CSV)
@@ -177,8 +198,21 @@ def test_run_audit_on_real_eurojackpot() -> None:
     assert "2014" in years
     assert "2022" in years
 
-    # Negative control: Family B na realnej puli glownej nic nie odrzuca → honest null.
-    assert report.family_b_size == 50
+    # Negative control liczony PER REZIM: split 133/389/436 → wszystkie 3 rezimy obecne.
+    assert set(report.regime_audits) == {"R1", "R2", "R3"}
+    assert report.regime_audits["R1"].n_draws == 133
+    assert report.regime_audits["R2"].n_draws == 389
+    assert report.regime_audits["R3"].n_draws == 436
+    # Kluczowa wlasnosc DoD-1 negative control: framework NIE haluciuje sygnalu KONWERGENTNEGO
+    # (≥2/3) na puli glownej. Pojedyncze filary moga zapalic (1/3 = "requires power context",
+    # NIE finding) — to poprawne dzialanie Disagreement Protocolu, nie tlumi surowego sygnalu.
+    for ra in report.regime_audits.values():
+        assert ra.verdict.n_agree <= 1
+        assert not ra.verdict.is_primary_finding
+
+    # Family B per-number: 50 × 3 rezimy = 150, pooled jedna rodzina; nic nie odrzuca → honest null.
+    assert report.family_b_size == 150
+    assert report.family_b.n_reject == 0
     assert report.watchlist is None
 
     # Raport jest dobrze uformowany.

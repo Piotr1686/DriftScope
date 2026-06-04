@@ -3,33 +3,33 @@
 Spina zwalidowane komponenty DoD-1..6 w jeden przebieg na realnym strumieniu losowan:
 
   POSITIVE CONTROL (euron, filar temporalny/H1): `run_bocpd(draws, "euron")` wykrywa
-    zmiany puli euronumerow 2014/2022 (ground truth DoD-1b).
+    zmiany puli euronumerow 2014/2022 (ground truth DoD-1b). FULL-STREAM — sygnal to
+    przejscie MIEDZY rezimami, ciecie per-rezim by go zniszczylo (preregistration_v7 §1c).
   NEGATIVE CONTROL (main 1-50, 3 filary Disagreement): trzy NIEZALEZNE rodziny detektorow
-    (H1/temporal, MMD/distributional, co-occurrence/joint) na puli glownej. Oczekiwane
-    0/3 — pula glowna nie ma pre-rejestrowanego sygnalu (DoD-1 negative control).
+    (H1/temporal, MMD/distributional, co-occurrence/joint) na puli glownej, liczone PER
+    REZIM (R1/R2/R3) — test stacjonarnosci WEWNATRZ rezimu (H0 §1). Oczekiwane 0/3 w kazdym
+    rezimie — pula glowna nie ma pre-rejestrowanego sygnalu (DoD-1 negative control).
   HONEST WATCHLIST (DoD-5): Family B FDR (per-number exact binomial) + konwergencja →
     `build_watchlist`. Na czystym neg. control → **None** (honest null, nie pusta lista).
 
 **Decyzja projektowa (gating "H1 family → 1 werdykt filaru"):** filar `h1` reprezentuje
 BOCPD per-stream (`bocpd_detector`). Uzasadnienie: BOCPD jest skalibrowany per-pole
-(FPR≈0.05, preregistration_v6 §0/§2), ma zwalidowany positive/negative control i jest
+(FPR≈0.05, preregistration_v7 §2), ma zwalidowany positive/negative control i jest
 detektorem hooka W8. ADF/KPSS/Welch/ACF operuja na pochodnych szeregach SKALARNYCH
 (euron_mean, ...) i pelnia role DIAGNOSTYCZNA, nie glosujacego filaru — OR-agregacja
 skorelowanych pod-testow H1 zawyzylaby FPR filaru. DoD-4 pozostaje 3/3.
 
-**Granularnosc (uczciwe odwzorowanie sygnalu na realnych danych):** MMD i co-occurrence
-czytaja pule GLOWNA (1-50, niezmienna przez cala historie); realny sygnal EuroJackpot
-(zmiana puli) jest w EURON. Dlatego pelny 3-filarowy Disagreement aplikuje sie do puli
-glownej jako NEGATIVE CONTROL, a euron jest pokryty osobno przez filar temporalny (BOCPD,
-positive control). Framework potwierdza znany sygnal (euron) i NIE halucynuje sygnalu tam,
-gdzie go nie ma (main — 3 niezalezne rodziny zgodnie 0/3).
+**Granularnosc per-rezim (preregistration_v7 §0(B)/§1c):** negative control (3 filary) i
+Family B liczone OSOBNO w kazdym rezimie regul (R1/R2/R3) — H0 §1 jest pre-rejestrowana
+per rezim ("stacjonarny uniform i.i.d. WEWNATRZ rezimu"). Pula glowna 1-50 jest strukturalnie
+niezmienna przez wszystkie rezimy, wiec kazdy rezim to NIEZALEZNY negative control. Positive
+control (euron) pozostaje full-stream (wykrywa przejscia miedzy rezimami).
 
-**Family B (czesciowe domkniecie licznika §5):** rdzen = 50 per-number exact-binomial
-p-values (pre-rejestrowane §5 Family B; count_k ~ Binomial(n, 5/50) pod uniform). Rozmiar
-rodziny dla tego przebiegu jest KONKRETNY (`AuditReport.family_b_size`), nie referencyjny
-450 (ktory zakladal 3 rezimy × 3 testy). Pelne domkniecie (gap GoF §5b per-liczba +
-co-occurrence pary jako dodatkowi czlonkowie rodziny) — przy regime-split (regime_split.py
-to wciaz stub) i pelnym sweepie raportowym.
+**Family B (per-number, licznik ratyfikowany v7 §0(A)):** rodzina = WYLACZNIE per-number
+exact-binomial p-values (count_k ~ Binomial(n, 5/50) pod uniform), 50 liczb × #niepustych
+rezimow = na realnych danych **150** (zamiast referencyjnych 450 — chi²/gap/cooc to detektory
+OMNIBUS, nie per-liczba, raportowane osobno jako rodziny komplementarne). Pula p-values ze
+wszystkich rezimow tworzy JEDNA rodzine, korygowana raz Benjamini-Yekutieli (v7 §5).
 
 Modul orkiestruje gotowe, niezaleznie zwalidowane komponenty — sam nie wprowadza nowych
 decyzji metodologicznych (NIE podlega dyscyplinie prereg §0).
@@ -49,6 +49,7 @@ from driftscope.adaptive.honest_watchlist import (
     watchlist_or_message,
 )
 from driftscope.core.types import Detector, DrawRecord, TestResult
+from driftscope.ingestion.regime_split import REGIME_LABELS, split_by_regime
 from driftscope.methodology.cooccurrence import cooccurrence_detector
 from driftscope.methodology.h1_classical import run_bocpd
 from driftscope.methodology.k4_mmd import mmd_uniform_detector
@@ -77,7 +78,7 @@ def bocpd_detector(
     """Fabryka detektora H1 = BOCPD na zadanym polu (czysta funkcja `draws`, DoD-6).
 
     `run_bocpd` zwraca `reject_h0` wg per-pole progu skalibrowanego na FPR≈0.05
-    (preregistration_v6 §2). To reprezentant filaru `h1` w Disagreement Protocol —
+    (preregistration_v7 §2). To reprezentant filaru `h1` w Disagreement Protocol —
     zob. docstring modulu (decyzja gating). `alpha_unused` istnieje dla spojnosci
     sygnatury z innymi fabrykami; prog BOCPD nie jest parametrem alpha.
     """
@@ -92,16 +93,16 @@ def default_pillar_detectors(
     alpha: float = _DEFAULT_ALPHA,
     n_perm: int = _DEFAULT_N_PERM,
 ) -> dict[str, Detector]:
-    """Trzy filary Disagreement na puli GLOWNEJ (negative control na realnych danych).
+    """Trzy filary Disagreement na puli GLOWNEJ (negative control, stosowane per rezim).
 
     - `h1`           — BOCPD(field="main") (filar temporalny; reprezentant H1).
-    - `mmd`          — MMD² okna obserwacji vs uniform reference (window=25, §3/v6).
+    - `mmd`          — MMD² okna obserwacji vs uniform reference (window=25, §3/v7).
     - `cooccurrence` — max-pair, curveball null (§5c).
 
-    window=25 (nie §3 oryginalne 200): na pelnym strumieniu ~958 daje ~38 okien
-    non-overlap (robustna kalibracja); 200 → tylko ~4 okna (preregistration_v4 §3,
-    korekta real-data). Wszystkie czytaja pule glowna — niezmienna przez cala historie,
-    wiec sluza jako negative control niezaleznie od rezimu.
+    window=25 (nie §3 oryginalne 200): na pelnym strumieniu non-overlap daje robustna
+    kalibracje (preregistration_v4 §3, korekta real-data). UWAGA per-rezim: R1 (n=133)
+    daje tylko ~5 okien MMD — granica wykonalnosci (§3 "Ograniczenie danych"); wynik R1
+    raportowany z ta uwaga, ale detektor nie crashuje. Wszystkie czytaja pule glowna.
     """
     return {
         "h1": bocpd_detector(field="main"),
@@ -150,19 +151,28 @@ def family_b_per_number_pvalues(
 # ---------------------------------------------------------------------------
 
 @dataclass(frozen=True)
-class AuditReport:
-    """Werdykt frameworka na pojedynczym strumieniu losowan (pos + neg control + gate)."""
+class RegimeAudit:
+    """Negative control pojedynczego rezimu regul (3 filary na puli glownej WEWNATRZ rezimu)."""
 
-    positive_control: TestResult              # BOCPD euron (ground truth 2014/2022)
-    negative_control: dict[str, TestResult]   # 3 filary na puli glownej
-    verdict: DisagreementVerdict              # Disagreement Protocol (DoD-4) nad neg. control
-    family_b: FDRResult                       # per-number FDR (DoD-3)
+    regime: str                               # "R1" / "R2" / "R3" (prereg_v7 §1)
+    n_draws: int                              # liczba losowan w rezimie
+    negative_control: dict[str, TestResult]   # 3 filary Disagreement (h1/mmd/cooccurrence)
+    verdict: DisagreementVerdict              # Disagreement Protocol (DoD-4) dla tego rezimu
+
+
+@dataclass(frozen=True)
+class AuditReport:
+    """Werdykt frameworka na strumieniu: pos control (full) + neg control per-rezim + gate."""
+
+    positive_control: TestResult              # BOCPD euron full-stream (ground truth 2014/2022)
+    regime_audits: dict[str, RegimeAudit]     # neg control per rezim (R1/R2/R3; tylko niepuste)
+    family_b: FDRResult                       # per-number FDR pooled nad rezimami (DoD-3)
     watchlist: list[WatchlistEntry] | None    # DoD-5: None = honest null
     watchlist_message: str
 
     @property
     def family_b_size(self) -> int:
-        """Konkretny rozmiar rodziny B dla tego przebiegu (zamiast referencyjnych 450)."""
+        """Konkretny rozmiar rodziny B (50 × #niepustych rezimow; realnie 150)."""
         return len(self.family_b.labels)
 
     def summary(self) -> str:
@@ -175,26 +185,36 @@ class AuditReport:
             )
         )
         cp_str = ", ".join(f"{d} (p={p:.2f})" for d, p in cps[:3]) or "brak"
-        neg = " ".join(
-            f"{k}={'reject' if r.reject_h0 else 'ok'}"
-            for k, r in self.negative_control.items()
-        )
+        lines = [
+            "DriftScope audit — werdykt na strumieniu:",
+            f"  POSITIVE CONTROL (euron/BOCPD, full-stream): reject={pc.reject_h0}; "
+            f"top CP: {cp_str}",
+            "  NEGATIVE CONTROL (main/3 filary, per rezim):",
+        ]
+        for label in REGIME_LABELS:
+            ra = self.regime_audits.get(label)
+            if ra is None:
+                continue
+            neg = " ".join(
+                f"{k}={'reject' if r.reject_h0 else 'ok'}"
+                for k, r in ra.negative_control.items()
+            )
+            lines.append(
+                f"    {label} (n={ra.n_draws}): {ra.verdict.fraction} "
+                f"({ra.verdict.label}); [{neg}]"
+            )
         wl = (
             "None (honest null)"
             if self.watchlist is None
             else f"{len(self.watchlist)} wpis(ow)"
         )
-        return (
-            "DriftScope audit — werdykt na strumieniu:\n"
-            f"  POSITIVE CONTROL (euron/BOCPD): reject={pc.reject_h0}; "
-            f"top CP: {cp_str}\n"
-            f"  NEGATIVE CONTROL (main/3 filary): {self.verdict.fraction} "
-            f"({self.verdict.label}); [{neg}]\n"
+        lines.append(
             f"  Family B (per-number FDR, {self.family_b.method}): "
-            f"{self.family_b.n_reject}/{self.family_b_size} odrzucen\n"
-            f"  WATCHLIST (DoD-5): {wl}\n"
-            f"  -> {self.watchlist_message}"
+            f"{self.family_b.n_reject}/{self.family_b_size} odrzucen"
         )
+        lines.append(f"  WATCHLIST (DoD-5): {wl}")
+        lines.append(f"  -> {self.watchlist_message}")
+        return "\n".join(lines)
 
 
 def run_audit(
@@ -205,18 +225,19 @@ def run_audit(
     n_perm: int = _DEFAULT_N_PERM,
     min_convergence: int = 1,
 ) -> AuditReport:
-    """Pelny audyt strumienia: positive + negative control + honest watchlist gate.
+    """Pelny audyt strumienia: positive control (full) + per-rezim neg control + honest gate.
 
-    1. Positive control: BOCPD(euron) — wykrycie zmian puli 2014/2022 (DoD-1b).
-    2. Negative control: 3 filary Disagreement na puli glownej → klasyfikacja (DoD-4).
-    3. Family B FDR: per-number exact-binomial + Benjamini-Yekutieli (DoD-3).
-    4. Watchlist: kandydaci = liczby odrzucone przez Family B, opatrzcone werdyktem
-       konwergencji neg. control; `build_watchlist` → None gdy zaden nie przejdzie
-       gate'u (FDR q≤alpha ORAZ konwergencja ≥min_convergence). Na czystym neg. control
-       Family B nie odrzuca nic → honest null (DoD-5).
+    1. Positive control: BOCPD(euron) FULL-STREAM — wykrycie zmian puli 2014/2022 (DoD-1b).
+    2. Negative control PER REZIM: dla kazdego niepustego rezimu (R1/R2/R3) 3 filary
+       Disagreement na puli glownej → klasyfikacja (DoD-4). Reszta rezimow pominieta.
+    3. Family B FDR: per-number exact-binomial per rezim, POOLED w jedna rodzine (labels
+       "Rk:number_j") + Benjamini-Yekutieli raz nad cala rodzina (DoD-3, v7 §5).
+    4. Watchlist: kandydaci = liczby odrzucone przez Family B, kazda z werdyktem konwergencji
+       SWOJEGO rezimu; `build_watchlist` → None gdy zaden nie przejdzie gate'u (FDR q≤alpha
+       ORAZ konwergencja ≥min_convergence). Na czystym neg. control → honest null (DoD-5).
 
     `pillar_detectors`: nadpisanie 3 filarow (testy wstrzykuja szybkie warianty);
-    None → `default_pillar_detectors(alpha, n_perm)`.
+    stosowane do KAZDEGO rezimu. None → `default_pillar_detectors(alpha, n_perm)`.
     """
     positive = run_bocpd(draws, field="euron")
 
@@ -225,20 +246,40 @@ def run_audit(
         if pillar_detectors is not None
         else default_pillar_detectors(alpha=alpha, n_perm=n_perm)
     )
-    pillars = run_pillars(draws, detectors)
-    verdict = classify_from_results(pillars)
 
-    labels, pvals = family_b_per_number_pvalues(draws)
-    family_b = correct_family_b(pvals, labels, alpha=alpha)
+    regimes = split_by_regime(draws)
+    regime_audits: dict[str, RegimeAudit] = {}
+    pooled_labels: list[str] = []
+    pooled_pvals: list[npt.NDArray[np.float64]] = []
 
-    # Kandydaci do watchlisty = TYLKO liczby odrzucone przez Family B (DoD-3). Kazdy
-    # niesie werdykt konwergencji neg. control (DoD-4). Oba gate'y egzekwowane w
+    for label in REGIME_LABELS:
+        regime_draws = regimes.get(label, [])
+        if not regime_draws:  # rezim bez losowan — pominiety (np. niepelny strumien)
+            continue
+        pillars = run_pillars(regime_draws, detectors)
+        regime_audits[label] = RegimeAudit(
+            regime=label,
+            n_draws=len(regime_draws),
+            negative_control=pillars,
+            verdict=classify_from_results(pillars),
+        )
+        lbls, pvals = family_b_per_number_pvalues(regime_draws)
+        pooled_labels.extend(f"{label}:{lbl}" for lbl in lbls)
+        pooled_pvals.append(pvals)
+
+    pvals_all = (
+        np.concatenate(pooled_pvals) if pooled_pvals else np.array([], dtype=float)
+    )
+    family_b = correct_family_b(pvals_all, pooled_labels, alpha=alpha)
+
+    # Kandydaci do watchlisty = liczby odrzucone przez Family B (DoD-3). Kazdy niesie werdykt
+    # konwergencji SWOJEGO rezimu (DoD-4; label = "Rk:number_j"). Oba gate'y egzekwowane w
     # `watchlist_or_message`; na uniform main Family B nie odrzuca nic → brak kandydatow.
     candidates = [
         WatchlistCandidate(
-            label=f"main:{lbl}",
-            regime="full",
-            verdict=verdict,
+            label=lbl,
+            regime=lbl.split(":", 1)[0],
+            verdict=regime_audits[lbl.split(":", 1)[0]].verdict,
             q_value=float(q),
             detail="per-number exact binomial (Family B)",
         )
@@ -251,8 +292,7 @@ def run_audit(
 
     return AuditReport(
         positive_control=positive,
-        negative_control=pillars,
-        verdict=verdict,
+        regime_audits=regime_audits,
         family_b=family_b,
         watchlist=watchlist,
         watchlist_message=message,

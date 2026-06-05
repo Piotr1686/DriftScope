@@ -39,6 +39,8 @@ dependencies = [
     "tenacity>=8.0",
     # Runtime guards
     "psutil>=5.9",
+    # Cryptographic PRNG (reusability benchmark — ChaCha20 keystream, ingestion/rng_streams.py)
+    "cryptography>=41,<46",
 ]
 
 [project.optional-dependencies]
@@ -84,6 +86,7 @@ module = [
     "scipy.*",
     "statsmodels.*",
     "psutil",
+    "cryptography.*",
 ]
 ignore_missing_imports = true
 

@@ -32,6 +32,7 @@ from __future__ import annotations
 import hashlib
 
 import numpy as np
+import numpy.typing as npt
 from numba import njit
 
 from driftscope.core.types import Detector, DrawRecord, TestResult
@@ -51,17 +52,17 @@ DEFAULT_ALPHA = 0.05
 # Frequency vectors p ∈ Δ⁴⁹
 # ---------------------------------------------------------------------------
 
-def _main_matrix(draws: list[DrawRecord]) -> np.ndarray:
+def _main_matrix(draws: list[DrawRecord]) -> npt.NDArray[np.int64]:
     """Macierz (n_draws, 5) liczb glownych (1-based). MMD czyta tylko pule glowna."""
     return np.array([d.main_numbers for d in draws], dtype=np.int64)
 
 
-def frequency_vector(draws: list[DrawRecord]) -> np.ndarray:
+def frequency_vector(draws: list[DrawRecord]) -> npt.NDArray[np.float64]:
     """Marginalny wektor czestosci p ∈ Δ⁴⁹ (suma=1) puli glownej dla zbioru losowan."""
     return _block_frequency(_main_matrix(draws))
 
 
-def _block_frequency(main_block: np.ndarray) -> np.ndarray:
+def _block_frequency(main_block: npt.NDArray[np.int64]) -> npt.NDArray[np.float64]:
     """Wektor czestosci (50,) dla bloku liczb glownych (w, 5); normalizowany do sumy 1."""
     counts = np.bincount(main_block.ravel() - 1, minlength=_MAIN_POOL_SIZE).astype(float)
     total = counts.sum()
@@ -72,7 +73,7 @@ def sliding_frequency_vectors(
     draws: list[DrawRecord],
     window: int,
     step: int,
-) -> np.ndarray:
+) -> npt.NDArray[np.float64]:
     """Wektory czestosci Δ⁴⁹ z przesuwajacego sie okna `window` (krok `step`).
 
     Zwraca macierz (n_windows, 50). Kazdy wiersz = marginalna czestosc puli glownej
@@ -103,14 +104,16 @@ def sliding_frequency_vectors(
 # Gaussian RBF + median heuristic
 # ---------------------------------------------------------------------------
 
-def _pairwise_sq_dists(A: np.ndarray, B: np.ndarray) -> np.ndarray:
+def _pairwise_sq_dists(
+    A: npt.NDArray[np.float64], B: npt.NDArray[np.float64]
+) -> npt.NDArray[np.float64]:
     """Macierz kwadratow odleglosci euklidesowych ||a_i - b_j||² (clip do >= 0)."""
     aa = np.sum(A * A, axis=1)[:, None]
     bb = np.sum(B * B, axis=1)[None, :]
     return np.maximum(aa + bb - 2.0 * A @ B.T, 0.0)
 
 
-def median_heuristic(X: np.ndarray) -> float:
+def median_heuristic(X: npt.NDArray[np.float64]) -> float:
     """Bandwidth σ = mediana parami odleglosci euklidesowych w X (Gretton 2012).
 
     Anti-leakage (§3): liczona WYLACZNIE na training window (przekazany X = obserwacja),
@@ -125,12 +128,16 @@ def median_heuristic(X: np.ndarray) -> float:
     return med if med > 0.0 else 1.0
 
 
-def _rbf_gram(A: np.ndarray, B: np.ndarray, bandwidth: float) -> np.ndarray:
+def _rbf_gram(
+    A: npt.NDArray[np.float64], B: npt.NDArray[np.float64], bandwidth: float
+) -> npt.NDArray[np.float64]:
     """Macierz Grama Gaussian RBF: k(a,b) = exp(-||a-b||² / (2σ²))."""
     return np.exp(-_pairwise_sq_dists(A, B) / (2.0 * bandwidth * bandwidth))
 
 
-def mmd_rbf_squared(X: np.ndarray, Y: np.ndarray, bandwidth: float) -> float:
+def mmd_rbf_squared(
+    X: npt.NDArray[np.float64], Y: npt.NDArray[np.float64], bandwidth: float
+) -> float:
     """Nieobciazony estymator MMD² (Gretton 2012, eq. 3) z Gaussian RBF.
 
     Wyklucza diagonale (i≠j) w skladnikach within-sample. Moze byc lekko ujemny
@@ -153,7 +160,7 @@ def mmd_rbf_squared(X: np.ndarray, Y: np.ndarray, bandwidth: float) -> float:
 # ---------------------------------------------------------------------------
 
 @njit(cache=True)
-def _mmd2_permuted(gram: np.ndarray, perm: np.ndarray, m: int) -> float:
+def _mmd2_permuted(gram: npt.NDArray[np.float64], perm: npt.NDArray[np.int64], m: int) -> float:
     """Nieobciazony MMD² dla podzialu zadanego permutacja `perm` indeksow puli Z=[X;Y].
 
     Pierwsze `m` indeksow perm → X', reszta → Y'. Indeksuje pre-policzona macierz `gram`
@@ -182,7 +189,9 @@ def _mmd2_permuted(gram: np.ndarray, perm: np.ndarray, m: int) -> float:
 
 
 @njit(cache=True)
-def _permutation_null(gram: np.ndarray, perms: np.ndarray, m: int) -> np.ndarray:
+def _permutation_null(
+    gram: npt.NDArray[np.float64], perms: npt.NDArray[np.int64], m: int
+) -> npt.NDArray[np.float64]:
     """Rozklad null MMD² dla `perms.shape[0]` permutacji etykiet (hot loop)."""
     n_perm = perms.shape[0]
     out = np.empty(n_perm, dtype=np.float64)
@@ -192,8 +201,8 @@ def _permutation_null(gram: np.ndarray, perms: np.ndarray, m: int) -> np.ndarray
 
 
 def mmd_permutation_test(
-    X: np.ndarray,
-    Y: np.ndarray,
+    X: npt.NDArray[np.float64],
+    Y: npt.NDArray[np.float64],
     n_perm: int = DEFAULT_N_PERM,
     rng: np.random.Generator | None = None,
     bandwidth: float | None = None,

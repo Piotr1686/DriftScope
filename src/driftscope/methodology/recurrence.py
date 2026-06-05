@@ -35,6 +35,7 @@ from __future__ import annotations
 import hashlib
 
 import numpy as np
+import numpy.typing as npt
 
 from driftscope.core.types import Detector, DrawRecord, TestResult
 
@@ -50,7 +51,7 @@ DEFAULT_ALPHA = 0.05
 # Gapy
 # ---------------------------------------------------------------------------
 
-def _incidence_matrix(draws: list[DrawRecord]) -> np.ndarray:
+def _incidence_matrix(draws: list[DrawRecord]) -> npt.NDArray[np.int8]:
     """Binarna macierz (n_draws, 50): M[t, k]=1 ⇔ liczba (k+1) w losowaniu t."""
     n = len(draws)
     m = np.zeros((n, _MAIN_POOL_SIZE), dtype=np.int8)
@@ -60,7 +61,7 @@ def _incidence_matrix(draws: list[DrawRecord]) -> np.ndarray:
     return m
 
 
-def number_gaps(draws: list[DrawRecord], number: int) -> np.ndarray:
+def number_gaps(draws: list[DrawRecord], number: int) -> npt.NDArray[np.int64]:
     """Gapy (w losowaniach) miedzy kolejnymi wystapieniami `number` (1-based).
 
     Gap = roznica indeksow losowan kolejnych wystapien (>=1). Zwraca [] gdy liczba
@@ -70,7 +71,7 @@ def number_gaps(draws: list[DrawRecord], number: int) -> np.ndarray:
     return _gaps_from_column(col)
 
 
-def _gaps_from_column(col: np.ndarray) -> np.ndarray:
+def _gaps_from_column(col: npt.NDArray[np.int8]) -> npt.NDArray[np.int64]:
     """Gapy z binarnej kolumny wystapien (1D 0/1)."""
     pos = np.flatnonzero(col)
     if pos.size < 2:
@@ -78,7 +79,7 @@ def _gaps_from_column(col: np.ndarray) -> np.ndarray:
     return np.diff(pos).astype(np.int64)
 
 
-def _ks_vs_geometric(gaps: np.ndarray, q: float) -> float:
+def _ks_vs_geometric(gaps: npt.NDArray[np.int64], q: float) -> float:
     """KS distance empirycznego CDF gapow od Geometric(q) na {1,2,...}.
 
     Geometric CDF: F(g) = 1 − (1−q)^g dla g >= 1. Wariant dwustronny (gorny i dolny
@@ -96,7 +97,7 @@ def _ks_vs_geometric(gaps: np.ndarray, q: float) -> float:
     return float(max(d_upper, d_lower))
 
 
-def _max_ks_over_numbers(m: np.ndarray, q: float) -> tuple[float, int]:
+def _max_ks_over_numbers(m: npt.NDArray[np.int8], q: float) -> tuple[float, int]:
     """(max_k D_k, argmax_k) po wszystkich 50 liczbach dla macierzy incydencji `m`."""
     best_d = 0.0
     best_k = 0
@@ -112,7 +113,9 @@ def _max_ks_over_numbers(m: np.ndarray, q: float) -> tuple[float, int]:
 # Nelson-Aalen cumulative hazard (diagnostyka §5b)
 # ---------------------------------------------------------------------------
 
-def nelson_aalen(gaps: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
+def nelson_aalen(
+    gaps: npt.NDArray[np.int64],
+) -> tuple[npt.NDArray[np.int64], npt.NDArray[np.float64]]:
     """Estymator Nelson-Aalen skumulowanego hazardu z gapow (~20 LOC, bez lifelines).
 
     Traktuje gapy jako czasy zdarzen (recurrence). Hazard krokowy w czasie t = liczba
@@ -121,7 +124,7 @@ def nelson_aalen(gaps: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
     intensywnosc; krzywizna sygnalizuje niestacjonarnosc intensywnosci.
     """
     if gaps.size == 0:
-        return np.empty(0), np.empty(0)
+        return np.empty(0, dtype=np.int64), np.empty(0, dtype=np.float64)
     times = np.unique(gaps)
     cumhaz = np.empty(times.size, dtype=np.float64)
     acc = 0.0
@@ -134,7 +137,7 @@ def nelson_aalen(gaps: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
     return times, cumhaz
 
 
-def nelson_aalen_linearity_deviation(gaps: np.ndarray) -> float:
+def nelson_aalen_linearity_deviation(gaps: npt.NDArray[np.int64]) -> float:
     """Maks. odchylenie skumulowanego hazardu od prostej (0,0)→(t_max, H_max).
 
     0 = idealnie liniowy (stala intensywnosc, zgodne z uniform); rosnie przy krzywiznie
@@ -155,7 +158,7 @@ def nelson_aalen_linearity_deviation(gaps: np.ndarray) -> float:
 # EVT max-gap (Gumbel, diagnostyka §5b)
 # ---------------------------------------------------------------------------
 
-def evt_max_gap_pvalue(gaps: np.ndarray, q: float) -> tuple[int, float]:
+def evt_max_gap_pvalue(gaps: npt.NDArray[np.int64], q: float) -> tuple[int, float]:
     """(max_gap, p-value) skrajnie dlugiej przerwy wg asymptotyki Gumbela.
 
     Dla gapow ~ Geometric(q), maksimum z m gapow ma w przyblizeniu rozklad maks.

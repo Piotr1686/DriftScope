@@ -19,6 +19,7 @@ from __future__ import annotations
 import hashlib
 
 import numpy as np
+import numpy.typing as npt
 from numba import njit
 
 from driftscope.core.types import Detector, DrawRecord, TestResult
@@ -28,7 +29,7 @@ DEFAULT_N_PERM = 999
 DEFAULT_ALPHA = 0.05
 
 
-def permutation_pvalue(observed: float, null_stats: np.ndarray) -> float:
+def permutation_pvalue(observed: float, null_stats: npt.NDArray[np.float64]) -> float:
     """Jednostronny (prawy ogon) p-value Monte Carlo: (1 + #{null ≥ obs})/(B + 1).
 
     `+1` w liczniku i mianowniku → estymator dowodliwie konserwatywny (E[FPR] ≤ α pod H0),
@@ -39,13 +40,13 @@ def permutation_pvalue(observed: float, null_stats: np.ndarray) -> float:
     return (1 + ge) / (b + 1)
 
 
-def _main_matrix(draws: list[DrawRecord]) -> np.ndarray:
+def _main_matrix(draws: list[DrawRecord]) -> npt.NDArray[np.int64]:
     """Macierz (n, 5) liczb glownych (1-based)."""
     return np.array([d.main_numbers for d in draws], dtype=np.int64)
 
 
 @njit(cache=True)
-def _mean_lag1_overlap(mat: np.ndarray) -> float:
+def _mean_lag1_overlap(mat: npt.NDArray[np.int64]) -> float:
     """Srednia liczba wspolnych liczb miedzy kolejnymi losowaniami (order-dependent)."""
     n = mat.shape[0]
     if n < 2:
@@ -62,7 +63,9 @@ def _mean_lag1_overlap(mat: np.ndarray) -> float:
 
 
 @njit(cache=True)
-def _shuffle_overlap_null(mat: np.ndarray, n_perm: int, seed: int) -> np.ndarray:
+def _shuffle_overlap_null(
+    mat: npt.NDArray[np.int64], n_perm: int, seed: int
+) -> npt.NDArray[np.float64]:
     """Null lag-1 overlap pod permutacja KOLEJNOSCI (njit hot loop — wzorzec PoC)."""
     np.random.seed(seed)
     n = mat.shape[0]

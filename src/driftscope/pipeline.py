@@ -41,7 +41,7 @@ from typing import Literal
 
 import numpy as np
 import numpy.typing as npt
-from scipy.stats import binomtest  # type: ignore[import-untyped]
+from scipy.stats import binomtest
 
 from driftscope.adaptive.honest_watchlist import (
     WatchlistCandidate,

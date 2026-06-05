@@ -61,14 +61,14 @@ def with_timeout(seconds: int) -> Callable[[F], F]:
                         f"{func.__name__}: przekroczono limit {seconds}s"
                     )
 
-                old = signal.signal(signal.SIGALRM, _handler)  # type: ignore[attr-defined]
-                signal.alarm(seconds)  # type: ignore[attr-defined]
+                old = signal.signal(signal.SIGALRM, _handler)  # type: ignore[attr-defined, unused-ignore]
+                signal.alarm(seconds)  # type: ignore[attr-defined, unused-ignore]
                 try:
                     return func(*args, **kwargs)
                 finally:
-                    signal.alarm(0)  # type: ignore[attr-defined]
-                    signal.signal(signal.SIGALRM, old)  # type: ignore[attr-defined]
+                    signal.alarm(0)  # type: ignore[attr-defined, unused-ignore]
+                    signal.signal(signal.SIGALRM, old)  # type: ignore[attr-defined, unused-ignore]
 
             return _unix_wrapper  # type: ignore[return-value]
 
-    return decorator  # type: ignore[return-value]
+    return decorator

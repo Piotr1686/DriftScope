@@ -32,6 +32,7 @@ from __future__ import annotations
 from typing import Literal
 
 import numpy as np
+import numpy.typing as npt
 
 from driftscope.core.types import DrawRecord
 from driftscope.driftsim.null_uniform import (
@@ -72,7 +73,9 @@ _WEEKDAY_FRIDAY = 4
 _WEEKDAY_TUESDAY = 1
 
 
-def _sample_main_weighted(weights: np.ndarray, rng: np.random.Generator) -> np.ndarray:
+def _sample_main_weighted(
+    weights: npt.NDArray[np.float64], rng: np.random.Generator
+) -> npt.NDArray[np.int64]:
     """5 z 50 bez zwracania wg wag (rosnaco, 1-based). Wagi normalizowane wewnatrz."""
     p = weights / weights.sum()
     return np.sort(rng.choice(_MAIN_POOL_SIZE, size=_MAIN_DRAW, replace=False, p=p) + 1)
@@ -84,8 +87,8 @@ def _weights_for(
     t: int,
     n_draws: int,
     weekday: int,
-    prev_main: np.ndarray | None,
-) -> np.ndarray:
+    prev_main: npt.NDArray[np.int64] | None,
+) -> npt.NDArray[np.float64]:
     """Wektor wag (len 50) dla losowania t pod danym sygnalem marginalnym."""
     w = np.full(_MAIN_POOL_SIZE, 1.0 / _MAIN_POOL_SIZE)
     idx = PLANTED_MAIN - 1
@@ -107,7 +110,7 @@ def _weights_for(
     return w
 
 
-def _sample_pair_corr(forced_frac: float, rng: np.random.Generator) -> np.ndarray:
+def _sample_pair_corr(forced_frac: float, rng: np.random.Generator) -> npt.NDArray[np.int64]:
     """Sygnal #5 (margin-preserving): podnosi wspolwystapienie PLANTED_PAIR, NIE marginesy.
 
     Mieszanka 3-komponentowa (forced_frac = p ∈ [0, 0.1], preregistration_v5 §6):
@@ -177,7 +180,7 @@ def generate_planted_draws(
 
     dates = synthetic_dates(n_draws, regime)
     records: list[DrawRecord] = []
-    prev_main: np.ndarray | None = None
+    prev_main: npt.NDArray[np.int64] | None = None
 
     for t, draw_date in enumerate(dates):
         if signal == "pair_corr":

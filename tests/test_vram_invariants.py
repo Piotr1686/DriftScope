@@ -7,12 +7,17 @@ Fixtures:
   load_pipeline   — dict z komponentami pipeline (placeholders do W1)
   sample_input    — lista DrawRecord-compatible dictow (200 losowan)
 """
+import gc
 import os
+from datetime import date, timedelta
 
 import numpy as np
 import polars as pl
 import psutil
 import pytest
+
+from driftscope.core.types import DrawRecord
+from driftscope.methodology.h1_classical import run_all_h1
 
 # ---------------------------------------------------------------------------
 # Fixtures
@@ -118,15 +123,43 @@ def test_ram_ingestion_budget(sample_input: list[dict]) -> None:  # type: ignore
     )
 
 
-def test_ram_baseline_below_h1_budget() -> None:
-    """Biezacy RSS procesu musi byc < 500 MB (H1 single run budget, §6.1).
+def _make_h1_draws(n: int = 200) -> list[DrawRecord]:
+    """n losowan EuroJackpot-compatible jako DrawRecord (tygodniowy krok dat)."""
+    rng = np.random.default_rng(42)
+    start = date(2020, 1, 3)
+    draws: list[DrawRecord] = []
+    for i in range(n):
+        main = sorted(rng.choice(range(1, 51), size=5, replace=False).tolist())
+        euron = sorted(rng.choice(range(1, 13), size=2, replace=False).tolist())
+        draws.append(
+            DrawRecord(
+                draw_date=start + timedelta(weeks=i),
+                main_1=main[0], main_2=main[1], main_3=main[2],
+                main_4=main[3], main_5=main[4],
+                euron_1=euron[0], euron_2=euron[1],
+            )
+        )
+    return draws
 
-    Placeholder — po implementacji h1_classical.py test bedzie weryfikowal
-    rzeczywiste zuzycie RAM w trakcie H1 run.
+
+def test_ram_h1_run_below_budget() -> None:
+    """Delta RSS pojedynczego H1 run (run_all_h1) < 500 MB (§6.1).
+
+    Mierzy PRZYROST RSS wokol jednego H1 run, NIE absolutny RSS procesu —
+    ten jest zdominowany przez import-footprint stacka (numba/scipy/statsmodels)
+    i platform-zalezny (~550 MB na Linux). Warm-up isoluje jednorazowy koszt
+    JIT (numba) od wlasciwego working-setu runu.
     """
-    rss = _rss_mb()
-    assert rss < 500, (
-        f"RSS {rss:.1f} MB > 500 MB H1 budget. Sprawdz co jest zaladowane."
+    draws = _make_h1_draws()
+
+    run_all_h1(draws)          # warm-up: JIT compile + lazy alloc poza pomiarem
+    gc.collect()
+    rss_before = _rss_mb()
+    run_all_h1(draws)          # mierzony run
+    delta_mb = _rss_mb() - rss_before
+
+    assert delta_mb < 500, (
+        f"H1 run zuzyl {delta_mb:.1f} MB > 500 MB budget (§6.1)"
     )
 
 

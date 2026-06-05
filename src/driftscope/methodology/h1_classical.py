@@ -9,6 +9,7 @@ import warnings
 from typing import Literal
 
 import numpy as np
+import numpy.typing as npt
 from scipy.signal import find_peaks, welch
 from scipy.special import logsumexp
 from statsmodels.stats.diagnostic import acorr_ljungbox
@@ -23,7 +24,7 @@ from driftscope.core.types import DrawRecord, TestResult
 def extract_series(
     draws: list[DrawRecord],
     kind: Literal["euron_mean", "euron_max", "main_mean", "main_std"],
-) -> np.ndarray:
+) -> npt.NDArray[np.float64]:
     """Skalarne szeregi czasowe z DrawRecord — do testów ADF/KPSS/Welch/ACF."""
     if kind == "euron_mean":
         return np.array([(d.euron_1 + d.euron_2) / 2.0 for d in draws])
@@ -40,7 +41,7 @@ def extract_series(
 # ADF
 # ---------------------------------------------------------------------------
 
-def run_adf(series: np.ndarray, label: str = "") -> TestResult:
+def run_adf(series: npt.NDArray[np.float64], label: str = "") -> TestResult:
     """ADF test — H0: unit root. Odrzucenie (p < 0.05) → szereg stacjonarny."""
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
@@ -65,7 +66,7 @@ def run_adf(series: np.ndarray, label: str = "") -> TestResult:
 # KPSS
 # ---------------------------------------------------------------------------
 
-def run_kpss(series: np.ndarray, label: str = "") -> TestResult:
+def run_kpss(series: npt.NDArray[np.float64], label: str = "") -> TestResult:
     """KPSS test — H0: level-stationary. Odrzucenie (p < 0.05) → niestacjonarny.
 
     Uwaga: p_value ograniczone do [0.01, 0.10] przez statsmodels (tabele tabel).
@@ -120,7 +121,7 @@ def _bocpd_dirichlet(
     k_per_draw: int,
     alpha: float,
     hazard: float,
-) -> tuple[np.ndarray, np.ndarray]:
+) -> tuple[npt.NDArray[np.float64], npt.NDArray[np.int64]]:
     """Rdzeń BOCPD z Dirichlet-Multinomial (Adams-MacKay 2007).
 
     Aproksymacja: K losowań bez zwracania traktowane jako K niezależnych próbek
@@ -187,7 +188,7 @@ def compute_bocpd_curve(
     alpha: float = 0.1,
     hazard: float = 0.005,
     warmup: int | None = None,
-) -> tuple[np.ndarray, np.ndarray, int, float]:
+) -> tuple[npt.NDArray[np.float64], npt.NDArray[np.int64], int, float]:
     """Pełna krzywa BOCPD + parametry detekcji — czysty accessor (reuse reporting/W8).
 
     Wydzielone z `run_bocpd`: mapuje `field → (n_symbols, K, obs_list)`, odpala
@@ -292,7 +293,7 @@ def run_bocpd(
 # ---------------------------------------------------------------------------
 
 def run_welch_test(
-    series: np.ndarray,
+    series: npt.NDArray[np.float64],
     fs: float = 1.0,
     label: str = "",
 ) -> TestResult:
@@ -337,7 +338,7 @@ def run_welch_test(
 # ---------------------------------------------------------------------------
 
 def run_acf_test(
-    series: np.ndarray,
+    series: npt.NDArray[np.float64],
     nlags: int = 40,
     label: str = "",
 ) -> TestResult:
@@ -388,7 +389,7 @@ def run_all_h1(draws: list[DrawRecord]) -> list[TestResult]:
     results: list[TestResult] = []
 
     for kind in ("euron_mean", "euron_max"):
-        series = extract_series(draws, kind)  # type: ignore[arg-type]
+        series = extract_series(draws, kind)
         results.append(run_adf(series, label=kind))
         results.append(run_kpss(series, label=kind))
         results.append(run_welch_test(series, label=kind))

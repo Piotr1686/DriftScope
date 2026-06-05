@@ -1,5 +1,7 @@
 # DriftScope
 
+[![CI](https://github.com/Piotr1686/DriftScope/actions/workflows/ci.yml/badge.svg)](https://github.com/Piotr1686/DriftScope/actions/workflows/ci.yml)
+
 **A stationarity audit framework for streaming discrete-valued processes — with calibrated
 detector hallucination rates.**
 

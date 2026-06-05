@@ -20,6 +20,7 @@ from __future__ import annotations
 import hashlib
 
 import numpy as np
+import numpy.typing as npt
 from numba import njit
 
 from driftscope.core.types import Detector, DrawRecord, TestResult
@@ -34,8 +35,8 @@ _DEFAULT_BLOCK = 10
 
 @njit(cache=True)
 def _block_boot_overlap_null(
-    mat: np.ndarray, n_boot: int, block_size: int, seed: int
-) -> np.ndarray:
+    mat: npt.NDArray[np.int64], n_boot: int, block_size: int, seed: int
+) -> npt.NDArray[np.float64]:
     """Null lag-1 overlap pod moving block bootstrap (njit hot loop).
 
     Kazda replika: skleja ceil(n/block_size) nakladajacych sie blokow dlugosci `block_size`

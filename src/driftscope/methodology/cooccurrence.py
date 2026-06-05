@@ -51,6 +51,7 @@ from __future__ import annotations
 import hashlib
 
 import numpy as np
+import numpy.typing as npt
 from numba import njit
 
 from driftscope.core.types import Detector, DrawRecord, TestResult
@@ -71,7 +72,7 @@ DEFAULT_THIN_FACTOR = 1   # thinning = THIN_FACTOR * n_draws wymian miedzy probk
 # Macierz incydencji i wspolwystapienia
 # ---------------------------------------------------------------------------
 
-def _incidence_matrix(draws: list[DrawRecord]) -> np.ndarray:
+def _incidence_matrix(draws: list[DrawRecord]) -> npt.NDArray[np.int8]:
     """Binarna macierz incydencji (n_draws, 50): M[t, k]=1 ⇔ liczba (k+1) w losowaniu t.
 
     Suma kazdego wiersza = 5 (liczby glowne); suma kolumny k = liczebnosc liczby (k+1).
@@ -84,7 +85,9 @@ def _incidence_matrix(draws: list[DrawRecord]) -> np.ndarray:
     return m
 
 
-def _cooccurrence_upper(m: np.ndarray, iu: tuple[np.ndarray, np.ndarray]) -> np.ndarray:
+def _cooccurrence_upper(
+    m: npt.NDArray[np.int8], iu: tuple[npt.NDArray[np.intp], npt.NDArray[np.intp]]
+) -> npt.NDArray[np.float64]:
     """Wektor wspolwystapien gornego trojkata: C_ij = #{losowania z obiema i,j} dla i<j."""
     cooc = m.T.astype(np.int64) @ m.astype(np.int64)  # (50,50), diagonala = liczebnosci
     return cooc[iu].astype(np.float64)
@@ -95,7 +98,7 @@ def _cooccurrence_upper(m: np.ndarray, iu: tuple[np.ndarray, np.ndarray]) -> np.
 # ---------------------------------------------------------------------------
 
 @njit(cache=True)
-def _curveball_trades(m: np.ndarray, n_trades: int) -> None:
+def _curveball_trades(m: npt.NDArray[np.int8], n_trades: int) -> None:
     """In-place `n_trades` wymian curveball na binarnej macierzy `m` (mutuje `m`).
 
     Jedna wymiana: losuj dwa rozne wiersze r1, r2; kolumny w ktorych sie ROZNIA tworza
@@ -145,13 +148,13 @@ def _seed_numba(seed: int) -> None:
 
 
 def _permutation_cooccurrence(
-    m0: np.ndarray,
-    iu: tuple[np.ndarray, np.ndarray],
+    m0: npt.NDArray[np.int8],
+    iu: tuple[npt.NDArray[np.intp], npt.NDArray[np.intp]],
     n_perm: int,
     burn_in: int,
     thin: int,
     seed: int,
-) -> np.ndarray:
+) -> npt.NDArray[np.float64]:
     """Macierz (n_perm, n_pairs) wspolwystapien pod nullem curveball (lancuch + thinning)."""
     _seed_numba(seed)
     m = m0.copy()
@@ -200,7 +203,7 @@ def cooccurrence_test(
     safe = e > 0.0
     sd = np.sqrt(np.where(safe, e, 1.0))  # sqrt(E) jako skala (Poisson-like); guard div0
 
-    def _max_z(c: np.ndarray) -> float:
+    def _max_z(c: npt.NDArray[np.float64]) -> float:
         return float(np.where(safe, (c - e) / sd, 0.0).max())
 
     max_obs = _max_z(obs)

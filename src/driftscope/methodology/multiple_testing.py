@@ -24,6 +24,7 @@ from dataclasses import dataclass, field
 from typing import Literal
 
 import numpy as np
+import numpy.typing as npt
 from statsmodels.stats.multitest import multipletests
 
 Method = Literal["bh", "by", "storey"]
@@ -43,10 +44,11 @@ class FDRResult:
     method: str
     alpha: float
     labels: list[str]
-    p_values: np.ndarray
-    q_values: np.ndarray          # adjusted p-values (monotoniczne)
-    reject: np.ndarray            # maska bool: q <= alpha
-    secondary: dict[str, np.ndarray] = field(default_factory=dict)  # np. {"storey": q...}
+    p_values: npt.NDArray[np.float64]
+    q_values: npt.NDArray[np.float64]          # adjusted p-values (monotoniczne)
+    reject: npt.NDArray[np.bool_]              # maska bool: q <= alpha
+    # secondary: np. {"storey": q-values}
+    secondary: dict[str, npt.NDArray[np.float64]] = field(default_factory=dict)
 
     @property
     def n_reject(self) -> int:
@@ -60,7 +62,9 @@ class FDRResult:
 # Procedury bazowe (adjusted p-values / q-values)
 # ---------------------------------------------------------------------------
 
-def bh_adjusted(pvals: np.ndarray, alpha: float = _DEFAULT_ALPHA) -> np.ndarray:
+def bh_adjusted(
+    pvals: npt.NDArray[np.float64], alpha: float = _DEFAULT_ALPHA
+) -> npt.NDArray[np.float64]:
     """Benjamini-Hochberg adjusted p-values (q-values). PRDS-zalezne."""
     if pvals.size == 0:
         return np.empty(0)
@@ -68,7 +72,9 @@ def bh_adjusted(pvals: np.ndarray, alpha: float = _DEFAULT_ALPHA) -> np.ndarray:
     return q
 
 
-def by_adjusted(pvals: np.ndarray, alpha: float = _DEFAULT_ALPHA) -> np.ndarray:
+def by_adjusted(
+    pvals: npt.NDArray[np.float64], alpha: float = _DEFAULT_ALPHA
+) -> npt.NDArray[np.float64]:
     """Benjamini-Yekutieli adjusted p-values — wazne przy DOWOLNEJ zaleznosci."""
     if pvals.size == 0:
         return np.empty(0)
@@ -76,7 +82,9 @@ def by_adjusted(pvals: np.ndarray, alpha: float = _DEFAULT_ALPHA) -> np.ndarray:
     return q
 
 
-def storey_qvalues(pvals: np.ndarray, lam: float = _STOREY_LAMBDA) -> np.ndarray:
+def storey_qvalues(
+    pvals: npt.NDArray[np.float64], lam: float = _STOREY_LAMBDA
+) -> npt.NDArray[np.float64]:
     """Storey (2002/2003) q-values z estymacja pi0 = #{p>lam}/(m·(1−lam)).
 
     Mniej konserwatywny niz BH gdy frakcja prawdziwych H1 jest duza (pi0 < 1). Dla
@@ -105,8 +113,8 @@ def storey_qvalues(pvals: np.ndarray, lam: float = _STOREY_LAMBDA) -> np.ndarray
 # ---------------------------------------------------------------------------
 
 def _as_arrays(
-    pvals: np.ndarray | list[float], labels: list[str] | None
-) -> tuple[np.ndarray, list[str]]:
+    pvals: npt.NDArray[np.float64] | list[float], labels: list[str] | None
+) -> tuple[npt.NDArray[np.float64], list[str]]:
     p = np.asarray(pvals, dtype=float)
     if labels is None:
         labels = [f"h{i}" for i in range(p.size)]
@@ -118,7 +126,7 @@ def _as_arrays(
 
 
 def correct_family_a(
-    pvals: np.ndarray | list[float],
+    pvals: npt.NDArray[np.float64] | list[float],
     labels: list[str] | None = None,
     alpha: float = _DEFAULT_ALPHA,
 ) -> FDRResult:
@@ -137,7 +145,7 @@ def correct_family_a(
 
 
 def correct_family_b(
-    pvals: np.ndarray | list[float],
+    pvals: npt.NDArray[np.float64] | list[float],
     labels: list[str] | None = None,
     alpha: float = _DEFAULT_ALPHA,
 ) -> FDRResult:

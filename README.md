@@ -51,6 +51,23 @@ The key property: `pair_corr` is visible **only** to co-occurrence — chi²/MMD
 to it when the margins are preserved (power ≈ FPR). Every planted signal class has at least one
 champion pillar, and the families do not overlap.
 
+## Reusability — the same audit on PRNGs
+
+A null result on EuroJackpot is only worth trusting if the instrument is *sensitive*. The same
+battery (Family B + MMD + co-occurrence) applied to streams with a **known ground truth**:
+
+| Source | Class | Verdict |
+|---|---|---|
+| MT19937, Xorshift64 | good (non-crypto) | **clear** |
+| ChaCha20 | cryptographic | **clear** (specificity) |
+| MT19937 + injected bias | **defect** | **FLAG** (caught by Family B + MMD) |
+| EuroJackpot (main 1–50) | real | **clear** (the honest null above) |
+
+The same detector that stays silent on EuroJackpot **lights up on a planted PRNG defect and
+clears a crypto-grade RNG** — the honest null is a calibrated instrument, not blindness. The
+framework is detector-agnostic: feeding it a PRNG stream is just a different `DrawRecord` source
+(`ingestion/rng_streams.py`). Reproduce: `python scripts/prng_benchmark.py`.
+
 ## Methodological discipline
 
 - **Pre-registration.** Every methodological choice (statistics, nulls, thresholds, effect-size
@@ -97,17 +114,18 @@ quarto render src/driftscope/reporting/report.qmd --to html
 
 ```
 src/driftscope/
-├── ingestion/      # seed CSV loader + regime split (2014-10-10 / 2022-03-25 boundaries)
+├── ingestion/      # seed CSV loader + regime split + PRNG stream adapters (rng_streams.py)
 ├── methodology/    # the frozen science: BOCPD, MMD, co-occurrence, permutation,
 │                   #   recurrence, multiple-testing (BH / Benjamini-Yekutieli),
 │                   #   specification curve, block bootstrap + preregistration_v*.md
 ├── driftsim/       # planted-signal simulator (5 signals × 4 effect sizes) + calibration
 ├── reporting/      # disagreement protocol, static (matplotlib) + interactive (Plotly) plots,
-│                   #   Quarto report
+│                   #   PRNG benchmark, Quarto report
 ├── adaptive/       # honest watchlist (returns None unless DoD-3 AND DoD-4 pass)
 ├── pipeline.py     # end-to-end orchestrator: run_audit(draws) -> AuditReport
 └── cli.py          # `driftscope run`
-tests/              # 221 tests — calibration, invariants, FPR ≤ α, reproducibility
+scripts/            # archive (SHA-256 manifest), prng_benchmark (reusability showcase)
+tests/              # 239 tests — calibration, invariants, FPR ≤ α, reproducibility, PRNG
 data/seed/          # eurojackpot_history.csv (958 draws, committed)
 ```
 

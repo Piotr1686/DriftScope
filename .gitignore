@@ -25,6 +25,7 @@ notebooks/*.ipynb
 artifacts/*.png
 artifacts/*.webm
 artifacts/*.gif
+artifacts/*.csv
 
 # --- Quarto build artifacts ---
 # Figury są inline'owane do docs/*.html (embed-resources), więc źródła build nie są commitowane.

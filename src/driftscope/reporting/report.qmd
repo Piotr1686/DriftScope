@@ -31,6 +31,8 @@ import driftscope
 from driftscope.core.config import settings
 from driftscope.ingestion.lotto_scraper import load_seed_csv
 from driftscope.pipeline import run_audit
+from IPython.display import HTML
+from driftscope.reporting.plots_interactive import interactive_bocpd_figure
 from driftscope.reporting.plots_static import (
     animate_bocpd_hook,
     plot_bocpd_changepoints,
@@ -147,6 +149,19 @@ control remains untouched.
 
 ![BOCPD on the euro-number pool — the full P(change-point) curve. Red markers: peaks
 crossing the reject threshold 0.33.](figs/bocpd_euron.png)
+
+**Interactive view.** The same BOCPD curve, interactive — hover any draw for its exact
+posterior, zoom into either change-point, or pan across the 958-draw stream. The red
+markers carry the draw date (2014-11-28, 2022-03-29):
+
+```{python}
+#| label: interactive-bocpd
+#| echo: false
+# Interactive Plotly twin of the static figure above (plots_interactive.py). plotly.js is
+# loaded from CDN (include_plotlyjs="cdn") so it does not bloat the embed-resources HTML.
+fig = interactive_bocpd_figure(draws, "euron")
+HTML(fig.to_html(include_plotlyjs="cdn", full_html=False))
+```
 
 **Negative control (main 1–50).** Three independent pillars, evaluated *within each
 regime* (H0 §1 is stationarity inside a regime; the 1–50 pool is invariant across regimes,

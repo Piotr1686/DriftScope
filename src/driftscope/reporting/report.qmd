@@ -232,7 +232,53 @@ single-pillar flag on a clean main pool clears neither. So no pattern clears the
 the framework **proposes nothing**. This is deliberate: a raw signal is reported as raw,
 absence of convergent evidence as absence of evidence.
 
-# 5. Reproducibility (DoD-6)
+# 5. Reusability — the same audit on PRNGs
+
+A null result on EuroJackpot ("we found nothing") is only worth trusting if the instrument
+is *sensitive*. So we point the **exact same battery** (Family B per-number FDR + MMD +
+co-occurrence) at streams with a **known ground truth**: two well-behaved generators
+(MT19937, Xorshift64), a cryptographic one (ChaCha20), the same MT19937 with a **deliberately
+injected defect** (one number over-represented in 15% of draws), and real EuroJackpot. The
+framework is detector-agnostic — feeding it a PRNG stream instead of a lottery is just a
+different `DrawRecord` source (`ingestion/rng_streams.py`).
+
+```{python}
+#| label: prng-benchmark
+#| echo: false
+#| output: asis
+#| cache: true
+from driftscope.reporting.prng_benchmark import run_benchmark
+
+rows = run_benchmark(n_draws=1500, n_perm=199, seed_csv=SEED if SEED.exists() else None)
+print("| Source | Class | n | Family B (reject/size) | MMD p | Co-occ p | Verdict |")
+print("|---|---|---|---|---|---|---|")
+for r in rows:
+    print(
+        f"| {r.source} | {r.klass} | {r.n} | {r.family_b_reject}/{r.family_b_size} "
+        f"| {r.mmd_p:.3f} | {r.cooc_p:.3f} | **{r.verdict}** |"
+    )
+sens = all(r.flagged for r in rows if r.klass == "DEFECT")
+spec = all(not r.flagged for r in rows if r.klass != "DEFECT")
+print(
+    f"\n**Sensitivity** (defect → FLAG): {'✓' if sens else '✗'} · "
+    f"**Specificity** (good / crypto / real → clear): {'✓' if spec else '✗'}."
+)
+```
+
+The defective generator is caught by **Family B** (the over-represented number breaks the
+per-number binomial) **and MMD** (the windowed frequency departs from uniform) — but *not* by
+co-occurrence, which targets pair structure, not marginals. That split is itself a
+correctness check: each pillar fires only on the deviation class it is designed for. The two
+good PRNGs, the cryptographic PRNG, and real EuroJackpot all come back **clear**.
+
+This is the point of the whole framework in one table: the same detector that **stays silent
+on EuroJackpot's main pool lights up on a planted defect and clears a crypto-grade RNG**. The
+honest null is not blindness — it is a calibrated instrument reporting the absence of a signal.
+It also cashes the reusability claim directly: DriftScope is a general non-stationarity /
+uniformity auditor (NIST RNG, cryptographic PRNG, financial random-walk are natural targets),
+not a lottery-specific script.
+
+# 6. Reproducibility (DoD-6)
 
 - **Determinism:** every detector is a pure function of the stream; the RNG is seeded from
   the data contents (⊕ `BASE_SEED`), independent of call order.

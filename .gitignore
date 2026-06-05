@@ -16,9 +16,15 @@ notebooks/*.ipynb
 # --- Claude Code Session System ---
 # Odkomentuj jeśli nie chcesz commitować stanu sesji:
 # last_session.md
-CLAUDE.md.backup_*
-MEMORY.md.backup_*
-last_session.md.backup_*
+# last_session.archive.md
+*.backup_*
+
+# --- Generated reporting media w artifacts/ ---
+# Figury/animacje są inline'owane base64 do docs/report.html (embed-resources) → redundantne w repo.
+# *.parquet / *.sqlite / artifacts_manifest.json (deliverables) zostają trackowane (planowo git-lfs).
+artifacts/*.png
+artifacts/*.webm
+artifacts/*.gif
 
 # --- Quarto build artifacts ---
 # Figury są inline'owane do docs/*.html (embed-resources), więc źródła build nie są commitowane.

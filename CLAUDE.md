@@ -92,16 +92,18 @@
 | Polars LazyFrame reduce | <2 GB | 5–15 min | `scan_parquet(glob).collect()` |
 
 ## Pliki stanu sesji
-- **MEMORY.md**       — długoterminowa pamięć projektu (czytaj na /start)
-- **last_session.md** — stan ostatniej sesji (czytaj na /start, pisz na /end)
+- **MEMORY.md**               — długoterminowa pamięć projektu (czytaj na /start)
+- **last_session.md**         — stan ostatniej sesji + punkt odniesienia git (czytaj na /start, pisz na /end)
+- **last_session.archive.md** — archiwum 5 ostatnich sesji (bezpiecznik /end; powstaje przy pierwszym /end)
 
 ## Komendy dostępne w tym projekcie
-| Komenda   | Kiedy używać                      | Co robi                                    |
-|-----------|-----------------------------------|--------------------------------------------|
-| `/start`  | Na początku każdej sesji          | Czyta MEMORY.md + last_session.md          |
-| `/save`   | Checkpoint w trakcie pracy        | Aktualizuje last_session.md (sesja trwa)   |
-| `/end`    | Na końcu sesji                    | Nadpisuje last_session.md + update MEMORY  |
-| `/status` | Szybki podgląd (bez modyfikacji)  | Wyświetla aktualny stan z last_session.md  |
+| Komenda    | Kiedy używać                        | Co robi                                          |
+|------------|-------------------------------------|--------------------------------------------------|
+| `/start`   | Na początku każdej sesji            | Czyta MEMORY.md + last_session.md; sanity-check  |
+| `/save`    | Checkpoint w trakcie pracy          | Aktualizuje last_session.md (sesja trwa)         |
+| `/recover` | Przed /end lub po chaotycznej pracy | Audyt zmian od punktu odniesienia; lista napraw  |
+| `/end`     | Na końcu sesji                      | Weryfikacja → archiwizacja → nadpis + MEMORY     |
+| `/status`  | Szybki podgląd (bez modyfikacji)    | Wyświetla aktualny stan z last_session.md        |
 
 ## Struktura katalogów
 ```

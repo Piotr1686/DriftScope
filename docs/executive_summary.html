@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DriftScope — Executive Summary</title>
+<!--
+  Standalone, self-contained one-page executive summary (W9).
+  Print-friendly: Ctrl+P fits a single A4 page (see @media print / @page below).
+  Numbers are the frozen headline figures (958 real draws, 2012-2026); this page
+  intentionally does NOT re-run the pipeline — it is a portfolio one-pager, not the
+  full report. Full evidence + interactive plots live in report.html.
+-->
+<style>
+  :root {
+    --ink: #1a1f29;
+    --muted: #555f6e;
+    --line: #d7dce3;
+    --accent: #0b5fa5;
+    --good: #1d7a46;
+    --flag: #b4451c;
+    --boxbg: #f4f7fb;
+  }
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    color: var(--ink);
+    line-height: 1.42;
+    margin: 0;
+    background: #e9edf2;
+    font-size: 14px;
+  }
+  .sheet {
+    max-width: 820px;
+    margin: 24px auto;
+    background: #fff;
+    padding: 30px 38px 26px;
+    box-shadow: 0 2px 18px rgba(20,30,50,.12);
+    border-radius: 4px;
+  }
+  header { border-bottom: 2px solid var(--ink); padding-bottom: 10px; margin-bottom: 14px; }
+  h1 { font-size: 25px; margin: 0 0 3px; letter-spacing: -.4px; }
+  .tagline { color: var(--muted); font-size: 13.5px; margin: 0; }
+  .role { color: var(--accent); font-weight: 600; font-size: 11.5px; text-transform: uppercase; letter-spacing: .6px; margin: 6px 0 0; }
+  h2 {
+    font-size: 12px; text-transform: uppercase; letter-spacing: .7px;
+    color: var(--accent); margin: 16px 0 6px; padding-bottom: 2px;
+    border-bottom: 1px solid var(--line);
+  }
+  p { margin: 0 0 7px; }
+  .lead { font-size: 14px; }
+  .lead b { color: var(--ink); }
+  ul { margin: 4px 0 7px; padding-left: 18px; }
+  li { margin: 2px 0; }
+  .result {
+    background: var(--boxbg);
+    border: 1px solid var(--line);
+    border-left: 4px solid var(--accent);
+    border-radius: 4px;
+    padding: 11px 14px;
+    margin: 8px 0 4px;
+  }
+  .result table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .result td { padding: 3px 6px; vertical-align: top; }
+  .result td.k { color: var(--muted); white-space: nowrap; width: 38%; }
+  .result td.v b { font-variant-numeric: tabular-nums; }
+  .yes { color: var(--good); font-weight: 700; }
+  .no  { color: var(--flag); font-weight: 700; }
+  .verdict-line { font-size: 13px; margin-top: 8px; color: var(--ink); }
+  table.prng { width: 100%; border-collapse: collapse; font-size: 12.5px; margin: 4px 0; }
+  table.prng th, table.prng td { text-align: left; padding: 4px 7px; border-bottom: 1px solid var(--line); }
+  table.prng th { color: var(--muted); font-weight: 600; font-size: 11px; text-transform: uppercase; letter-spacing: .4px; }
+  table.prng td.cls { color: var(--muted); }
+  .clear { color: var(--good); font-weight: 600; }
+  .flag  { color: var(--flag); font-weight: 600; }
+  .cols { display: flex; gap: 26px; }
+  .cols > div { flex: 1; }
+  .demo li { font-size: 13px; }
+  .demo b { color: var(--accent); }
+  footer {
+    margin-top: 16px; padding-top: 10px; border-top: 1px solid var(--line);
+    font-size: 11.5px; color: var(--muted);
+    display: flex; justify-content: space-between; gap: 16px; flex-wrap: wrap;
+  }
+  footer a { color: var(--accent); text-decoration: none; }
+  footer .stack { flex-basis: 100%; margin-top: 6px; color: var(--muted); }
+  .pill { display: inline-block; background: #eef3f8; color: var(--accent); border: 1px solid var(--line);
+          border-radius: 10px; padding: 1px 9px; font-size: 11px; font-weight: 600; }
+
+  @page { size: A4; margin: 8mm 11mm; }
+  @media print {
+    body { background: #fff; font-size: 9pt; line-height: 1.24; }
+    .sheet { box-shadow: none; margin: 0; max-width: none; padding: 0; border-radius: 0; }
+    header { padding-bottom: 6pt; margin-bottom: 8pt; }
+    h1 { font-size: 16pt; margin-bottom: 2pt; }
+    .tagline { font-size: 9pt; }
+    .role { font-size: 7.5pt; margin-top: 3pt; }
+    h2 { margin: 7pt 0 3pt; font-size: 8pt; }
+    p { margin-bottom: 3pt; }
+    .lead { font-size: 9pt; }
+    ul { margin: 2pt 0 4pt; padding-left: 14pt; }
+    li { margin: 1pt 0; }
+    .result { padding: 7pt 10pt; margin: 5pt 0 3pt; break-inside: avoid; }
+    .result table { font-size: 8.6pt; }
+    .result td { padding: 1.5pt 5pt; }
+    .verdict-line { font-size: 8.6pt; margin-top: 5pt; }
+    .cols { gap: 18pt; }
+    table.prng { font-size: 8.2pt; break-inside: avoid; }
+    table.prng th, table.prng td { padding: 2pt 5pt; }
+    .demo li { font-size: 8.6pt; }
+    footer { margin-top: 9pt; padding-top: 6pt; font-size: 7.8pt; }
+    footer a { color: var(--ink); }
+    footer .stack { margin-top: 3pt; }
+    a { text-decoration: none; }
+  }
+</style>
+</head>
+<body>
+<div class="sheet">
+
+  <header>
+    <h1>DriftScope</h1>
+    <p class="tagline">A stationarity audit framework for discrete streams that are <i>uniform by design</i> — with calibrated detector hallucination rates.</p>
+    <p class="role">Executive summary · scientific research framework · solo build</p>
+  </header>
+
+  <h2>The problem</h2>
+  <p class="lead">Anomaly detectors are easy to fool: point one at random data long enough and it
+  "finds" something. The honest question is not <i>"did we find an anomaly?"</i> but
+  <b>"does the detector fire on a real signal <i>and stay silent where there is none?"</i></b>
+  DriftScope answers it on a stream with a <b>known ground truth</b> — EuroJackpot, whose
+  euro-number pool changed rules twice (2014, 2022) while the main 1–50 pool never did: a
+  built-in positive/negative control.</p>
+
+  <h2>The result — 958 real draws (2012–2026)</h2>
+  <div class="result">
+    <table>
+      <tr>
+        <td class="k">Positive control — BOCPD on euron</td>
+        <td class="v"><b class="yes">FIRES ✓</b> — change-points at <b>2014-11-28</b> and
+          <b>2022-03-29</b>, the first draws reflecting each rule change (DoD-1b).</td>
+      </tr>
+      <tr>
+        <td class="k">Negative control — main 1–50, 3 pillars, per regime</td>
+        <td class="v"><b>R1 0/3 · R2 1/3 · R3 0/3.</b> The lone R2 single-pillar flag is
+          classified <i>"requires power context" — not a finding</i> (≈14% chance one of three
+          regimes flags at α=0.05).</td>
+      </tr>
+      <tr>
+        <td class="k">Family B FDR — per-number, Benjamini-Yekutieli, 150 hyp.</td>
+        <td class="v"><b>0 / 150</b> rejections.</td>
+      </tr>
+      <tr>
+        <td class="k">Honest watchlist (DoD-5)</td>
+        <td class="v"><b class="no">None</b> — an honest null, not an empty list or an extrapolation.</td>
+      </tr>
+    </table>
+    <p class="verdict-line"><b>The framework confirms the known signal and refuses to hallucinate one where there is none.</b></p>
+  </div>
+
+  <div class="cols">
+    <div>
+      <h2>Why the null is credible</h2>
+      <ul>
+        <li><b>Three non-redundant pillars.</b> BOCPD (temporal), MMD (distributional),
+          co-occurrence (joint pair structure). <code>pair_corr</code> is visible <i>only</i> to
+          co-occurrence — the families provably don't overlap, so a clean verdict isn't one
+          blind detector agreeing with itself.</li>
+        <li><b>Pre-registration.</b> Every choice (statistics, nulls, thresholds, effect grids)
+          frozen before seeing results; each revision carries a <code>revision_reason</code> split
+          <i>clean</i> vs <i>data-informed</i>.</li>
+        <li><b>Calibrated nulls.</b> Each detector's false-positive rate validated ≈ α on an
+          honest uniform null (DoD-2); BOCPD threshold calibrated per field (FPR ≈ 0.05).</li>
+      </ul>
+    </div>
+    <div>
+      <h2>Sensitivity proof — same battery on PRNGs</h2>
+      <p style="font-size:12.5px;margin-bottom:5px;">A null is only worth trusting if the
+        instrument is <i>sensitive</i>. The exact same battery on streams with known truth:</p>
+      <table class="prng">
+        <tr><th>Stream</th><th>Class</th><th>Verdict</th></tr>
+        <tr><td>MT19937 · Xorshift64</td><td class="cls">good</td><td class="clear">clear</td></tr>
+        <tr><td>ChaCha20 · AES-CTR-DRBG</td><td class="cls">crypto</td><td class="clear">clear</td></tr>
+        <tr><td>MT19937 + marginal bias</td><td class="cls">defect</td><td class="flag">FLAG — narrow</td></tr>
+        <tr><td>MT19937 + period-truncation</td><td class="cls">defect</td><td class="flag">FLAG — broad</td></tr>
+        <tr><td>EuroJackpot main 1–50</td><td class="cls">real</td><td class="clear">clear</td></tr>
+      </table>
+      <p style="font-size:12px;margin-top:5px;color:var(--muted);">Defects flag; two crypto-grade
+        RNGs and real data clear. <b>Which pillars fire reveals the defect kind</b> — a marginal
+        bias trips Family B + MMD narrowly; a short period freezes the whole distribution and trips
+        all three.</p>
+    </div>
+  </div>
+
+  <h2>What it demonstrates</h2>
+  <ul class="demo">
+    <li><b>Statistical rigor under adversarial self-scrutiny</b> — family-aware FDR, calibrated
+      FPR, a negative control treated as seriously as the positive one.</li>
+    <li><b>Reproducibility engineering</b> — pure-function detectors, content-seeded RNG, a
+      deterministic SHA-256 manifest (cold-machine re-run is bit-identical, DoD-6).</li>
+    <li><b>Performance & clean architecture</b> — Numba-JIT permutation hot loops (CPU-only),
+      a detector-agnostic pipeline (a PRNG stream is just a different <code>DrawRecord</code> source).</li>
+    <li><b>Intellectual honesty as a feature</b> — the deliverable is a calibrated "we found
+      nothing", defended — not a manufactured finding.</li>
+  </ul>
+
+  <footer>
+    <span>📊 Live report &amp; interactive plots: <a href="https://piotr1686.github.io/DriftScope/">piotr1686.github.io/DriftScope</a></span>
+    <span>Source: <a href="https://github.com/Piotr1686/DriftScope">github.com/Piotr1686/DriftScope</a></span>
+    <span class="pill">246 tests · CI green</span>
+    <span class="stack">Python 3.10 · NumPy 2.x + Numba 0.65.1 · statsmodels · ruptures · SciPy · scikit-learn · Polars · Pydantic v2 · Typer · matplotlib + Plotly · Quarto. CPU-only, ~4 GB peak.</span>
+  </footer>
+
+</div>
+</body>
+</html>

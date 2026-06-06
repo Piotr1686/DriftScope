@@ -58,6 +58,11 @@ plot_bocpd_changepoints(draws, "euron", out_path=FIGS / "bocpd_euron.png")
 HOOK = animate_bocpd_hook(draws, "euron", out_path=FIGS / "hook_euron.webm")
 ```
 
+::: {.callout-note appearance="simple"}
+📄 **In a hurry?** Read the one-page [**executive summary**](executive_summary.html) instead
+(print-friendly — `Ctrl+P` → a clean single-page PDF).
+:::
+
 # 1. The finding
 
 DriftScope audits discrete streams that are *uniform by design* for non-stationarity.

@@ -18,6 +18,7 @@ framework (NIST RNG, cryptographic PRNGs, and financial random walks are natural
 targets).
 
 📊 **Live report:** https://piotr1686.github.io/DriftScope/
+📄 **Executive summary (1-page, print → PDF):** https://piotr1686.github.io/DriftScope/executive_summary.html
 
 ## The headline
 

@@ -10,13 +10,14 @@ import numpy as np
 import pytest
 
 from driftscope.ingestion.rng_streams import (
+    AESCtrDrbgStream,
     ChaCha20Stream,
     MT19937Stream,
     Xorshift64Stream,
     draws_from_stream,
 )
 
-_STREAMS = [MT19937Stream, Xorshift64Stream, ChaCha20Stream]
+_STREAMS = [MT19937Stream, Xorshift64Stream, ChaCha20Stream, AESCtrDrbgStream]
 
 
 @pytest.mark.parametrize("cls", _STREAMS)
@@ -61,7 +62,7 @@ def test_randbelow_unbiased() -> None:
     assert np.all(np.abs(counts - expected) < 0.15 * expected)
 
 
-@pytest.mark.parametrize("cls", [MT19937Stream, ChaCha20Stream])
+@pytest.mark.parametrize("cls", [MT19937Stream, ChaCha20Stream, AESCtrDrbgStream])
 def test_good_rng_marginals_near_uniform(cls: type) -> None:
     """Good/crypto RNG: czestosc kazdej liczby glownej ~ 5/50 (zaden numer nie odstaje)."""
     draws = draws_from_stream(cls(99), 5000)
@@ -84,8 +85,47 @@ def test_defect_detectable() -> None:
     assert freq_bad > 1.5 * freq_good  # defekt musi byc widoczny golym okiem
 
 
+def test_period_truncation_repeats() -> None:
+    """Defekt period=p: losowania powtarzaja sie z okresem p (zamrozony cykl)."""
+    p = 20
+    draws = draws_from_stream(MT19937Stream(11), 100, period=p)
+    for i in range(p, 100):
+        # numery (main+euron) identyczne co p; daty pozostaja monotoniczne (re-stamp).
+        assert draws[i].main_numbers == draws[i % p].main_numbers
+        assert draws[i].euronumbers == draws[i % p].euronumbers
+    dates = [d.draw_date for d in draws]
+    assert dates == sorted(dates) and len(set(dates)) == 100  # daty wciaz unikalne
+
+
+def test_period_truncation_overdispersion() -> None:
+    """Krotki okres → ZAMROZONE czestosci → rozrzut zliczen >> good RNG (nadmierna dyspersja).
+
+    Inny mechanizm niz favor: cala dystrybucja zamrozona, nie jeden numer. Battery laduje
+    to przez Family B (efektywna proba = period, nie n)."""
+    n, p = 1500, 50
+
+    def _counts(draws: list) -> np.ndarray:
+        c = np.zeros(50, dtype=np.int64)
+        for d in draws:
+            for x in d.main_numbers:
+                c[x - 1] += 1
+        return c
+
+    good = _counts(draws_from_stream(MT19937Stream(5), n))
+    truncated = _counts(draws_from_stream(MT19937Stream(5), n, period=p))
+    # oba maja te sama sume (n*5), ale cykl zamraza odchylenia -> wieksza wariancja zliczen
+    assert truncated.sum() == good.sum() == n * 5
+    assert truncated.var() > 3.0 * good.var()
+
+
+def test_period_and_favor_mutually_exclusive() -> None:
+    """favor + period jednoczesnie → ValueError (wykluczajace sie defekty)."""
+    with pytest.raises(ValueError):
+        draws_from_stream(MT19937Stream(1), 10, favor=(7, 0.2), period=10)
+
+
 def test_invalid_args() -> None:
-    """Walidacja: n_draws<=0 i favor poza zakresem → ValueError."""
+    """Walidacja: n_draws<=0, favor poza zakresem, period<=0 → ValueError."""
     stream = MT19937Stream(1)
     with pytest.raises(ValueError):
         draws_from_stream(stream, 0)
@@ -93,6 +133,8 @@ def test_invalid_args() -> None:
         draws_from_stream(MT19937Stream(1), 10, favor=(99, 0.1))
     with pytest.raises(ValueError):
         draws_from_stream(MT19937Stream(1), 10, favor=(7, 1.5))
+    with pytest.raises(ValueError):
+        draws_from_stream(MT19937Stream(1), 10, period=0)
 
 
 def test_randbelow_rejects_nonpositive() -> None:

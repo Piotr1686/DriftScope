@@ -19,6 +19,7 @@ from driftscope.core.config import settings
 from driftscope.core.types import DrawRecord
 from driftscope.ingestion.lotto_scraper import load_seed_csv
 from driftscope.ingestion.rng_streams import (
+    AESCtrDrbgStream,
     ChaCha20Stream,
     MT19937Stream,
     Xorshift64Stream,
@@ -30,7 +31,8 @@ from driftscope.methodology.multiple_testing import correct_family_b
 from driftscope.pipeline import family_b_per_number_pvalues
 
 _ROOT = Path(driftscope.__file__).resolve().parents[2]
-_DEFAULT_FAVOR = (7, 0.15)  # defekt: numer 7 nadreprezentowany w 15% losowan
+_DEFAULT_FAVOR = (7, 0.15)  # defekt marginalny: numer 7 nadreprezentowany w 15% losowan
+_DEFAULT_PERIOD = 50  # defekt period-truncation: cykl 50 losowan powtarzany (zamrozone czestosci)
 
 
 @dataclass(frozen=True)
@@ -95,9 +97,15 @@ def build_sources(
     seed: int,
     *,
     favor: tuple[int, float] = _DEFAULT_FAVOR,
+    period: int = _DEFAULT_PERIOD,
     seed_csv: Path | None = None,
 ) -> list[tuple[str, str, list[DrawRecord]]]:
-    """Zrodla (nazwa, ground-truth label, draws). Defekt = ten sam MT base + wstrzyknieta bias.
+    """Zrodla (nazwa, ground-truth label, draws) — symetryczna macierz showcase.
+
+    Dwa good (MT19937/Xorshift64) + dwa crypto (ChaCha20/AES-CTR-DRBG) → oczekiwany clear;
+    dwa DEFECT na tym samym MT base → oczekiwany FLAG, kazdy przez INNY mechanizm:
+      - `+bias(k)`  — defekt marginalny (jeden numer nadreprezentowany; Family B/MMD),
+      - `+period(p)`— period-truncation (zamrozone czestosci cyklu; Family B over-dispersion).
 
     Dolacza realny EuroJackpot, jesli seed CSV istnieje (domyslnie z config). Real = honest
     null audytu (oczekiwany clear, jak negative control 1-50).
@@ -106,10 +114,16 @@ def build_sources(
         ("MT19937", "good", draws_from_stream(MT19937Stream(seed), n_draws)),
         ("Xorshift64", "good", draws_from_stream(Xorshift64Stream(seed), n_draws)),
         ("ChaCha20", "crypto", draws_from_stream(ChaCha20Stream(seed), n_draws)),
+        ("AES-CTR-DRBG", "crypto", draws_from_stream(AESCtrDrbgStream(seed), n_draws)),
         (
             f"MT19937+bias({favor[0]})",
             "DEFECT",
             draws_from_stream(MT19937Stream(seed), n_draws, favor=favor),
+        ),
+        (
+            f"MT19937+period({period})",
+            "DEFECT",
+            draws_from_stream(MT19937Stream(seed), n_draws, period=period),
         ),
     ]
     path = seed_csv if seed_csv is not None else _ROOT / settings.data_seed_path
@@ -125,12 +139,13 @@ def run_benchmark(
     alpha: float = 0.05,
     seed: int = 42,
     favor: tuple[int, float] = _DEFAULT_FAVOR,
+    period: int = _DEFAULT_PERIOD,
     seed_csv: Path | None = None,
 ) -> list[BenchmarkRow]:
     """Pelny benchmark: battery na kazdym zrodle → lista wierszy macierzy detekcji."""
     return [
         run_battery(name, klass, draws, alpha=alpha, n_perm=n_perm)
         for name, klass, draws in build_sources(
-            n_draws, seed, favor=favor, seed_csv=seed_csv
+            n_draws, seed, favor=favor, period=period, seed_csv=seed_csv
         )
     ]

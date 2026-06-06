@@ -24,7 +24,7 @@ import random
 from abc import ABC, abstractmethod
 from datetime import date, timedelta
 
-from cryptography.hazmat.primitives.ciphers import Cipher, algorithms
+from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 
 from driftscope.core.types import DrawRecord
 
@@ -132,11 +132,35 @@ class ChaCha20Stream(BitStream):
         return int.from_bytes(chunk, "little")
 
 
+class AESCtrDrbgStream(BitStream):
+    """AES-256 w trybie CTR jako DRBG (deterministic random bit generator, szkielet
+    NIST SP 800-90A CTR_DRBG). Keystream = szyfrowanie zer kluczem z seeda (SHA-256,
+    32 B = AES-256), licznik startuje od zera. Drugi reprezentant krypto-jakosci obok
+    ChaCha20 — oczekiwany clear, nieodroznialny od uniform (specificity showcase na
+    odmiennej prymitywie: blokowy szyfr w CTR vs strumieniowy ChaCha)."""
+
+    name = "AES-CTR-DRBG"
+
+    def __init__(self, seed: int) -> None:
+        key = hashlib.sha256(seed.to_bytes(8, "little", signed=False)).digest()  # 32 B
+        nonce = b"\x00" * 16  # 128-bit blok licznika startowego; deterministyczny per seed
+        self._enc = Cipher(algorithms.AES(key), modes.CTR(nonce)).encryptor()
+        self._buf = b""
+
+    def next_u64(self) -> int:
+        while len(self._buf) < 8:
+            # update(zeros) w CTR zwraca czysty keystream (XOR z zerami = keystream).
+            self._buf += self._enc.update(b"\x00" * 64)
+        chunk, self._buf = self._buf[:8], self._buf[8:]
+        return int.from_bytes(chunk, "little")
+
+
 #: Rejestr nazwa → fabryka(seed) dla benchmarku. Wszystkie "dobre" (bez defektu).
 STREAM_FACTORIES: dict[str, type[BitStream]] = {
     "MT19937": MT19937Stream,
     "Xorshift64": Xorshift64Stream,
     "ChaCha20": ChaCha20Stream,
+    "AES-CTR-DRBG": AESCtrDrbgStream,
 }
 
 
@@ -150,32 +174,49 @@ def draws_from_stream(
     *,
     euron_pool: int = 12,
     favor: tuple[int, float] | None = None,
+    period: int | None = None,
 ) -> list[DrawRecord]:
     """Mapuje `n_draws` losowan 5-z-50 (+2-z-`euron_pool`) z `stream`.
 
     Daty syntetyczne (tygodniowe od kotwicy) — RNG stream modeluje proces generatywny,
     nie kalendarz. Kolejnosc chronologiczna (potrzebna dla BOCPD).
 
-    `favor=(number, prob)` — WSTRZYKNIETY DEFEKT (pozytywna kontrola czulosci): w kazdym
-    losowaniu z prawdopodobienstwem `prob` wymusza obecnosc `number` w puli glownej
-    (podmieniajac najwiekszy slot, jesli `number` jeszcze nieobecny). Nadreprezentuje
-    `number` → wykrywalne przez Family B (binomial), chi² i MMD. Coin defektu pochodzi
-    z TEGO SAMEGO strumienia (determinizm). `None` = czysty uniform (good RNG).
+    Dwa WYKLUCZAJACE SIE defekty (pozytywna kontrola czulosci; podaj najwyzej jeden):
+
+    `favor=(number, prob)` — bias MARGINALNY: w kazdym losowaniu z prawdopodobienstwem
+    `prob` wymusza obecnosc `number` w puli glownej (podmieniajac najwiekszy slot, jesli
+    `number` jeszcze nieobecny). Nadreprezentuje `number` → wykrywalne przez Family B
+    (binomial), chi² i MMD. Coin defektu pochodzi z TEGO SAMEGO strumienia (determinizm).
+
+    `period=p` — KROTKI OKRES (period-truncation): generator zachowuje sie jak PRNG o
+    okresie `p` losowan — pierwsze `p` losowan tworzy cykl, ktory POWTARZA sie do `n_draws`.
+    Czestosci sa wtedy ZAMROZONE na wartosciach cyklu i nie usredniaja sie z n → przy
+    n ≫ p odchylenia narastaja ~(n/p)× ponad szum binomialny → NADMIERNA DYSPERSJA zliczen,
+    wykrywalna przez Family B (efektywna proba = `p`, nie `n`) i MMD (okna ~identyczne vs
+    uniform). Inny mechanizm niz `favor` (cala dystrybucja zamrozona, nie jeden numer).
+
+    `None`/`None` = czysty uniform (good RNG).
 
     Args:
         stream: zrodlo PRNG (jedyne zrodlo losowosci).
         n_draws: liczba losowan (> 0).
         euron_pool: gorna granica puli euron (1..K); domyslnie 12 (R3).
-        favor: opcjonalny defekt (numer 1-50, prawdopodobienstwo 0..1).
+        favor: opcjonalny defekt marginalny (numer 1-50, prawdopodobienstwo 0..1).
+        period: opcjonalny defekt period-truncation (dlugosc cyklu > 0).
 
     Returns:
         Lista `n_draws` rekordow `DrawRecord` w porzadku chronologicznym.
 
     Raises:
-        ValueError: gdy `n_draws` <= 0 lub `favor` poza zakresem.
+        ValueError: gdy `n_draws` <= 0, `favor` poza zakresem, `period` <= 0,
+            lub gdy podano JEDNOCZESNIE `favor` i `period`.
     """
     if n_draws <= 0:
         raise ValueError(f"n_draws musi byc > 0, otrzymano {n_draws}")
+    if favor is not None and period is not None:
+        raise ValueError("favor i period to wykluczajace sie defekty — podaj najwyzej jeden")
+    if period is not None and period <= 0:
+        raise ValueError(f"period musi byc > 0, otrzymano {period}")
     if favor is not None:
         fav_num, fav_prob = favor
         if not 1 <= fav_num <= _MAIN_POOL:
@@ -183,8 +224,13 @@ def draws_from_stream(
         if not 0.0 <= fav_prob <= 1.0:
             raise ValueError(f"favor prob {fav_prob} poza 0..1")
 
-    records: list[DrawRecord] = []
-    for i in range(n_draws):
+    # Liczba UNIKALNYCH losowan ze strumienia: przy period-truncation generujemy tylko
+    # cykl `period` (potem powtarzany); bez defektu = pelne `n_draws` (period=None →
+    # n_unique=n_draws → i % n_unique == i → identyczne zachowanie jak bez cyklu).
+    n_unique = n_draws if period is None else min(period, n_draws)
+
+    cycle: list[tuple[list[int], list[int]]] = []
+    for _ in range(n_unique):
         main = stream.sample_distinct(_MAIN_DRAW, _MAIN_POOL)
         if favor is not None:
             fav_num, fav_prob = favor
@@ -193,6 +239,11 @@ def draws_from_stream(
                 main[-1] = fav_num  # podmien najwiekszy slot na faworyzowany
                 main.sort()
         euron = stream.sample_distinct(_EURON_DRAW, euron_pool)
+        cycle.append((main, euron))
+
+    records: list[DrawRecord] = []
+    for i in range(n_draws):
+        main, euron = cycle[i % n_unique]  # cykliczne powtorzenie przy period-truncation
         records.append(
             DrawRecord(
                 draw_date=_ANCHOR + timedelta(weeks=i),

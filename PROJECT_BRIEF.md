@@ -10,8 +10,9 @@
 
 - **Compute Execution Policy** (§6) zastępuje generic "Hardware Transcendence Stack" — realny bottleneck = CPU permutation overhead. `HARDWARE_PUSH_CATALOG.md` aplikuje **selektywnie**: **Oś 0 (Environment Sanity)** i **Oś 3 (Compilation — Numba JIT na CPU)** pozostają aktywne; Osie 1–2, 4–7 nie aplikują (brak GPU, brak modeli neural, brak VRAM budget).
 - **Anti-goal guard:** każda decyzja sprawdzona pod SEED_IDEA §5A.1–4 (no naive frequency, no hallucinated signal, no wrapper, no gambling-app framing) i §5B.1–4 (no premise pivot).
-- **Permanent pattern (Piotr's template):** `pyproject.toml` jako single source of truth; `artifacts/` na root; `@dataclass Config` per moduł dla standalone CLI; `db/queries.py` zamiast Repository pattern (solo dev); PowerShell 5.1 compatible; zmiany w istniejących plikach, nie patch-documenty.
+- **Permanent pattern (Piotr's template):** `pyproject.toml` jako single source of truth; `artifacts/` na root; `@dataclass Config` per moduł dla standalone CLI; *gdy* potrzebny dostęp do DB → `db/queries.py` zamiast Repository pattern (solo dev) — **w DriftScope niezinstancjonowane** (persystencja plikowa, zob. rewizja [2026-06-06]); PowerShell 5.1 compatible; zmiany w istniejących plikach, nie patch-documenty.
 - **Global determinism:** `BASE_SEED=42` (deklarowany w `.env.example` i `core/config.py`). Wszystkie strumienie RNG derive z `np.random.SeedSequence(BASE_SEED)`.
+- **Rewizja [2026-06-06] — `db/` access layer usunięty (revision_reason: kontrakt==kod):** planowana warstwa dostępu SQLite (`db/queries.py`, `schema_validation.py`, `schema.sql`) **nigdy się nie zmaterializowała**. Persystencja pozostała w pełni plikowa: Parquet (Zstd) dla reżimów/permutacji + CSV dla seed/wyników; reporting czyta **bezpośrednio z plików** (`load_seed_csv`, `scan_parquet`), nie przez access layer. Kontrakt zsynchronizowany z kodem w: §0 (permanent pattern), §3 (storage — metadata), §4.1 (drzewo), §4.2 (DAG), §4.3 (konwencje data-flow), §10 (synergy table), DoD-6. Decyzja prezentacyjna: martwe stuby usunięte zamiast utrzymywane jako „deferred".
 
 ---
 
@@ -69,7 +70,7 @@ GitHub renderuje `<video>` natywnie w MD.
 | Data ingestion | `httpx` + `selectolax` + `tenacity` | — | Scraper z eurojackpot.org archive (brak publicznego API z kluczem). Cached CSV jako Tier-1 fallback w `data/seed/eurojackpot_history.csv` |
 | Storage — raw/cleaned data | **Parquet** (`pyarrow`) | — | Zstd compression. Frequency vectors jako `pl.List(pl.Float64)` (Arrow nested list) |
 | Storage — permutation results | **Parquet shards per worker** | `pyarrow` | `artifacts/permutations/{test}/{regime}/worker_{id}.parquet`. Reduce w Polars LazyFrame `scan_parquet(glob).collect()`. Zero-contention writes, naturalny checkpoint |
-| Storage — metadata | **SQLite** (małe append-only) | stdlib | `artifacts/regime_meta.sqlite` dla regime_meta + calibration_runs (single-writer pattern). NIE primary cache |
+| Storage — metadata | **Parquet/CSV inline** (file-based) | `pyarrow` | Metadane reżimów + wyniki kalibracji trzymane w plikowych artefaktach (`regime_{1,2,3}.parquet`, `prng_benchmark.csv`). ~~SQLite `regime_meta.sqlite`~~ — **deferred, nigdy nie zmaterializowane** (rewizja [2026-06-06]); skala MVP (~958 rows) nie uzasadnia osobnej bazy |
 | Data versioning | **`git lfs`** + `scripts/archive.py` | git-lfs 3.x | `git lfs track "*.parquet"` + SHA-256 manifest zawartości logicznej (sorted ORDER BY) |
 | Config | **Pydantic Settings** v2 + `.env` | 2.x | `core/config.py` |
 | Data validation | **Pydantic** v2 | 2.x | `DrawRecord` z `Field(ge=1, le=50)` (main) / `Field(ge=1, le=12)` (euron). Fail-fast przy ingestion |
@@ -142,10 +143,6 @@ driftscope/
 │   │   ├── planted_signals.py  # 5 signals concretely defined (zob. §5 Krok 5)
 │   │   ├── null_uniform.py     # honest null generator
 │   │   └── calibration.py      # sensitivity/specificity curves
-│   ├── db/
-│   │   ├── schema.sql          # regime_meta, calibration_runs (małe tabele)
-│   │   ├── schema_validation.py# Pydantic models per tabela
-│   │   └── queries.py          # safe_insert(table, model) + query funcs
 │   ├── reporting/
 │   │   ├── plots_static.py     # matplotlib (paper + .webm) + animate_bocpd_posterior()
 │   │   ├── plots_interactive.py# Plotly (HTML embedded w Quarto)
@@ -166,7 +163,6 @@ driftscope/
 │   ├── raw_draws.parquet
 │   ├── regime_{1,2,3}.parquet
 │   ├── permutations/{test}/{regime}/worker_{id}.parquet  # sharded
-│   ├── regime_meta.sqlite      # physical sink dla db/ access layer
 │   ├── driftsim_runs/
 │   ├── calibration_curves/
 │   └── artifacts_manifest.json # SHA-256 manifest
@@ -210,13 +206,13 @@ Wszystkie ładowane przez `core/config.py` (Pydantic Settings).
 ingestion ──► core.types ──► methodology ──► reporting
                   ▲              │              ▲
                   │              ▼              │
-              driftsim ────────► db (sink) ─────┘
+              driftsim ──► artifacts/ (Parquet/CSV) ─┘
                   │
                   ▼
               adaptive (only-if DoD-1..5 pass)
 ```
 
-**Konwencje:** `methodology/` to pure functions na `DrawRecord` sequences — nie zna ingestion ani reporting. `db/` jest **terminalnym sinkiem na poziomie kodu** (access layer: `queries.py`, `schema_validation.py`); fizyczne persistence to pliki w `artifacts/` (Parquet shards + `regime_meta.sqlite`). Reporting czyta przez `db/queries.py`, nie bezpośrednio z plików.
+**Konwencje:** `methodology/` to pure functions na `DrawRecord` sequences — nie zna ingestion ani reporting. Persystencja jest **w pełni plikowa** w `artifacts/`: Parquet (Zstd) dla reżimów/permutacji + CSV dla seed/wyników; brak warstwy dostępu (DB access layer) — zob. rewizja [2026-06-06]. Reporting czyta **bezpośrednio z plików** (`load_seed_csv`, `scan_parquet(glob).collect()`), nie przez moduł pośredniczący.
 
 ### 4.3 Przepływ danych (end-to-end)
 
@@ -440,7 +436,6 @@ Wykonanie kolejności: (1) DriftSim sweep → (2) permutation runs → (3) spec 
 | Numba JIT × joblib.Parallel (nad konfigami) | ✓ | PoC verified; `@njit(cache=True)` picklable wrapper |
 | Numba JIT × Polars | ✓ | Konwersja via `.to_numpy()` przed JIT hot path |
 | Parquet shards × joblib parallel writes | ✓ | Każdy worker pisze do własnego pliku — zero contention |
-| SQLite × append-only single-writer (regime_meta) | ✓ | Tylko CLI main process pisze; tabela mała |
 | git-lfs × parquet | ✓ | LFS handles binary; deterministic via sorted CSV hash |
 | Pydantic Settings × `.env` | ✓ | Permanent pattern |
 | Quarto × Polars | ✓ | Python chunks via jupyter kernel |
@@ -543,7 +538,7 @@ Z SWOT TOP 1: jeśli H1 + MMD nie wykrywają planted signals → projekt staje s
 | DoD-3 — Multiple testing correction | `methodology/multiple_testing.py` | Family-aware: BH w Family A (12 hyp), Benjamini-Yekutieli w Family B (450 hyp) — osobno |
 | DoD-4 — Complementary pillars | H1 + MMD + DriftSim via `reporting/disagreement.py` | Każdy reported signal classified per Disagreement Protocol (§5 Krok 9.1): 3/3, 2/3, 1/3, lub 0/3 |
 | DoD-5 — Honest predictor (kalibracja) | `driftsim/calibration.py` | Adaptive watchlist generuje output IFF passed DoD-1..4; w przeciwnym razie None |
-| DoD-6 — Reproducibility | `core/seeds.py` + git-lfs + GitHub Action | Cold-machine re-run produces bit-identical SHA-256 hash z `ORDER BY (test, regime, seed)` CSV eksportu (nie binarki SQLite) z committed `BASE_SEED=42` |
+| DoD-6 — Reproducibility | `core/seeds.py` + git-lfs + GitHub Action | Cold-machine re-run produces bit-identical SHA-256 hash z `ORDER BY (test, regime, seed)` CSV eksportu (CSV, nie format binarny) z committed `BASE_SEED=42` |
 
 ---
 

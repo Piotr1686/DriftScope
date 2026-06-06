@@ -40,10 +40,10 @@
 - Linter/formatter: ruff (wszystko) + mypy --strict (priorytetowo dla `methodology/`)
 - Package layout: `pyproject.toml` + `src/driftscope/` (PEP 621)
 - Config: Pydantic Settings v2 + `.env` (`BASE_SEED=42` globalny determinizm)
-- Storage: Parquet + Zstd (`artifacts/`) + SQLite append-only (`regime_meta.sqlite`)
+- Storage: Parquet + Zstd (`artifacts/`) + CSV (seed/wyniki) — persystencja w pełni plikowa (warstwa SQLite `db/` usunięta 2026-06-06, nigdy nie zmaterializowana; zob. PROJECT_BRIEF.md §0 rewizja)
 - Testowanie stochastyczne: `pytest.approx(rel=0.05, abs=1e-3)` (globalnie w conftest.py)
 - **Nigdy:**
-  - Repository pattern (użyj `db/queries.py` zamiast)
+  - Repository pattern (gdyby zaszła potrzeba dostępu do DB → `db/queries.py`; w DriftScope persystencja plikowa, brak warstwy DB)
   - `pandas.apply` (użyj Polars)
   - joblib nad pojedynczymi permutacjami (joblib TYLKO nad konfigami `(test, regime, kernel_config, seed_offset)`)
   - JAX (DLL risk na Win11)
@@ -126,11 +126,10 @@ DriftScope/
 ├── notebooks/                        # exploratory — NIE part of pipeline
 ├── demo/
 │   └── app.py                        # Streamlit app (W9+ stretch)
-├── artifacts/                        # git-lfs tracked (*.parquet, *.sqlite)
+├── artifacts/                        # git-lfs tracked (*.parquet)
 │   ├── raw_draws.parquet
 │   ├── regime_{1,2,3}.parquet
 │   ├── permutations/{test}/{regime}/worker_{id}.parquet
-│   ├── regime_meta.sqlite
 │   ├── driftsim_runs/
 │   ├── calibration_curves/
 │   └── artifacts_manifest.json
@@ -165,10 +164,6 @@ DriftScope/
 │   │   ├── planted_signals.py        # 5 sygnały × 4 effect sizes = 20 scenarios
 │   │   ├── null_uniform.py           # honest null generator (baseline)
 │   │   └── calibration.py            # sensitivity/specificity curves
-│   ├── db/
-│   │   ├── schema.sql                # regime_meta + calibration_runs (SQLite)
-│   │   ├── schema_validation.py      # Pydantic models per table
-│   │   └── queries.py                # safe_insert + query functions
 │   ├── reporting/
 │   │   ├── plots_static.py           # matplotlib (paper + .webm export)
 │   │   ├── plots_interactive.py      # Plotly (HTML w Quarto)

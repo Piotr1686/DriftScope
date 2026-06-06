@@ -1,7 +1,7 @@
 """SHA-256 manifest generator dla reprodukowalnosci (DoD-6).
 
 Generuje `artifacts/artifacts_manifest.json` z SHA-256 plikow danych — committed seed CSV
-(Tier-1 kotwica) + ewentualne `artifacts/*.parquet` / `*.sqlite`. Pliki sortowane po
+(Tier-1 kotwica) + ewentualne `artifacts/*.parquet`. Pliki sortowane po
 sciezce wzglednej (POSIX) → manifest jest DETERMINISTYCZNY: ta sama zawartosc daje
 bit-identyczny JSON niezaleznie od kolejnosci systemu plikow.
 
@@ -27,7 +27,6 @@ _PATTERNS: tuple[str, ...] = (
     "data/seed/*.csv",
     "artifacts/*.parquet",
     "artifacts/**/*.parquet",
-    "artifacts/*.sqlite",
 )
 
 

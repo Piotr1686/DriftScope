@@ -165,6 +165,13 @@ Diagnoza przed ew. cleanupem stubow. `src/driftscope/db/` = puste stuby (queries
 **[2026-06-06] Toolchain: LaTeX/PDF niedostepny (executive summary W9).**
 `pdflatex`/`tlmgr` NIE na PATH; quarto bez tinytex. Prawdziwy PDF wymaga `quarto install tinytex` (~100 MB, ryzyko bledow SSL przez AVG-proxy jak przy renderze fonts/CDN). **Rekomendacja dla W9: executive summary jako print-friendly standalone HTML one-pager** (Quarto→HTML + print-CSS, eksport Ctrl+P→PDF) — zero zaleznosci LaTeX. PDF commitowany tylko jesli user zaakceptuje ryzyko tinytex.
 
+**[2026-06-06 sesja 2] ✓ W9 executive summary ZBUDOWANY (commit `0b32711`, pushed).**
+`docs/executive_summary.html` — standalone, self-contained, recruiter-facing 1-page one-pager (problem → killer-result box → 3 bullety wiarygodnosci → mini-tabela PRNG → „what it demonstrates" → footer linki/stack/246 testow). **Odrebny artefakt od `report.html`** (nie skrot — inny kat: portfolio/rekruter). Liczby zaszyte STATYCZNIE (frozen headline, 958 draws) — strona NIE odpala pipeline.
+- **Format = HTML** (decyzja usera: zero ryzyka LaTeX/tinytex). Druk: `@page A4` + `@media print` → eksport `Ctrl+P` → 1 strona.
+- **Gotcha print-fit:** pierwszy render dawal 2 strony; dociśnięcie `@media print` (font 9pt, marginesy 8mm, ciasne odstepy) → 1 strona. **Weryfikacja: headless Edge** `msedge --headless --print-to-pdf` + zliczenie `/Type /Page` w PDF (=1). Screenshot przez `msedge --headless --screenshot`. Brak `pdftoppm` na Win11.
+- **Linkowanie:** README (przy „Live report") + callout `::: {.callout-note}` w `report.qmd` → propaguje do `docs/index.html`+`report.html` przy renderze. **`docs/` to RECZNIE kopiowane artefakty** (CI=tylko lint/test, brak render-stepu; Pages=Deploy-from-branch). `reporting/report.html`+`figs/` sa GITIGNORED (base64-inline do docs/*.html via embed-resources). Re-render: `cd src/driftscope/reporting && quarto render report.qmd --to html` → kopia do `docs/index.html`+`report.html`.
+- **Render gotcha:** AVG-proxy blokuje build-time fetch plotly.js (`HandshakeFailed`), ale chunk uzywa `include_plotlyjs="cdn"` → fallback do CDN runtime, embed kompletny, render exit 0. Toolchain render OK: python3 kernel + ipykernel 7.2.0 + ffmpeg.
+
 ---
 
 ## Rozwiązane problemy

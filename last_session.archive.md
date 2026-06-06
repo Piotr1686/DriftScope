@@ -1,3 +1,77 @@
+## ═══ Sesja zarchiwizowana [2026-06-06 22:15] ═══
+
+# last_session.md
+
+**Sesja:** 2026-06-06 · ~20:50-21:35
+**Status:** ✓ Zakończona poprawnie
+**Punkt odniesienia (git):** 0b32711 @ master (pushed → origin/master)
+
+---
+
+## ▸ NASTĘPNY KROK (zacznij tutaj)
+
+**Zweryfikować live GitHub Pages po push `0b32711`:** że landing
+`https://piotr1686.github.io/DriftScope/` serwuje callout „executive summary" ORAZ że
+`https://piotr1686.github.io/DriftScope/executive_summary.html` ładuje się (200 + treść
+one-pagera). Sandbox blokuje HTTPS (curl exit 35) → weryfikować przez
+`gh run list --workflow=pages-build-deployment` + `gh run view <id>` (status success,
+headSha=0b32711), lub poprosić usera o rzut oka na URL. Jeśli OK → projekt praktycznie domknięty.
+
+Kontekst: oba wstrzymane punkty z poprz. sesji (db/ cleanup + W9) WYKONANE i wypchnięte w tej
+sesji. Pozostała tylko potwierdzenie deployu (async po push) — analogicznie jak weryfikowano
+Pages po PR#2/#3 w poprzednich sesjach. Opcjonalny stretch po weryfikacji: przełączyć Pages
+na source „GitHub Actions" + własny `actions/deploy-pages` (usuwa Node20-warning z wbudowanego
+`pages-build-deployment`).
+
+---
+
+## Co zrobiono w tej sesji
+
+- ✓ **db/ cleanup + sync kontraktu (commit `d2048e5`, pushed):** `git rm -r src/driftscope/db/`
+  (4 puste stuby, zero importów). Kontrakt zsynchronizowany z kodem: PROJECT_BRIEF.md (nota
+  rewizji §0 z `revision_reason`, §3 storage→Parquet/CSV inline, §4.1 drzewo, §4.2 DAG→`artifacts/`,
+  §4.3 data-flow, §10 synergy, DoD-6) + CLAUDE.md (Storage/Nigdy/drzewo/lfs-glob) + `scripts/archive.py`
+  (martwy glob `*.sqlite`). Walidacja: 246 passed / 2 skip, mypy --strict src czyste (32 pliki), ruff czyste.
+- ✓ **W9 executive summary (commit `0b32711`, pushed):** `docs/executive_summary.html` — standalone
+  print-friendly 1-page one-pager (recruiter TL;DR, odrębny od `report.html`). `@media print` → 1 strona
+  A4 (zweryfikowane headless Edge → PDF page-count=1). Linki: README + callout w `report.qmd`. Re-render
+  Quarto → `docs/{index,report}.html` (plotly via CDN; AVG-proxy build-fetch fail nieszkodliwy).
+- ✓ **Push:** `5c2237d..0b32711` → `origin/master` (2 commity).
+- ✓ **Pamięć:** projektowy MEMORY.md — db/ finding oznaczony ✓ RESOLVED + wpis ✓ W9 ZBUDOWANY
+  (gotcha print-fit, docs/ ręcznie kopiowane, render gotcha). Pamięć agenta: nowy wpis
+  `powershell-git-commit-heredoc-gotcha.md`.
+
+## Co zostało (backlog sesji — wszystko OPCJONALNE / stretch)
+
+- ⟳ Weryfikacja live Pages po push (NASTĘPNY KROK).
+- ⟳ Pages na `actions/deploy-pages` (usuwa Node20-warning) — opcjonalne.
+- ⟳ demo Streamlit (`demo/app.py` stub, off-stack).
+- ⟳ Głębsza analiza pary (10,25) w R2 — non-finding.
+- ⟳ `information_theory.py` (LZ76/MDL) — absent, stretch.
+
+## Aktywne pliki
+
+- `docs/executive_summary.html` — nowy one-pager (`0b32711`)
+- `docs/{index,report}.html` — re-render z callout (`0b32711`)
+- `src/driftscope/reporting/report.qmd` — callout do executive summary (`0b32711`)
+- `README.md` — link executive summary (`0b32711`)
+- `PROJECT_BRIEF.md` + `CLAUDE.md` + `scripts/archive.py` — sync kontraktu po usunięciu db/ (`d2048e5`)
+- ACTIVE prereg = **v7** (bez zmian — sesja non-methodology)
+
+## Otwarte pytania
+
+- **Live Pages po deploy** — czy `pages-build-deployment` na `0b32711` = success i URL serwuje
+  one-pager + callout (deploy async po push).
+- **Czy projekt „skończony"?** — jako framework audytowy (Ścieżka A) praktycznie TAK; oba ostatnie
+  długi polish (db/ kontrakt + W9) zamknięte. Pozostałe pozycje to czyste stretche.
+
+## Do MEMORY.md (przeniesiono)
+
+Projektowy MEMORY.md: db/ FINDING → ✓ RESOLVED (opis wykonania) + nowy wpis **[2026-06-06 sesja 2]
+✓ W9 executive summary ZBUDOWANY** (gotcha print-fit headless-Edge, docs/ ręcznie kopiowane = brak
+render-stepu w CI, render gotcha AVG-proxy plotly→CDN). Pamięć agenta:
+`powershell-git-commit-heredoc-gotcha.md` (`-m @'...'@` wycieka `@` → używać `git commit -F <plik>`).
+
 ## ═══ Sesja zarchiwizowana [2026-06-06 21:30] ═══
 
 # last_session.md
@@ -283,78 +357,3 @@ ryzyko to manylinux-wheel numba na ubuntu.
 ## Do MEMORY.md (przeniesiono)
 
 Wpis **[2026-06-05] CI (GitHub Actions) + mypy --strict zielony** w Architektura.
-
-## ═══ Sesja zarchiwizowana [2026-06-05 11:30] ═══
-
-# last_session.md
-
-**Sesja:** 2026-06-05 · ~10:00-11:30
-**Status:** ✓ Zakończona poprawnie
-
----
-
-## ▸ NASTĘPNY KROK (zacznij tutaj)
-
-**Wybrać kolejny milestone portfolio/stretch — rdzeń + reporting + warstwa OSS są kompletne.
-Brak narzuconego "must-do"; wybór wg priorytetu portfolio.**
-
-Konkretne opcje (rozbieżne kierunki, decyzja usera):
-1. **CI workflow** — `.github/workflows/ci.yml` uruchamiający `pytest`+`ruff`+`mypy` na push.
-   Demonstruje rygor, zielony badge. RYZYKO: `numba==0.65.1` pinowana pod Win11 — zweryfikować
-   na ubuntu runnerze (powinno działać z numpy 2.x, ale env był weryfikowany tylko Win11).
-2. **W9 executive summary** — 1-page (HTML/MD przez Quarto); ryzyko redundancji z `report.html`.
-3. **demo Streamlit** (`demo/app.py` stub) — dużo UI, streamlit poza pinned stackiem.
-4. **Analiza pary (10,25) w R2** — non-finding (P≈14%), wartość poznawcza.
-
-Kontekst: ta sesja domknęła ostatni stub rdzenia reporting (plots_interactive) + portfolio
-front door (README, LICENSE). MVP jest kompletny, publiczny i poprawnie udokumentowany.
-Pozostałe zadania są opcjonalne — żadne nie jest na ścieżce krytycznej.
-
----
-
-## Co zrobiono w tej sesji
-
-- ✓ **Weryfikacja Pages (część 1 poprz. NASTĘPNEGO KROKU):** committed `docs/` potwierdzony
-  per-reżim (R1 0/3 / R2 1/3 / R3 0/3, Family B /150); pełna weryfikacja live blokowana
-  sandboxem (curl HTTP=000) + WebFetch truncation (osadzony webm). Źródło pushowane = poprawne.
-- ✓ **`plots_interactive.py` (Plotly)** zaimplementowany (`ef14153`) — ostatni stub rdzenia
-  reporting. `interactive_bocpd_figure` + `interactive_control_comparison`, reuse
-  `compute_bocpd_curve`, CDN dla plotly.js. 5 testów smoke. Suite 221 passed / 2 skip.
-- ✓ **Embed w `report.qmd` + re-render** (`d6b844a`) — interaktywny BOCPD w sekcji 3; plotly.js
-  z CDN → HTML +37 KB (nie +3.5 MB). `docs/report.html`+`index.html` zweryfikowane grep-em.
-- ✓ **README przepisany** (`47b4884`) — stale "W0" → wierny MVP front door (headline, 3 filary,
-  DoD, quickstart, link live Pages). Liczby zweryfikowane z kodem.
-- ✓ **LICENSE (MIT)** dodany (`8588aca`) — open-source readiness.
-- ✓ **4 commity wypchnięte** na `origin/master` (`1ca6d47..8588aca`).
-- ✓ ruff + mypy czyste; brak zmian metodologii (reporting poza prereg §0).
-
-## Co zostało (backlog sesji)
-
-- ⟳ Wybór kolejnego milestone (NASTĘPNY KROK).
-- ⟳ CI workflow (nowy kandydat) — wymaga weryfikacji numba na ubuntu.
-- ⟳ `demo/app.py` (Streamlit) — stub, off-stack, W9+ stretch.
-- ⟳ `db/queries.py`+`db/schema_validation.py` — warstwa SQLite nieużywana (pipeline na Parquet/CSV).
-- ⟳ `information_theory.py` (LZ76/MDL) — absent, stretch post-MVP.
-- ⟳ Głębsza analiza pary (10,25) w R2 — non-finding.
-
-## Aktywne pliki
-
-- `src/driftscope/reporting/plots_interactive.py` — implementacja (ZACOMMITOWANE `ef14153`, push)
-- `tests/test_plots_interactive.py` — nowy (ZACOMMITOWANE `ef14153`)
-- `src/driftscope/reporting/report.qmd` — embed interaktywny (ZACOMMITOWANE `d6b844a`)
-- `docs/report.html` + `docs/index.html` — re-render z plotly (ZACOMMITOWANE `d6b844a`, live)
-- `README.md` — przepisany (ZACOMMITOWANE `47b4884`)
-- `LICENSE` — nowy MIT (ZACOMMITOWANE `8588aca`)
-- ACTIVE prereg = **v7** (bez zmian w tej sesji)
-
-## Otwarte pytania
-
-- **CI na Win11-pinned numba:** `numba==0.65.1` weryfikowane tylko Win11 — czy zadziała na
-  ubuntu-latest runnerze (numpy 2.x)? Do sprawdzenia jeśli wybór padnie na CI workflow.
-- **W9 vs report.html:** executive summary mocno pokrywa się z istniejącym raportem — czy ma
-  sens osobny deliverable, czy raczej skrócony landing? Nierozstrzygnięte.
-
-## Do MEMORY.md (przeniesiono)
-
-Wpis **[2026-06-05] Portfolio polish** w Architektura: plots_interactive, wzorzec embed Plotly
-w Quarto przez CDN, README przepisany, LICENSE MIT, stan stubów (rdzeń reporting kompletny).

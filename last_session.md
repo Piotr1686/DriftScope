@@ -1,71 +1,60 @@
 # last_session.md
 
-**Sesja:** 2026-06-06 · ~20:50-21:35
+**Sesja:** 2026-06-06 · ~21:50-22:15
 **Status:** ✓ Zakończona poprawnie
-**Punkt odniesienia (git):** 0b32711 @ master (pushed → origin/master)
+**Punkt odniesienia (git):** a24b684 @ master (origin zsynchronizowany)
 
 ---
 
 ## ▸ NASTĘPNY KROK (zacznij tutaj)
 
-**Zweryfikować live GitHub Pages po push `0b32711`:** że landing
-`https://piotr1686.github.io/DriftScope/` serwuje callout „executive summary" ORAZ że
-`https://piotr1686.github.io/DriftScope/executive_summary.html` ładuje się (200 + treść
-one-pagera). Sandbox blokuje HTTPS (curl exit 35) → weryfikować przez
-`gh run list --workflow=pages-build-deployment` + `gh run view <id>` (status success,
-headSha=0b32711), lub poprosić usera o rzut oka na URL. Jeśli OK → projekt praktycznie domknięty.
+**Stretch (opcjonalny): przełączyć GitHub Pages na deploy przez `actions/deploy-pages`.**
+Konkretnie: utworzyć `.github/workflows/pages.yml` (job `build` z `actions/upload-pages-artifact@v3`
+wskazującym `docs/` + job `deploy` z `actions/deploy-pages@v4`, `permissions: pages:write,
+id-token:write`, trigger `push` na `master` przy zmianie `docs/**`), następnie w Settings → Pages
+zmienić Source z „Deploy from a branch" na „GitHub Actions". Cel: usunięcie jedynego pozostałego
+ostrzeżenia Node20 z wbudowanego `pages-build-deployment`.
 
-Kontekst: oba wstrzymane punkty z poprz. sesji (db/ cleanup + W9) WYKONANE i wypchnięte w tej
-sesji. Pozostała tylko potwierdzenie deployu (async po push) — analogicznie jak weryfikowano
-Pages po PR#2/#3 w poprzednich sesjach. Opcjonalny stretch po weryfikacji: przełączyć Pages
-na source „GitHub Actions" + własny `actions/deploy-pages` (usuwa Node20-warning z wbudowanego
-`pages-build-deployment`).
+Kontekst: główny cel projektu (framework audytowy, Ścieżka A) jest **praktycznie domknięty** —
+DoD-1..6, reporting, CI, Pages, pełna piątka PRNG, db/ cleanup i W9 executive summary wszystkie
+gotowe, wypchnięte i zweryfikowane na żywo. To zadanie to czysty polish CI; nie ma ścieżki
+krytycznej. Równorzędne alternatywy: demo Streamlit, analiza pary (10,25), `information_theory.py`.
 
 ---
 
 ## Co zrobiono w tej sesji
 
-- ✓ **db/ cleanup + sync kontraktu (commit `d2048e5`, pushed):** `git rm -r src/driftscope/db/`
-  (4 puste stuby, zero importów). Kontrakt zsynchronizowany z kodem: PROJECT_BRIEF.md (nota
-  rewizji §0 z `revision_reason`, §3 storage→Parquet/CSV inline, §4.1 drzewo, §4.2 DAG→`artifacts/`,
-  §4.3 data-flow, §10 synergy, DoD-6) + CLAUDE.md (Storage/Nigdy/drzewo/lfs-glob) + `scripts/archive.py`
-  (martwy glob `*.sqlite`). Walidacja: 246 passed / 2 skip, mypy --strict src czyste (32 pliki), ruff czyste.
-- ✓ **W9 executive summary (commit `0b32711`, pushed):** `docs/executive_summary.html` — standalone
-  print-friendly 1-page one-pager (recruiter TL;DR, odrębny od `report.html`). `@media print` → 1 strona
-  A4 (zweryfikowane headless Edge → PDF page-count=1). Linki: README + callout w `report.qmd`. Re-render
-  Quarto → `docs/{index,report}.html` (plotly via CDN; AVG-proxy build-fetch fail nieszkodliwy).
-- ✓ **Push:** `5c2237d..0b32711` → `origin/master` (2 commity).
-- ✓ **Pamięć:** projektowy MEMORY.md — db/ finding oznaczony ✓ RESOLVED + wpis ✓ W9 ZBUDOWANY
-  (gotcha print-fit, docs/ ręcznie kopiowane, render gotcha). Pamięć agenta: nowy wpis
-  `powershell-git-commit-heredoc-gotcha.md`.
+- ✓ **NASTĘPNY KROK z poprz. sesji DOMKNIĘTY — live Pages zweryfikowane:** run
+  `pages-build-deployment` `27072126882` → **success**, `headSha=0b3271179e...` (= `0b32711`,
+  commit z W9 executive summary). Weryfikacja przez `gh run list/view --json` (sandbox blokuje HTTPS).
+- ✓ **Live URL potwierdzony przez WebFetch:** `executive_summary.html` serwuje pełny one-pager
+  (heading + kluczowe linie zgadzają się z W9). Callout „executive summary" obecny w wdrożonym
+  `docs/index.html:2229` → linkuje do `executive_summary.html`.
+- ✓ **Push zaległego `a24b684`** (commit zapisu sesji z poprz. `/end`, niewypchnięty) →
+  `origin/master` zsynchronizowany (`0b32711..a24b684`).
+- ✓ **`artifacts/` potwierdzone jako celowo git-ignored** (`git check-ignore` exit 0) — nie wymaga akcji.
 
 ## Co zostało (backlog sesji — wszystko OPCJONALNE / stretch)
 
-- ⟳ Weryfikacja live Pages po push (NASTĘPNY KROK).
-- ⟳ Pages na `actions/deploy-pages` (usuwa Node20-warning) — opcjonalne.
+- ⟳ Pages na `actions/deploy-pages` (usuwa Node20-warning) — NASTĘPNY KROK.
 - ⟳ demo Streamlit (`demo/app.py` stub, off-stack).
 - ⟳ Głębsza analiza pary (10,25) w R2 — non-finding.
 - ⟳ `information_theory.py` (LZ76/MDL) — absent, stretch.
 
 ## Aktywne pliki
 
-- `docs/executive_summary.html` — nowy one-pager (`0b32711`)
-- `docs/{index,report}.html` — re-render z callout (`0b32711`)
-- `src/driftscope/reporting/report.qmd` — callout do executive summary (`0b32711`)
-- `README.md` — link executive summary (`0b32711`)
-- `PROJECT_BRIEF.md` + `CLAUDE.md` + `scripts/archive.py` — sync kontraktu po usunięciu db/ (`d2048e5`)
+- (brak zmian w kodzie/docs w tej sesji — sesja czysto weryfikacyjna)
+- `last_session.md` + `last_session.archive.md` — stan sesji (ten commit)
 - ACTIVE prereg = **v7** (bez zmian — sesja non-methodology)
 
 ## Otwarte pytania
 
-- **Live Pages po deploy** — czy `pages-build-deployment` na `0b32711` = success i URL serwuje
-  one-pager + callout (deploy async po push).
-- **Czy projekt „skończony"?** — jako framework audytowy (Ścieżka A) praktycznie TAK; oba ostatnie
-  długi polish (db/ kontrakt + W9) zamknięte. Pozostałe pozycje to czyste stretche.
+- **Czy projekt „skończony"?** — jako framework audytowy (Ścieżka A) **praktycznie TAK**.
+  Wszystkie długi polish (db/ kontrakt, W9) zamknięte, wdrożone i zweryfikowane na żywo.
+  Pozostałe pozycje to czyste stretche bez ścieżki krytycznej.
 
 ## Do MEMORY.md (przeniesiono)
 
-Projektowy MEMORY.md: db/ FINDING → ✓ RESOLVED (opis wykonania) + nowy wpis **[2026-06-06 sesja 2]
-✓ W9 executive summary ZBUDOWANY** (gotcha print-fit headless-Edge, docs/ ręcznie kopiowane = brak
-render-stepu w CI, render gotcha AVG-proxy plotly→CDN). Pamięć agenta:
-`powershell-git-commit-heredoc-gotcha.md` (`-m @'...'@` wycieka `@` → używać `git commit -F <plik>`).
+Brak nowych wpisów — sesja czysto weryfikacyjna (potwierdzenie deployu `0b32711`), bez decyzji
+architektonicznych ani rozwiązań trudnych problemów. Wynik „live Pages OK" jest efemeryczny,
+nie wymaga trwałej pamięci.

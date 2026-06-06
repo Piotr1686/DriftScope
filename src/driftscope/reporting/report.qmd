@@ -237,10 +237,12 @@ absence of convergent evidence as absence of evidence.
 A null result on EuroJackpot ("we found nothing") is only worth trusting if the instrument
 is *sensitive*. So we point the **exact same battery** (Family B per-number FDR + MMD +
 co-occurrence) at streams with a **known ground truth**: two well-behaved generators
-(MT19937, Xorshift64), a cryptographic one (ChaCha20), the same MT19937 with a **deliberately
-injected defect** (one number over-represented in 15% of draws), and real EuroJackpot. The
-framework is detector-agnostic — feeding it a PRNG stream instead of a lottery is just a
-different `DrawRecord` source (`ingestion/rng_streams.py`).
+(MT19937, Xorshift64), two cryptographic ones (ChaCha20, AES-CTR-DRBG), the same MT19937 with
+**two deliberately injected defects of different kinds** — a *marginal bias* (one number
+over-represented in 15% of draws) and a *period-truncation* (a short 50-draw cycle that repeats,
+freezing the frequencies) — and real EuroJackpot. The framework is detector-agnostic — feeding
+it a PRNG stream instead of a lottery is just a different `DrawRecord` source
+(`ingestion/rng_streams.py`).
 
 ```{python}
 #| label: prng-benchmark
@@ -265,11 +267,15 @@ print(
 )
 ```
 
-The defective generator is caught by **Family B** (the over-represented number breaks the
-per-number binomial) **and MMD** (the windowed frequency departs from uniform) — but *not* by
-co-occurrence, which targets pair structure, not marginals. That split is itself a
-correctness check: each pillar fires only on the deviation class it is designed for. The two
-good PRNGs, the cryptographic PRNG, and real EuroJackpot all come back **clear**.
+The **two defects fire differently, and that contrast is the showcase**. The *marginal bias*
+is caught narrowly — **Family B** (the over-represented number breaks its per-number binomial)
+and **MMD** (the windowed frequency departs from uniform) — but *not* co-occurrence, which
+targets pair structure, not marginals. The *period-truncation* is caught **broadly across all
+three pillars**: the frozen cycle distorts marginals (Family B rejects many numbers at once),
+the windowed distribution (MMD), *and* pair structure (co-occurrence) simultaneously. The
+framework therefore reports not just *whether* a stream is defective but *what kind* of defect
+it is. The two good PRNGs, **both** cryptographic PRNGs, and real EuroJackpot all come back
+**clear** — specificity holds across two distinct crypto primitives (stream vs block cipher).
 
 This is the point of the whole framework in one table: the same detector that **stays silent
 on EuroJackpot's main pool lights up on a planted defect and clears a crypto-grade RNG**. The

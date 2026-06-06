@@ -12,13 +12,18 @@ from driftscope.reporting.prng_benchmark import run_battery, run_benchmark
 def test_defect_flagged_and_good_clear() -> None:
     """DEFECT -> FLAG (sensitivity); good/crypto -> clear (specificity)."""
     rows = run_benchmark(n_draws=600, n_perm=99, seed=1, seed_csv=None)
-    by_class = {r.klass: [] for r in rows}
+    by_class: dict[str, list] = {r.klass: [] for r in rows}
     for r in rows:
         by_class[r.klass].append(r)
 
-    # Sensitivity: kazdy DEFECT zaplonal.
+    # Oba mechanizmy defektu obecne (bias marginalny + period-truncation).
+    defect_sources = {r.source for r in by_class["DEFECT"]}
+    assert any("bias" in s for s in defect_sources)
+    assert any("period" in s for s in defect_sources)
+
+    # Sensitivity: kazdy DEFECT zaplonal (oba mechanizmy).
     assert all(r.flagged for r in by_class["DEFECT"])
-    # Specificity: zaden good/crypto nie zaplonal.
+    # Specificity: zaden good/crypto nie zaplonal (oba krypto: ChaCha20 + AES-CTR-DRBG).
     assert all(not r.flagged for r in by_class.get("good", []))
     assert all(not r.flagged for r in by_class.get("crypto", []))
 

@@ -59,12 +59,15 @@ battery (Family B + MMD + co-occurrence) applied to streams with a **known groun
 | Source | Class | Verdict |
 |---|---|---|
 | MT19937, Xorshift64 | good (non-crypto) | **clear** |
-| ChaCha20 | cryptographic | **clear** (specificity) |
-| MT19937 + injected bias | **defect** | **FLAG** (caught by Family B + MMD) |
+| ChaCha20, AES-CTR-DRBG | cryptographic | **clear** (specificity) |
+| MT19937 + injected bias | **defect** (marginal) | **FLAG** — narrow (Family B + MMD) |
+| MT19937 + period-truncation | **defect** (short cycle) | **FLAG** — broad (all 3 pillars) |
 | EuroJackpot (main 1–50) | real | **clear** (the honest null above) |
 
-The same detector that stays silent on EuroJackpot **lights up on a planted PRNG defect and
-clears a crypto-grade RNG** — the honest null is a calibrated instrument, not blindness. The
+The same detector that stays silent on EuroJackpot **lights up on planted PRNG defects and
+clears two crypto-grade RNGs** — and the *pattern* of which pillars fire reveals the defect
+*kind* (a marginal bias hits Family B + MMD narrowly; a short period freezes the whole
+distribution and trips all three). The honest null is a calibrated instrument, not blindness. The
 framework is detector-agnostic: feeding it a PRNG stream is just a different `DrawRecord` source
 (`ingestion/rng_streams.py`). Reproduce: `python scripts/prng_benchmark.py`.
 
@@ -125,7 +128,7 @@ src/driftscope/
 ├── pipeline.py     # end-to-end orchestrator: run_audit(draws) -> AuditReport
 └── cli.py          # `driftscope run`
 scripts/            # archive (SHA-256 manifest), prng_benchmark (reusability showcase)
-tests/              # 239 tests — calibration, invariants, FPR ≤ α, reproducibility, PRNG
+tests/              # 246 tests — calibration, invariants, FPR ≤ α, reproducibility, PRNG
 data/seed/          # eurojackpot_history.csv (958 draws, committed)
 ```
 

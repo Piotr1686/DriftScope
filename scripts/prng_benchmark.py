@@ -4,11 +4,13 @@ Cienki wrapper nad `driftscope.reporting.prng_benchmark.run_benchmark`: aplikuje
 battery detektorow co audyt EuroJackpot na strumienie z GROUND-TRUTH labelem i drukuje
 macierz "ktory test wykrywa jaki defekt per RNG":
 
-    MT19937     (good, non-crypto)    -> oczekiwany CLEAR
-    Xorshift64  (good, non-crypto)    -> oczekiwany CLEAR
-    ChaCha20    (crypto)              -> oczekiwany CLEAR  (specificity)
-    MT19937+bias(defekt wstrzykniety) -> oczekiwany FLAG   (sensitivity)
-    EuroJackpot (real, main 1-50)     -> oczekiwany CLEAR  (honest null audytu)
+    MT19937      (good, non-crypto)     -> oczekiwany CLEAR
+    Xorshift64   (good, non-crypto)     -> oczekiwany CLEAR
+    ChaCha20     (crypto)               -> oczekiwany CLEAR  (specificity)
+    AES-CTR-DRBG (crypto)               -> oczekiwany CLEAR  (specificity)
+    MT19937+bias (defekt marginalny)    -> oczekiwany FLAG   (sensitivity)
+    MT19937+period (period-truncation)  -> oczekiwany FLAG   (sensitivity)
+    EuroJackpot  (real, main 1-50)      -> oczekiwany CLEAR  (honest null audytu)
 
 Uruchomienie:
     python scripts/prng_benchmark.py
@@ -54,6 +56,9 @@ def main() -> None:
         "--favor-number", type=int, default=7, help="numer defektu (nadreprezentowany)"
     )
     parser.add_argument("--favor-prob", type=float, default=0.15, help="prawd. defektu")
+    parser.add_argument(
+        "--period", type=int, default=50, help="dlugosc cyklu defektu period-truncation"
+    )
     parser.add_argument("--out", type=Path, default=None, help="opcjonalny zapis CSV")
     args = parser.parse_args()
 
@@ -63,6 +68,7 @@ def main() -> None:
         alpha=args.alpha,
         seed=args.seed,
         favor=(args.favor_number, args.favor_prob),
+        period=args.period,
     )
     for r in rows:
         print(f"  {r.source:18s} [{r.klass:6s}] -> {r.verdict}")

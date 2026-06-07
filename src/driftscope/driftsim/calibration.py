@@ -92,8 +92,12 @@ _DEFAULT_ALPHA = 0.05
 # ---------------------------------------------------------------------------
 
 def chi2_main_uniformity(draws: list[DrawRecord], alpha: float = _DEFAULT_ALPHA) -> TestResult:
-    """chi-squared GoF: H0 = liczby glowne ~ Uniform(1..50). reject_h0 ⇔ p < alpha."""
-    counts = np.zeros(_MAIN_POOL_SIZE, dtype=float)
+    """chi-squared GoF: H0 = liczby glowne ~ Uniform(1..pool). reject_h0 ⇔ p < alpha.
+
+    Rozmiar puli wyprowadzony z rekordow (`draws[0].pool_size`; EJ=50, MM=80).
+    """
+    pool = draws[0].pool_size if draws else _MAIN_POOL_SIZE
+    counts = np.zeros(pool, dtype=float)
     for d in draws:
         for n in d.main_numbers:
             counts[n - 1] += 1.0

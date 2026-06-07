@@ -27,11 +27,11 @@ def extract_series(
 ) -> npt.NDArray[np.float64]:
     """Skalarne szeregi czasowe z DrawRecord — do testów ADF/KPSS/Welch/ACF."""
     if kind == "euron_mean":
-        return np.array([(d.euron_1 + d.euron_2) / 2.0 for d in draws])
+        return np.array([sum(d.euronumbers) / 2.0 for d in draws])
     if kind == "euron_max":
-        return np.array([float(max(d.euron_1, d.euron_2)) for d in draws])
+        return np.array([float(max(d.euronumbers)) for d in draws])
     if kind == "main_mean":
-        return np.array([sum(d.main_numbers) / 5.0 for d in draws])
+        return np.array([sum(d.main_numbers) / len(d.main_numbers) for d in draws])
     if kind == "main_std":
         return np.array([float(np.std(d.main_numbers)) for d in draws])
     raise ValueError(f"Nieznany kind: {kind!r}")
@@ -111,7 +111,13 @@ def run_kpss(series: npt.NDArray[np.float64], label: str = "") -> TestResult:
 # Stary magiczny prog 0.3 (bez warm-up) dawal FPR=0.07 (euron) i FPR=0.77 (main).
 _BOCPD_REJECT_THRESHOLD: dict[str, float] = {
     "euron": 0.33,  # N=12, K=2, warmup=6;  p95 null = 0.329
-    "main": 0.70,   # N=50, K=5, warmup=10; p95 null = 0.699
+}
+# Pole 'main': prog zalezy od puli (N, K) danej gry → keyed po pool_size. Kalibrowany
+# per gra przez scripts/calibrate_bocpd_threshold.py (BASE_SEED=42, 200 trials, hazard=0.005).
+_MAIN_REJECT_THRESHOLD_BY_POOL: dict[int, float] = {
+    50: 0.70,  # EuroJackpot N=50, K=5, warmup=10; p95 null = 0.699
+    80: 0.34,  # Multi Multi N=80, K=20, warmup=4; p95 null = 0.3314 (n=2000, trials=200)
+               # → round-up do 0.34 (konwencja EJ: prog >= p95, FPR<=0.05)
 }
 
 
@@ -205,9 +211,18 @@ def compute_bocpd_curve(
     if field == "euron":
         n_symbols, k_per_draw = 12, 2
         obs_list = [[e - 1 for e in d.euronumbers] for d in draws]
+        reject_threshold = _BOCPD_REJECT_THRESHOLD["euron"]
     else:
-        n_symbols, k_per_draw = 50, 5
+        # Pula/k wyprowadzone z rekordow (EJ=50/5, MM=80/20); prog per-pool z kalibracji.
+        n_symbols = draws[0].pool_size
+        k_per_draw = len(draws[0].main_numbers)
         obs_list = [[m - 1 for m in d.main_numbers] for d in draws]
+        if n_symbols not in _MAIN_REJECT_THRESHOLD_BY_POOL:
+            raise KeyError(
+                f"brak skalibrowanego progu BOCPD dla puli main N={n_symbols} — "
+                "uruchom scripts/calibrate_bocpd_threshold.py i dodaj wpis"
+            )
+        reject_threshold = _MAIN_REJECT_THRESHOLD_BY_POOL[n_symbols]
 
     cp_probs, rl_map = _bocpd_dirichlet(
         obs_list, n_symbols, k_per_draw, alpha, hazard
@@ -218,7 +233,7 @@ def compute_bocpd_curve(
         warmup = n_symbols // k_per_draw
     warmup = max(0, min(warmup, len(cp_probs) - 1))
 
-    return cp_probs, rl_map, warmup, _BOCPD_REJECT_THRESHOLD[field]
+    return cp_probs, rl_map, warmup, reject_threshold
 
 
 def run_bocpd(
@@ -248,7 +263,8 @@ def run_bocpd(
     if field == "euron":
         n_symbols, k_per_draw = 12, 2
     else:
-        n_symbols, k_per_draw = 50, 5
+        n_symbols = draws[0].pool_size
+        k_per_draw = len(draws[0].main_numbers)
 
     # Lokalne maksima cp_probs = kandydaci na change-pointy (tylko POZA warm-up)
     # distance=5: ~5 losowan ≈ 5 tygodni EuroJackpot (piątek) — pozwala na bliskie szczyty

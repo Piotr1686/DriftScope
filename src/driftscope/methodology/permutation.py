@@ -24,7 +24,6 @@ from numba import njit
 
 from driftscope.core.types import Detector, DrawRecord, TestResult
 
-_MAIN_DRAW = 5
 DEFAULT_N_PERM = 999
 DEFAULT_ALPHA = 0.05
 
@@ -41,21 +40,25 @@ def permutation_pvalue(observed: float, null_stats: npt.NDArray[np.float64]) -> 
 
 
 def _main_matrix(draws: list[DrawRecord]) -> npt.NDArray[np.int64]:
-    """Macierz (n, 5) liczb glownych (1-based)."""
+    """Macierz (n, k) liczb glownych (1-based); k z danych (EJ=5, MM=20)."""
     return np.array([d.main_numbers for d in draws], dtype=np.int64)
 
 
 @njit(cache=True)
 def _mean_lag1_overlap(mat: npt.NDArray[np.int64]) -> float:
-    """Srednia liczba wspolnych liczb miedzy kolejnymi losowaniami (order-dependent)."""
+    """Srednia liczba wspolnych liczb miedzy kolejnymi losowaniami (order-dependent).
+
+    Rozmiar losowania k = mat.shape[1] (wyprowadzony z danych: EJ=5, MM=20).
+    """
     n = mat.shape[0]
     if n < 2:
         return 0.0
+    k = mat.shape[1]
     total = 0
     for t in range(n - 1):
         c = 0
-        for a in range(_MAIN_DRAW):
-            for b in range(_MAIN_DRAW):
+        for a in range(k):
+            for b in range(k):
                 if mat[t, a] == mat[t + 1, b]:
                     c += 1
         total += c
@@ -69,6 +72,7 @@ def _shuffle_overlap_null(
     """Null lag-1 overlap pod permutacja KOLEJNOSCI (njit hot loop — wzorzec PoC)."""
     np.random.seed(seed)
     n = mat.shape[0]
+    kd = mat.shape[1]  # rozmiar losowania (EJ=5, MM=20)
     idx = np.arange(n)
     out = np.empty(n_perm, dtype=np.float64)
     for k in range(n_perm):
@@ -83,8 +87,8 @@ def _shuffle_overlap_null(
             r1 = idx[t]
             r2 = idx[t + 1]
             c = 0
-            for a in range(_MAIN_DRAW):
-                for b in range(_MAIN_DRAW):
+            for a in range(kd):
+                for b in range(kd):
                     if mat[r1, a] == mat[r2, b]:
                         c += 1
             total += c

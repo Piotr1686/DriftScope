@@ -26,7 +26,6 @@ from numba import njit
 from driftscope.core.types import Detector, DrawRecord, TestResult
 from driftscope.methodology.permutation import _main_matrix, _mean_lag1_overlap, permutation_pvalue
 
-_MAIN_DRAW = 5
 BLOCK_SIZES: tuple[int, ...] = (5, 10, 20)  # pre-registered
 DEFAULT_N_BOOT = 999
 DEFAULT_ALPHA = 0.05
@@ -45,6 +44,7 @@ def _block_boot_overlap_null(
     """
     np.random.seed(seed)
     n = mat.shape[0]
+    kd = mat.shape[1]  # rozmiar losowania (EJ=5, MM=20)
     n_blocks = (n + block_size - 1) // block_size
     idx = np.empty(n_blocks * block_size, dtype=np.int64)
     out = np.empty(n_boot, dtype=np.float64)
@@ -60,8 +60,8 @@ def _block_boot_overlap_null(
             r1 = idx[t]
             r2 = idx[t + 1]
             c = 0
-            for a in range(_MAIN_DRAW):
-                for b in range(_MAIN_DRAW):
+            for a in range(kd):
+                for b in range(kd):
                     if mat[r1, a] == mat[r2, b]:
                         c += 1
             total += c

@@ -52,9 +52,13 @@ DEFAULT_ALPHA = 0.05
 # ---------------------------------------------------------------------------
 
 def _incidence_matrix(draws: list[DrawRecord]) -> npt.NDArray[np.int8]:
-    """Binarna macierz (n_draws, 50): M[t, k]=1 ⇔ liczba (k+1) w losowaniu t."""
+    """Binarna macierz (n_draws, pool): M[t, k]=1 ⇔ liczba (k+1) w losowaniu t.
+
+    Szerokosc puli wyprowadzona z rekordow (`draws[0].pool_size`; EJ=50, MM=80).
+    """
     n = len(draws)
-    m = np.zeros((n, _MAIN_POOL_SIZE), dtype=np.int8)
+    pool = draws[0].pool_size if draws else _MAIN_POOL_SIZE
+    m = np.zeros((n, pool), dtype=np.int8)
     for t, d in enumerate(draws):
         for k in d.main_numbers:
             m[t, k - 1] = 1
@@ -98,10 +102,10 @@ def _ks_vs_geometric(gaps: npt.NDArray[np.int64], q: float) -> float:
 
 
 def _max_ks_over_numbers(m: npt.NDArray[np.int8], q: float) -> tuple[float, int]:
-    """(max_k D_k, argmax_k) po wszystkich 50 liczbach dla macierzy incydencji `m`."""
+    """(max_k D_k, argmax_k) po wszystkich liczbach puli (m.shape[1]) dla macierzy `m`."""
     best_d = 0.0
     best_k = 0
-    for k in range(_MAIN_POOL_SIZE):
+    for k in range(m.shape[1]):
         d = _ks_vs_geometric(_gaps_from_column(m[:, k]), q)
         if d > best_d:
             best_d = d
@@ -182,7 +186,7 @@ def evt_max_gap_pvalue(gaps: npt.NDArray[np.int64], q: float) -> tuple[int, floa
 
 def gap_recurrence_test(
     draws: list[DrawRecord],
-    q: float = _Q_MAIN,
+    q: float | None = None,
     n_perm: int = DEFAULT_N_PERM,
     alpha: float = DEFAULT_ALPHA,
     seed: int = 0,
@@ -193,10 +197,15 @@ def gap_recurrence_test(
     = max_k KS(gapy_k, Geometric(q)); null = permutacja kolejnosci losowan (zachowuje
     licznosci → warunkuje na marginesie). reject_h0 ⇔ p < alpha. Lokalizuje najbardziej
     anomalna liczbe (top_number, 1-based).
+
+    `q` = P(liczba w jednym losowaniu) pod uniform; None → wyprowadzone z danych jako
+    k/pool (EJ=5/50=0.1, MM=20/80=0.25).
     """
     n = len(draws)
     if n < 4:
         raise ValueError(f"gap_recurrence_test wymaga >=4 losowan, otrzymano {n}")
+    if q is None:
+        q = len(draws[0].main_numbers) / draws[0].pool_size
     m0 = _incidence_matrix(draws)
     d_obs, k_obs = _max_ks_over_numbers(m0, q)
 
@@ -227,7 +236,7 @@ def gap_recurrence_test(
 
 
 def recurrence_detector(
-    q: float = _Q_MAIN,
+    q: float | None = None,
     n_perm: int = DEFAULT_N_PERM,
     alpha: float = DEFAULT_ALPHA,
     base_seed: int = 20260531,

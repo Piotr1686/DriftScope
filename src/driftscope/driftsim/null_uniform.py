@@ -130,3 +130,55 @@ def generate_uniform_draws(
         )
 
     return records
+
+
+# Kotwica dla strumieni generycznych (gra inna niz EJ; np. Multi Multi). Daty syntetyczne —
+# generator modeluje proces generatywny, nie kalendarz konkretnej gry.
+_GENERIC_ANCHOR = date(2015, 1, 2)  # piatek
+
+
+def generate_generic_uniform(
+    n_draws: int,
+    pool_size: int,
+    k: int,
+    rng: np.random.Generator,
+    anchor: date = _GENERIC_ANCHOR,
+) -> list[DrawRecord]:
+    """Generuje `n_draws` losowan i.i.d. uniform k-z-`pool_size` (gra generyczna, bez euron).
+
+    Honest null dla gier innych niz EuroJackpot (Multi Multi 20-z-80, reference dla MMD,
+    kalibracja BOCPD nowej puli). Kazde losowanie: `k` liczb z 1..`pool_size` bez zwracania,
+    rosnaco. Rekordy generyczne (`DrawRecord.generic`) niosa `pool_size`, wiec detektory
+    wyprowadzaja pule/k z danych.
+
+    Determinizm: w pelni okreslony przez `rng` (DoD-6).
+
+    Args:
+        n_draws: liczba losowan (> 0).
+        pool_size: rozmiar puli glownej (> k).
+        k: liczb na losowanie (> 0).
+        rng: generator NumPy (jedyne zrodlo losowosci).
+        anchor: data startowa (daty syntetyczne, tygodniowe).
+
+    Returns:
+        Lista `n_draws` rekordow generycznych w porzadku chronologicznym.
+
+    Raises:
+        ValueError: gdy `n_draws` <= 0, `k` <= 0 lub `k` > `pool_size`.
+    """
+    if n_draws <= 0:
+        raise ValueError(f"n_draws musi byc > 0, otrzymano {n_draws}")
+    if k <= 0 or k > pool_size:
+        raise ValueError(f"k={k} poza (0, pool_size={pool_size}]")
+
+    records: list[DrawRecord] = []
+    for i in range(n_draws):
+        nums = np.sort(rng.choice(pool_size, size=k, replace=False) + 1)
+        records.append(
+            DrawRecord.generic(
+                draw_date=anchor + timedelta(weeks=i),
+                numbers=[int(x) for x in nums],
+                pool_size=pool_size,
+            )
+        )
+    return records

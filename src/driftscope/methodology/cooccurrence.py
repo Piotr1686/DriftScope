@@ -73,12 +73,14 @@ DEFAULT_THIN_FACTOR = 1   # thinning = THIN_FACTOR * n_draws wymian miedzy probk
 # ---------------------------------------------------------------------------
 
 def _incidence_matrix(draws: list[DrawRecord]) -> npt.NDArray[np.int8]:
-    """Binarna macierz incydencji (n_draws, 50): M[t, k]=1 ⇔ liczba (k+1) w losowaniu t.
+    """Binarna macierz incydencji (n_draws, pool): M[t, k]=1 ⇔ liczba (k+1) w losowaniu t.
 
-    Suma kazdego wiersza = 5 (liczby glowne); suma kolumny k = liczebnosc liczby (k+1).
+    Suma kazdego wiersza = k_drawn (liczby glowne); suma kolumny k = liczebnosc liczby (k+1).
+    Szerokosc puli wyprowadzona z rekordow (`draws[0].pool_size`; EJ=50, MM=80).
     """
     n = len(draws)
-    m = np.zeros((n, _MAIN_POOL_SIZE), dtype=np.int8)
+    pool = draws[0].pool_size if draws else _MAIN_POOL_SIZE
+    m = np.zeros((n, pool), dtype=np.int8)
     for t, d in enumerate(draws):
         for k in d.main_numbers:
             m[t, k - 1] = 1
@@ -190,8 +192,8 @@ def cooccurrence_test(
     n = len(draws)
     if n < 2:
         raise ValueError(f"cooccurrence_test wymaga >=2 losowan, otrzymano {n}")
-    iu = np.triu_indices(_MAIN_POOL_SIZE, k=1)
     m0 = _incidence_matrix(draws)
+    iu = np.triu_indices(m0.shape[1], k=1)  # gorny trojkat puli (pool z danych: EJ=50/MM=80)
     obs = _cooccurrence_upper(m0, iu)
 
     burn = burn_in if burn_in is not None else max(DEFAULT_BURN_FACTOR * n, DEFAULT_BURN_MIN)

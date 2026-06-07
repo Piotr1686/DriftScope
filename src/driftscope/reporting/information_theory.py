@@ -54,13 +54,15 @@ _DEFAULT_BASE_SEED = 20260607
 # ---------------------------------------------------------------------------
 
 def _main_blocks(draws: list[DrawRecord]) -> npt.NDArray[np.int32]:
-    """Macierz (n_draws, 5) POSORTOWANYCH liczb glownych w porzadku chronologicznym.
+    """Macierz (n_draws, k) POSORTOWANYCH liczb glownych w porzadku chronologicznym.
 
-    Wiersz t = blok losowania t. Splaszczenie `.ravel()` daje strumien dlugosci 5·n nad
-    alfabetem 1-50; permutacja wierszy = order-shuffle zachowujacy bloki (null).
+    Wiersz t = blok losowania t. Splaszczenie `.ravel()` daje strumien dlugosci k·n nad
+    alfabetem 1-pool; permutacja wierszy = order-shuffle zachowujacy bloki (null).
+    Szerokosc bloku k wyprowadzona z rekordow (EJ=5, MM=20).
     """
     n = len(draws)
-    blocks = np.empty((n, _MAIN_DRAW), dtype=np.int32)
+    k = len(draws[0].main_numbers) if draws else _MAIN_DRAW
+    blocks = np.empty((n, k), dtype=np.int32)
     for t, d in enumerate(draws):
         blocks[t] = np.sort(np.asarray(d.main_numbers, dtype=np.int32))
     return blocks
@@ -109,11 +111,14 @@ def lz76_complexity(s: npt.NDArray[np.int32]) -> int:
     return c
 
 
-def _normalized_complexity(c: int, length: int) -> float:
-    """Znormalizowana zlozonosc c_norm = c · ln(L) / (L · ln(a)) (→ ~1 dla losowego)."""
+def _normalized_complexity(c: int, length: int, alphabet: int = _MAIN_POOL_SIZE) -> float:
+    """Znormalizowana zlozonosc c_norm = c · ln(L) / (L · ln(a)) (→ ~1 dla losowego).
+
+    `alphabet` = rozmiar puli symboli (EJ=50, MM=80) wyprowadzony z rekordow.
+    """
     if length <= 1:
         return float(c)
-    return c * math.log(length) / (length * math.log(_MAIN_POOL_SIZE))
+    return c * math.log(length) / (length * math.log(alphabet))
 
 
 def _bz2_ratio(s: npt.NDArray[np.int32]) -> float:
@@ -144,6 +149,7 @@ def information_test(
     if n < 2:
         raise ValueError(f"information_test wymaga >=2 losowan, otrzymano {n}")
 
+    pool = draws[0].pool_size  # alfabet symboli (EJ=50, MM=80)
     blocks = _main_blocks(draws)
     obs_stream = blocks.ravel()
     length = obs_stream.shape[0]
@@ -165,7 +171,7 @@ def information_test(
 
     return TestResult(
         test_name="lz76_sequential",
-        statistic=_normalized_complexity(c_obs, length),
+        statistic=_normalized_complexity(c_obs, length, pool),
         p_value=p_lz,
         reject_h0=bool(p_lz < alpha),
         metadata={
@@ -173,7 +179,7 @@ def information_test(
             "n_draws": n,
             "n_perm": n_perm,
             "lz76_raw": int(c_obs),
-            "lz76_norm": _normalized_complexity(c_obs, length),
+            "lz76_norm": _normalized_complexity(c_obs, length, pool),
             "bz2_ratio": bz2_obs,      # cross-check (intuicyjny; NIE wchodzi do reject_h0)
             "bz2_p": p_bz2,
             "h0": "main pool uniform-iid (no sequential structure)",

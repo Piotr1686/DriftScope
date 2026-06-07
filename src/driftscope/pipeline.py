@@ -60,8 +60,7 @@ from driftscope.reporting.disagreement import (
     run_pillars,
 )
 
-_MAIN_POOL_SIZE = 50
-_P_NUMBER_PRESENT = 5.0 / 50.0  # P(liczba k w losowaniu) = 5/50 pod uniform (symetria)
+_MAIN_POOL_SIZE = 50  # fallback dla pustej listy; w praktyce pool czytany z draws[0].pool_size
 _DEFAULT_ALPHA = 0.05
 _DEFAULT_N_PERM = 999
 
@@ -127,7 +126,11 @@ def family_b_per_number_pvalues(
     Returns: (labels ["number_1".."number_50"], p_values (50,)).
     """
     n = len(draws)
-    counts = np.zeros(_MAIN_POOL_SIZE, dtype=np.int64)
+    # Pula/k wyprowadzone z rekordow (EJ=50/5 → P=0.10; MM=80/20 → P=0.25).
+    pool = draws[0].pool_size if draws else _MAIN_POOL_SIZE
+    k_drawn = len(draws[0].main_numbers) if draws else 5
+    p_present = k_drawn / pool
+    counts = np.zeros(pool, dtype=np.int64)
     for d in draws:
         # Incydencja: kazda liczba liczona RAZ na losowanie (model Binomial = obecnosc,
         # nie krotnosc) — odporne na ewentualne duplikaty w obrebie losowania.
@@ -136,13 +139,13 @@ def family_b_per_number_pvalues(
     pvals = np.array(
         [
             binomtest(
-                int(counts[k]), n, _P_NUMBER_PRESENT, alternative="two-sided"
+                int(counts[k]), n, p_present, alternative="two-sided"
             ).pvalue
-            for k in range(_MAIN_POOL_SIZE)
+            for k in range(pool)
         ],
         dtype=float,
     )
-    labels = [f"number_{k + 1}" for k in range(_MAIN_POOL_SIZE)]
+    labels = [f"number_{k + 1}" for k in range(pool)]
     return labels, pvals
 
 

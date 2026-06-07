@@ -36,9 +36,13 @@ import numpy.typing as npt
 from numba import njit
 
 from driftscope.core.types import Detector, DrawRecord, TestResult
-from driftscope.driftsim.null_uniform import Regime, generate_uniform_draws
+from driftscope.driftsim.null_uniform import (
+    Regime,
+    generate_generic_uniform,
+    generate_uniform_draws,
+)
 
-_MAIN_POOL_SIZE = 50  # pula glowna 1-50 → frequency vector p ∈ Δ⁴⁹
+_MAIN_POOL_SIZE = 50  # pula glowna 1-50 → frequency vector p ∈ Δ⁴⁹ (default EJ; MM=80)
 
 # Domyslne parametry. WINDOW=200 = wartosc §3 dla pelnego strumienia; kalibracja
 # per-rezim nadpisuje na mniejsze (n < 200). Brak DEFAULT_STEP: `step` jest WYMAGANY
@@ -58,13 +62,16 @@ def _main_matrix(draws: list[DrawRecord]) -> npt.NDArray[np.int64]:
 
 
 def frequency_vector(draws: list[DrawRecord]) -> npt.NDArray[np.float64]:
-    """Marginalny wektor czestosci p ∈ Δ⁴⁹ (suma=1) puli glownej dla zbioru losowan."""
-    return _block_frequency(_main_matrix(draws))
+    """Marginalny wektor czestosci p ∈ Δ^(pool-1) (suma=1) puli glownej dla zbioru losowan."""
+    pool = draws[0].pool_size if draws else _MAIN_POOL_SIZE
+    return _block_frequency(_main_matrix(draws), pool)
 
 
-def _block_frequency(main_block: npt.NDArray[np.int64]) -> npt.NDArray[np.float64]:
-    """Wektor czestosci (50,) dla bloku liczb glownych (w, 5); normalizowany do sumy 1."""
-    counts = np.bincount(main_block.ravel() - 1, minlength=_MAIN_POOL_SIZE).astype(float)
+def _block_frequency(
+    main_block: npt.NDArray[np.int64], pool: int = _MAIN_POOL_SIZE
+) -> npt.NDArray[np.float64]:
+    """Wektor czestosci (pool,) dla bloku liczb glownych (w, k); normalizowany do sumy 1."""
+    counts = np.bincount(main_block.ravel() - 1, minlength=pool).astype(float)
     total = counts.sum()
     return counts / total if total > 0 else counts
 
@@ -74,10 +81,10 @@ def sliding_frequency_vectors(
     window: int,
     step: int,
 ) -> npt.NDArray[np.float64]:
-    """Wektory czestosci Δ⁴⁹ z przesuwajacego sie okna `window` (krok `step`).
+    """Wektory czestosci Δ^(pool-1) z przesuwajacego sie okna `window` (krok `step`).
 
-    Zwraca macierz (n_windows, 50). Kazdy wiersz = marginalna czestosc puli glownej
-    w jednym oknie kolejnych losowan.
+    Zwraca macierz (n_windows, pool). Kazdy wiersz = marginalna czestosc puli glownej
+    w jednym oknie kolejnych losowan. Wymiar puli wyprowadzony z rekordow (EJ=50/MM=80).
 
     `step` jest WYMAGANY (bez domyslnej wartosci): pod permutacyjnym nullem MMD
     (`mmd_permutation_test`) okna musza byc NIENAKLADAJACE sie (step >= window), inaczej
@@ -89,12 +96,13 @@ def sliding_frequency_vectors(
     """
     if window <= 0 or step <= 0:
         raise ValueError(f"window i step musza byc > 0 (window={window}, step={step})")
+    pool = draws[0].pool_size if draws else _MAIN_POOL_SIZE
     mains = _main_matrix(draws)
     n = mains.shape[0]
     if window > n:
         raise ValueError(f"window={window} > liczba losowan={n} — okno sie nie miesci")
     vectors = [
-        _block_frequency(mains[start : start + window])
+        _block_frequency(mains[start : start + window], pool)
         for start in range(0, n - window + 1, step)
     ]
     return np.asarray(vectors, dtype=float)
@@ -337,7 +345,14 @@ def mmd_uniform_detector(
         seed_int = int.from_bytes(digest, "little")
         rng = np.random.default_rng(np.random.SeedSequence([base_seed, seed_int]))
 
-        reference = generate_uniform_draws(n, ref_regime, rng)
+        # Reference uniform tej samej dlugosci. EJ (pool=50) → istniejacy generator per-rezim
+        # (bit-identyczne wyniki, DoD-6); inna pula (np. MM 20/80) → generyczny uniform k-z-pool.
+        pool = draws[0].pool_size if draws else _MAIN_POOL_SIZE
+        if pool == _MAIN_POOL_SIZE:
+            reference = generate_uniform_draws(n, ref_regime, rng)
+        else:
+            k = len(draws[0].main_numbers)
+            reference = generate_generic_uniform(n, pool, k, rng)
         x = sliding_frequency_vectors(draws, window, actual_step)
         y = sliding_frequency_vectors(reference, window, actual_step)
         bandwidth = bandwidth_mult * median_heuristic(x)  # anti-leakage: σ tylko z X

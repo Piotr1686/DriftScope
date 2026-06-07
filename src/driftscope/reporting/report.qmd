@@ -187,6 +187,37 @@ verdicts = ", ".join(
 print(f"\n**Disagreement per regime: {verdicts}.**")
 ```
 
+**Supplementary sequential lens (IT / Lempel-Ziv).** Beyond the three Disagreement-Protocol
+pillars, the information-theoretic **Lempel-Ziv 1976** complexity test
+(`reporting/information_theory.py`, order-shuffle null over draw blocks) reads each regime
+along a *fourth, independent axis* — the **ordering between draws**. It conditions on both the
+marginal *and* the within-draw joint, so it is orthogonal to the three families and fires only
+on sequential structure (period / autocorrelation). It is a **supplement, not a fourth
+Disagreement-Protocol pillar** — that set stays three-way (DoD-4 = 3/3). Reported here to
+confirm the negative control is clear along the sequential axis too:
+
+```{python}
+#| label: it-supplement-regime
+#| echo: false
+#| output: asis
+from driftscope.ingestion.regime_split import split_by_regime
+from driftscope.reporting.information_theory import information_detector
+
+# n_perm=199 matches the build-time trade-off used for run_audit / run_benchmark above.
+it_detector = information_detector(n_perm=199)
+print("| Regime | n | IT (LZ) p | reject H0 |")
+print("|---|---|---|---|")
+for label, draws_r in split_by_regime(draws).items():
+    if len(draws_r) < 2:  # information_test requires >=2 draws
+        continue
+    res = it_detector(draws_r)
+    print(f"| {label} | {len(draws_r)} | {res.p_value:.3f} | {res.reject_h0} |")
+```
+
+Every regime reads **clear** (high p, no rejection): the main 1–50 pool carries no sequential
+structure within any regime — the honest null confirmed along a fourth, independent axis,
+without touching the three-pillar verdict.
+
 # 4. Rigor — FDR and the honest watchlist
 
 The marginal per-number signal is controlled by the **Family B** family: per-number

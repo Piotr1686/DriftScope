@@ -50,6 +50,10 @@ dev = [
     "ruff>=0.4",
     "mypy>=1.10",
 ]
+# Demo Streamlit (off-stack, W9+ stretch — plotly juz w core). Instalacja: pip install -e ".[demo]"
+demo = [
+    "streamlit>=1.36",
+]
 
 [project.scripts]
 driftscope = "driftscope.cli:app"

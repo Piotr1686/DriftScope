@@ -72,6 +72,14 @@ distribution and trips all three). The honest null is a calibrated instrument, n
 framework is detector-agnostic: feeding it a PRNG stream is just a different `DrawRecord` source
 (`ingestion/rng_streams.py`). Reproduce: `python scripts/prng_benchmark.py`.
 
+**A supplementary information-theoretic lens.** Beyond the three core pillars, a **Lempel-Ziv 1976**
+complexity test (`reporting/information_theory.py`; order-shuffle null over draw blocks, with a
+`bz2` compression-ratio cross-check) adds a *sequential* view. It conditions on both the marginal
+*and* the within-draw joint, so it is deliberately blind to a marginal bias (`+bias` stays clear)
+yet fires sharply on the **period-truncation** defect (a frozen cycle is compressible) — and reads
+real EuroJackpot as incompressible / clear (p ≈ 0.75). It is a **supplement, not a fourth
+Disagreement-Protocol pillar** — that pillar set stays three-way (DoD-4 = 3/3).
+
 ## Methodological discipline
 
 - **Pre-registration.** Every methodological choice (statistics, nulls, thresholds, effect-size
@@ -114,6 +122,14 @@ Reproduce the full HTML report:
 quarto render src/driftscope/reporting/report.qmd --to html
 ```
 
+Explore interactively (optional Streamlit demo — detection matrix, the LZ76 *entropy lens*, and a
+real-vs-uniform Turing test):
+
+```bash
+pip install -e ".[demo]"
+streamlit run demo/app.py
+```
+
 ## Project layout
 
 ```
@@ -124,12 +140,13 @@ src/driftscope/
 │                   #   specification curve, block bootstrap + preregistration_v*.md
 ├── driftsim/       # planted-signal simulator (5 signals × 4 effect sizes) + calibration
 ├── reporting/      # disagreement protocol, static (matplotlib) + interactive (Plotly) plots,
-│                   #   PRNG benchmark, Quarto report
+│                   #   PRNG benchmark, information-theory supplement (LZ76), Quarto report
 ├── adaptive/       # honest watchlist (returns None unless DoD-3 AND DoD-4 pass)
 ├── pipeline.py     # end-to-end orchestrator: run_audit(draws) -> AuditReport
 └── cli.py          # `driftscope run`
 scripts/            # archive (SHA-256 manifest), prng_benchmark (reusability showcase)
-tests/              # 246 tests — calibration, invariants, FPR ≤ α, reproducibility, PRNG
+demo/               # Streamlit audit explorer (optional, `pip install -e ".[demo]"`)
+tests/              # 260 tests — calibration, invariants, FPR ≤ α, reproducibility, PRNG, info-theory
 data/seed/          # eurojackpot_history.csv (958 draws, committed)
 ```
 
@@ -147,8 +164,8 @@ data/seed/          # eurojackpot_history.csv (958 draws, committed)
 ## Stack
 
 Python 3.10 · NumPy 2.x + Numba 0.65.1 (JIT hot loops) · statsmodels · ruptures · SciPy ·
-scikit-learn · Polars (not pandas) · Pydantic v2 · Typer · matplotlib + Plotly · Quarto report.
-CPU-only; the full pipeline peaks at ~4 GB RAM.
+scikit-learn · Polars (not pandas) · Pydantic v2 · Typer · matplotlib + Plotly · Quarto report ·
+optional Streamlit demo. CPU-only; the full pipeline peaks at ~4 GB RAM.
 
 ## License
 

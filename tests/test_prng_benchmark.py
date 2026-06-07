@@ -27,6 +27,13 @@ def test_defect_flagged_and_good_clear() -> None:
     assert all(not r.flagged for r in by_class.get("good", []))
     assert all(not r.flagged for r in by_class.get("crypto", []))
 
+    # Suplement IT (LZ76 sekwencyjny): JEGO sila to period-truncation (struktura szeregowa),
+    # slepy na bias marginalny (order-shuffle zachowuje multiset). Komplementarny do baterii.
+    it_by_source = {r.source: r.it_reject for r in rows}
+    assert any("period" in s and rej for s, rej in it_by_source.items()), "IT winien lapac period"
+    assert not any(r.it_reject for r in by_class.get("good", []))
+    assert not any(r.it_reject for r in by_class.get("crypto", []))
+
 
 def test_run_benchmark_without_real_csv(tmp_path: Path) -> None:
     """Nieistniejacy seed CSV → brak wiersza 'real' (czysto syntetyczne zrodla)."""

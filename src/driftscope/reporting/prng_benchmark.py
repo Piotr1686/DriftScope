@@ -29,6 +29,7 @@ from driftscope.methodology.cooccurrence import cooccurrence_detector
 from driftscope.methodology.k4_mmd import mmd_uniform_detector
 from driftscope.methodology.multiple_testing import correct_family_b
 from driftscope.pipeline import family_b_per_number_pvalues
+from driftscope.reporting.information_theory import information_detector
 
 _ROOT = Path(driftscope.__file__).resolve().parents[2]
 _DEFAULT_FAVOR = (7, 0.15)  # defekt marginalny: numer 7 nadreprezentowany w 15% losowan
@@ -49,11 +50,18 @@ class BenchmarkRow:
     mmd_p: float
     cooc_reject: bool
     cooc_p: float
+    it_reject: bool           # suplement IT (LZ76 sekwencyjny) — sila: period-truncation
+    it_p: float
 
     @property
     def flagged(self) -> bool:
         """Czy KTORYKOLWIEK detektor zaplonal (FLAG vs clear)."""
-        return self.family_b_reject > 0 or self.mmd_reject or self.cooc_reject
+        return (
+            self.family_b_reject > 0
+            or self.mmd_reject
+            or self.cooc_reject
+            or self.it_reject
+        )
 
     @property
     def verdict(self) -> str:
@@ -77,6 +85,7 @@ def run_battery(
     fb = correct_family_b(pvals, labels, alpha=alpha)
     mmd = mmd_uniform_detector(window=25, n_perm=n_perm, alpha=alpha)(draws)
     cooc = cooccurrence_detector(n_perm=n_perm, alpha=alpha)(draws)
+    it = information_detector(n_perm=n_perm, alpha=alpha)(draws)
     min_q = float(fb.q_values.min()) if fb.q_values.size else 1.0
     return BenchmarkRow(
         source=source,
@@ -89,6 +98,8 @@ def run_battery(
         mmd_p=float(mmd.p_value),
         cooc_reject=cooc.reject_h0,
         cooc_p=float(cooc.p_value),
+        it_reject=it.reject_h0,
+        it_p=float(it.p_value),
     )
 
 

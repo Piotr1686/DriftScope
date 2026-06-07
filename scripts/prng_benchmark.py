@@ -39,6 +39,8 @@ def _to_table(rows: list[BenchmarkRow]) -> pl.DataFrame:
                 "mmd_p": round(r.mmd_p, 4),
                 "cooc_reject": r.cooc_reject,
                 "cooc_p": round(r.cooc_p, 4),
+                "it_reject": r.it_reject,
+                "it_p": round(r.it_p, 4),
                 "verdict": r.verdict,
             }
             for r in rows
@@ -49,7 +51,7 @@ def _to_table(rows: list[BenchmarkRow]) -> pl.DataFrame:
 def main() -> None:
     parser = argparse.ArgumentParser(description="DriftScope PRNG benchmark side-by-side")
     parser.add_argument("--n-draws", type=int, default=1500, help="losowan per syntetyczny RNG")
-    parser.add_argument("--n-perm", type=int, default=499, help="permutacje MMD/co-occurrence")
+    parser.add_argument("--n-perm", type=int, default=499, help="permutacje MMD/co-occurrence/IT")
     parser.add_argument("--alpha", type=float, default=0.05)
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument(

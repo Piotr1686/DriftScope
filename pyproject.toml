@@ -102,6 +102,7 @@ module = [
     "driftscope.methodology.cooccurrence",
     "driftscope.methodology.block_bootstrap",
     "driftscope.methodology.multiple_testing",
+    "driftscope.reporting.information_theory",
 ]
 disallow_untyped_decorators = false
 warn_return_any = false

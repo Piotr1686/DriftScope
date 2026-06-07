@@ -257,12 +257,12 @@ it a PRNG stream instead of a lottery is just a different `DrawRecord` source
 from driftscope.reporting.prng_benchmark import run_benchmark
 
 rows = run_benchmark(n_draws=1500, n_perm=199, seed_csv=SEED if SEED.exists() else None)
-print("| Source | Class | n | Family B (reject/size) | MMD p | Co-occ p | Verdict |")
-print("|---|---|---|---|---|---|---|")
+print("| Source | Class | n | Family B (reject/size) | MMD p | Co-occ p | IT (LZ) p | Verdict |")
+print("|---|---|---|---|---|---|---|---|")
 for r in rows:
     print(
         f"| {r.source} | {r.klass} | {r.n} | {r.family_b_reject}/{r.family_b_size} "
-        f"| {r.mmd_p:.3f} | {r.cooc_p:.3f} | **{r.verdict}** |"
+        f"| {r.mmd_p:.3f} | {r.cooc_p:.3f} | {r.it_p:.3f} | **{r.verdict}** |"
     )
 sens = all(r.flagged for r in rows if r.klass == "DEFECT")
 spec = all(not r.flagged for r in rows if r.klass != "DEFECT")
@@ -281,6 +281,15 @@ the windowed distribution (MMD), *and* pair structure (co-occurrence) simultaneo
 framework therefore reports not just *whether* a stream is defective but *what kind* of defect
 it is. The two good PRNGs, **both** cryptographic PRNGs, and real EuroJackpot all come back
 **clear** — specificity holds across two distinct crypto primitives (stream vs block cipher).
+
+A fourth, **supplementary** lens — an information-theoretic **Lempel-Ziv 1976** complexity test
+(`reporting/information_theory.py`, order-shuffle null over draw blocks) — adds a *sequential*
+view orthogonal to the three core families: it conditions on both the marginal *and* the
+within-draw joint, firing only when structure lives in the **ordering between draws**. It is
+deliberately blind to the marginal bias (the `IT (LZ) p` column stays high for `+bias`) yet
+flags the **period-truncation** defect outright (low `p`) — and, like the core battery, reads
+real EuroJackpot as incompressible / clear. It is a supplement, **not** a Disagreement-Protocol
+pillar (that stays three-way; DoD-4 = 3/3).
 
 This is the point of the whole framework in one table: the same detector that **stays silent
 on EuroJackpot's main pool lights up on a planted defect and clears a crypto-grade RNG**. The

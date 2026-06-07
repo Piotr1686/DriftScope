@@ -1,3 +1,66 @@
+## ═══ Sesja zarchiwizowana [2026-06-07 12:10] ═══
+
+# last_session.md
+
+**Sesja:** 2026-06-06 · ~21:50-22:15
+**Status:** ✓ Zakończona poprawnie
+**Punkt odniesienia (git):** a24b684 @ master (origin zsynchronizowany)
+
+---
+
+## ▸ NASTĘPNY KROK (zacznij tutaj)
+
+**Stretch (opcjonalny): przełączyć GitHub Pages na deploy przez `actions/deploy-pages`.**
+Konkretnie: utworzyć `.github/workflows/pages.yml` (job `build` z `actions/upload-pages-artifact@v3`
+wskazującym `docs/` + job `deploy` z `actions/deploy-pages@v4`, `permissions: pages:write,
+id-token:write`, trigger `push` na `master` przy zmianie `docs/**`), następnie w Settings → Pages
+zmienić Source z „Deploy from a branch" na „GitHub Actions". Cel: usunięcie jedynego pozostałego
+ostrzeżenia Node20 z wbudowanego `pages-build-deployment`.
+
+Kontekst: główny cel projektu (framework audytowy, Ścieżka A) jest **praktycznie domknięty** —
+DoD-1..6, reporting, CI, Pages, pełna piątka PRNG, db/ cleanup i W9 executive summary wszystkie
+gotowe, wypchnięte i zweryfikowane na żywo. To zadanie to czysty polish CI; nie ma ścieżki
+krytycznej. Równorzędne alternatywy: demo Streamlit, analiza pary (10,25), `information_theory.py`.
+
+---
+
+## Co zrobiono w tej sesji
+
+- ✓ **NASTĘPNY KROK z poprz. sesji DOMKNIĘTY — live Pages zweryfikowane:** run
+  `pages-build-deployment` `27072126882` → **success**, `headSha=0b3271179e...` (= `0b32711`,
+  commit z W9 executive summary). Weryfikacja przez `gh run list/view --json` (sandbox blokuje HTTPS).
+- ✓ **Live URL potwierdzony przez WebFetch:** `executive_summary.html` serwuje pełny one-pager
+  (heading + kluczowe linie zgadzają się z W9). Callout „executive summary" obecny w wdrożonym
+  `docs/index.html:2229` → linkuje do `executive_summary.html`.
+- ✓ **Push zaległego `a24b684`** (commit zapisu sesji z poprz. `/end`, niewypchnięty) →
+  `origin/master` zsynchronizowany (`0b32711..a24b684`).
+- ✓ **`artifacts/` potwierdzone jako celowo git-ignored** (`git check-ignore` exit 0) — nie wymaga akcji.
+
+## Co zostało (backlog sesji — wszystko OPCJONALNE / stretch)
+
+- ⟳ Pages na `actions/deploy-pages` (usuwa Node20-warning) — NASTĘPNY KROK.
+- ⟳ demo Streamlit (`demo/app.py` stub, off-stack).
+- ⟳ Głębsza analiza pary (10,25) w R2 — non-finding.
+- ⟳ `information_theory.py` (LZ76/MDL) — absent, stretch.
+
+## Aktywne pliki
+
+- (brak zmian w kodzie/docs w tej sesji — sesja czysto weryfikacyjna)
+- `last_session.md` + `last_session.archive.md` — stan sesji (ten commit)
+- ACTIVE prereg = **v7** (bez zmian — sesja non-methodology)
+
+## Otwarte pytania
+
+- **Czy projekt „skończony"?** — jako framework audytowy (Ścieżka A) **praktycznie TAK**.
+  Wszystkie długi polish (db/ kontrakt, W9) zamknięte, wdrożone i zweryfikowane na żywo.
+  Pozostałe pozycje to czyste stretche bez ścieżki krytycznej.
+
+## Do MEMORY.md (przeniesiono)
+
+Brak nowych wpisów — sesja czysto weryfikacyjna (potwierdzenie deployu `0b32711`), bez decyzji
+architektonicznych ani rozwiązań trudnych problemów. Wynik „live Pages OK" jest efemeryczny,
+nie wymaga trwałej pamięci.
+
 ## ═══ Sesja zarchiwizowana [2026-06-06 22:15] ═══
 
 # last_session.md
@@ -296,64 +359,3 @@ zakończył się ✓, albo poprosić usera o rzut oka na URL.
 Root MEMORY.md: wpis **[2026-06-05] CI ZIELONE + merge PR#1/#2 + PRNG benchmark SHIPPED**
 (Architektura) + **[2026-06-05] cryptography niezadeklarowane → CI mypy fail** (Rozwiązane
 problemy). Pamięć agenta: `forward_strategy_prng_benchmark.md` (decyzja + komponenty + gotcha).
-
-## ═══ Sesja zarchiwizowana [2026-06-05 22:50] ═══
-
-# last_session.md
-
-**Sesja:** 2026-06-05 · ~11:40-12:50
-**Status:** ✓ Zakończona poprawnie
-**Punkt odniesienia (git):** b0b83c3 @ ci/github-actions
-
----
-
-## ▸ NASTĘPNY KROK (zacznij tutaj)
-
-**Utworzyć PR `ci/github-actions` → `master` i obejrzeć pierwszy bieg CI — rozstrzygnąć
-otwarte pytanie: czy `numba==0.65.1` startuje na `ubuntu-latest` (pin weryfikowany tylko Win11).**
-
-Konkretnie:
-1. PR: `gh pr create` (wymaga `gh auth login` — interaktywny; w poprzedniej sesji `gh` było
-   nieautoryzowane, Pages włączano ręcznie web UI). Alternatywa bez gh: otworzyć ręcznie
-   https://github.com/Piotr1686/DriftScope/pull/new/ci/github-actions
-2. Obejrzeć Actions → job `lint + typecheck + tests (py3.10)`. Jeśli **zielony** → merge do master.
-3. Jeśli krok "Environment sanity" lub install **czerwony na numba** → fallback: poluzować pin
-   `numba` w CI (env marker) LUB matrix tylko Win — zdecydować z userem (dotyka CLAUDE.md pin).
-
-Kontekst: cała robota CI jest zacommitowana i wypchnięta na gałąź `ci/github-actions`; brakuje
-tylko utworzenia PR (przerwane na `gh auth status` na życzenie usera) i obejrzenia biegu. Lokalnie
-wszystkie bramki zielone (ruff, mypy win32 + --platform linux, pytest 221/2), więc jedyne realne
-ryzyko to manylinux-wheel numba na ubuntu.
-
----
-
-## Co zrobiono w tej sesji
-
-- ✓ **Wybór milestone:** CI workflow (user, AskUserQuestion).
-- ✓ **Diagnoza długu mypy:** `mypy src` strict = **82 błędy** (NIE "czyste" jak sugerował log).
-- ✓ **Hybryda → mypy --strict zielony na całym src** (56 type-arg→npt.NDArray + config overrides + guards cross-platform idiom).
-- ✓ **`.github/workflows/ci.yml`** (nowy) + CI badge w README.
-- ✓ **Walidacja:** ruff + mypy (win32 + linux) czyste; pytest 221 passed / 2 skip.
-- ✓ **Commit `b0b83c3`** + push gałęzi `ci/github-actions`.
-
-## Co zostało (backlog sesji)
-
-- ⟳ Utworzyć PR + obejrzeć CI (NASTĘPNY KROK).
-- ⟳ Po zielonym CI: merge do master.
-- ⟳ Inne milestone'y portfolio: W9 executive summary, demo Streamlit, analiza pary (10,25).
-
-## Aktywne pliki
-
-- `.github/workflows/ci.yml` — nowy (`b0b83c3`)
-- `pyproject.toml` — config mypy overrides (`b0b83c3`)
-- `README.md` — CI badge (`b0b83c3`)
-- ACTIVE prereg = **v7** (bez zmian)
-
-## Otwarte pytania
-
-- **numba==0.65.1 na ubuntu-latest** — rozstrzygnie pierwszy bieg CI.
-- **gh auth** — prawdopodobnie nieautoryzowane (interaktywny login).
-
-## Do MEMORY.md (przeniesiono)
-
-Wpis **[2026-06-05] CI (GitHub Actions) + mypy --strict zielony** w Architektura.

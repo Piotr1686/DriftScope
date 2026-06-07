@@ -172,6 +172,15 @@ Diagnoza przed ew. cleanupem stubow. `src/driftscope/db/` = puste stuby (queries
 - **Linkowanie:** README (przy „Live report") + callout `::: {.callout-note}` w `report.qmd` → propaguje do `docs/index.html`+`report.html` przy renderze. **`docs/` to RECZNIE kopiowane artefakty** (CI=tylko lint/test, brak render-stepu; Pages=Deploy-from-branch). `reporting/report.html`+`figs/` sa GITIGNORED (base64-inline do docs/*.html via embed-resources). Re-render: `cd src/driftscope/reporting && quarto render report.qmd --to html` → kopia do `docs/index.html`+`report.html`.
 - **Render gotcha:** AVG-proxy blokuje build-time fetch plotly.js (`HandshakeFailed`), ale chunk uzywa `include_plotlyjs="cdn"` → fallback do CDN runtime, embed kompletny, render exit 0. Toolchain render OK: python3 kernel + ipykernel 7.2.0 + ffmpeg.
 
+**[2026-06-07] ✓ IT supplement (Lempel-Ziv 1976) + demo Streamlit ZBUDOWANE (commity `e60b888`+`99b4dea`, pushed).**
+Wow opcja #3 (zob. pamiec agenta `audit-framework-wow-options`). Detektor `src/driftscope/reporting/information_theory.py`.
+- **Decyzja architektoniczna: SUPLEMENT, NIE 4. filar Disagreement Protocol** (zostaje 3/3, h1/mmd/cooccurrence, DoD-4). `disagreement.py`, `preregistration_v7.md`, `PROJECT_BRIEF.md` — BEZ ZMIAN. Lokalizacja w `reporting/` (nie `methodology/`) celowo omija dyscypline prereg §0 (precedens: `prng_benchmark`, `disagreement`). Pamiec wow #3: „nie wprowadzac do preregistration — suplement do core".
+- **Statystyka:** znormalizowana zlozonosc Lempel-Ziv 1976 (Kaspar-Schuster, `@njit cache=True`; `lz76_complexity`); bz2 ratio jako cross-check w metadata (NIE w reject_h0). `statistic`=c_norm, p liczone na surowym c (lewy ogon).
+- **Null = order-shuffle** (permutacja kolejnosci BLOKOW losowan) — zachowuje marginal (multiset) i joint wewnatrz-losowania (blok 5 nienaruszony), lamie strukture MIEDZY-losowaniowa. → IT komplementarny: slepy na freq_shift (marginal→chi²/MMD) i pair_corr (joint→co-occurrence), czuly na autocorr/period.
+- **Determinizm DoD-6:** `information_detector` = czysta funkcja `draws` (seed z blake2b digestu macierzy glownej ⊕ base_seed, jak `cooccurrence_detector`). RNG przez `np.random.default_rng` w petli Python; tylko `lz76_complexity` njit (bez RNG).
+- **Walidacja:** FPR≤α na nullu, power na autocorr, slepota na freq_shift (test komplementarnosci), determinizm. Na baterii PRNG zapala sie WYLACZNIE na `+period(50)` (p≈0.01, nisza sekwencyjna), milczy na good/crypto/bias i realnym EuroJackpot (p≈0.75). mypy override (njit) w `pyproject` dla `driftscope.reporting.information_theory`.
+- **Integracja:** kolumna IT w `prng_benchmark.py` (`it_reject`/`it_p`, wlaczone do `flagged`) + `scripts/prng_benchmark.py` CLI + `report.qmd`. **Demo** `demo/app.py` (Streamlit, grupa optional-dep `demo`, off-stack): 3 zakladki (detection matrix / entropy-lens LZ76 histogram / Turing test); buildery czyste, `st.*` pod `render()`/`__main__`; zweryfikowane `AppTest` headless (0 wyjatkow). Suite: 260 passed.
+
 ---
 
 ## Rozwiązane problemy

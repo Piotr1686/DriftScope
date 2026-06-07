@@ -1,3 +1,77 @@
+## ═══ Sesja zarchiwizowana [2026-06-07 21:51] ═══
+
+# last_session.md
+
+**Sesja:** 2026-06-07 · ~11:00-12:10
+**Status:** ✓ Zakończona poprawnie
+**Punkt odniesienia (git):** 9c2dc2f @ master (origin: 99b4dea — patrz niżej)
+
+---
+
+## ▸ NASTĘPNY KROK (zacznij tutaj)
+
+**Rozszerzyć per-regime sekcję w `src/driftscope/reporting/report.qmd` o kolumnę „IT (LZ) p"
+na realnym EuroJackpot (R1/R2/R3)** — pokazać, że suplement IT czyta negative control jako
+clear również pod kątem SEKWENCYJNYM (czwarty, niezależny obiektyw obok 3 filarów). Konkretnie:
+w chunku raportu per-regime wywołać `information_detector()(draws_regime)` dla każdego reżimu i
+dodać kolumnę z `p_value`; oczekiwane wartości wysokie (~clear), jak negative control 1-50.
+
+Kontekst: IT pozostaje SUPLEMENTEM, NIE wchodzi do `classify()` / Disagreement Protocol
+(DoD-4=3/3 nienaruszone). To domyka narrację „honest null" o sekwencyjny wymiar bez zmiany
+kontraktu. Czysty stretch reporting — brak ścieżki krytycznej (framework Ścieżka A domknięty).
+
+---
+
+## Co zrobiono w tej sesji
+
+- ✓ **Naprawa rozjazdów z /start:** dotrackowany `artifacts/{.gitkeep,artifacts_manifest.json}`
+  (DoD-6 deliverable; poprz. sesja błędnie uznała „ignored"), odpięty `settings.local.json` od
+  gita (`git rm --cached` + `.gitignore`) — koniec perpetualnego churnu allowlisty. Commity
+  `7d73cb2`, `28ad0ca`, `1162bc4`. Push origin.
+- ✓ **Faza A — detektor IT** (`reporting/information_theory.py`): złożoność Lempel-Ziv 1976
+  (`@njit cache=True`) + bz2 cross-check; null **order-shuffle** (permutacja bloków losowań →
+  zachowuje marginal+joint, łamie strukturę między-losowaniową). Komplementarny: ślepy na
+  freq_shift/pair_corr, czuły na autocorr/period. `information_detector` = czysta funkcja (DoD-6,
+  digest-seed jak cooccurrence). 10 testów (FPR≤α, power autocorr, ślepota freq_shift, determinizm).
+- ✓ **Faza A.2 — integracja baterii PRNG:** kolumna IT (`it_reject`/`it_p`) w `prng_benchmark.py`
+  (src+scripts), `report.qmd`. IT zapala się WYŁĄCZNIE na `+period(50)` (p≈0.01), milczy na
+  good/crypto/bias i realnym EuroJackpot (p≈0.75).
+- ✓ **Faza B — demo Streamlit** (`demo/app.py`, był stub): 3 zakładki (detection matrix /
+  entropy-lens LZ76 / Turing test), grupa optional-dep `demo`. Buildery czyste, `st.*` pod
+  `render()`/`__main__`. Smoke test + `AppTest` headless (0 wyjątków). Streamlit 1.58 zainstalowany.
+- ✓ **Walidacja:** ruff + mypy strict (`src`+`demo`, 34 plików) clean; **260 passed / 2 skipped**.
+- ✓ **Commity + push:** `e60b888` (IT), `99b4dea` (demo) → origin. README + root MEMORY.md
+  zaktualizowane; `9c2dc2f` (docs readme) — patrz niżej co do push.
+
+## Co zostało (backlog sesji)
+
+- ⟳ **Kolumna IT per-regime w report.qmd** — NASTĘPNY KROK.
+- ⟳ Pages na `actions/deploy-pages` (usuwa Node20-warning) — stretch CI.
+- ⟳ Głębsza analiza pary (10,25) w R2 — non-finding.
+- ⚠ **`9c2dc2f` (docs readme) i commit stanu sesji NIEWYPCHNIĘTE** — origin na `99b4dea`.
+  Push pozostawiony do decyzji (zob. Otwarte pytania).
+
+## Aktywne pliki
+
+- `src/driftscope/reporting/information_theory.py` (nowy) + `tests/test_information_theory.py`
+- `src/driftscope/reporting/prng_benchmark.py`, `scripts/prng_benchmark.py`, `report.qmd` (kolumna IT)
+- `demo/app.py` (nowy) + `tests/test_demo_smoke.py`; `pyproject.toml` (mypy override + grupa demo)
+- `README.md`, `MEMORY.md` (root, wpis Architektura [2026-06-07])
+- ACTIVE prereg = **v7** (bez zmian — IT jest suplementem poza prereg)
+
+## Otwarte pytania
+
+- **Wypchnąć `9c2dc2f` (docs readme) + commit stanu sesji?** origin stoi na `99b4dea`
+  (feature'y już tam są). Brak ścieżki krytycznej; do decyzji na starcie następnej sesji.
+- **Czy projekt „skończony"?** — jako framework audytowy (Ścieżka A) praktycznie TAK; IT i demo
+  to zrealizowane wow-stretche. Pozostałe pozycje to czyste stretche.
+
+## Do MEMORY.md (przeniesiono)
+
+- Root `MEMORY.md` (Architektura): **[2026-06-07] ✓ IT supplement (LZ76) + demo Streamlit** —
+  decyzja suplement-nie-filar, reporting/ poza prereg, order-shuffle null, walidacja, integracja.
+- Pamięć agenta: `it_supplement_lz76.md` (+ wpis w indeksie MEMORY.md agenta).
+
 ## ═══ Sesja zarchiwizowana [2026-06-07 12:10] ═══
 
 # last_session.md
@@ -278,84 +352,3 @@ zamknięcie projektu.
 Root MEMORY.md: wpis **[2026-06-06] Live Pages zweryfikowane + Node20 deprecation domknięty
 (PR#3). master=fdc4138** (Architektura) — zamknięte dwa długi, gotcha PowerShell here-string,
 wzorzec weryfikacji Pages przez gh+git show zamiast flaky HTTP/WebFetch.
-
-## ═══ Sesja zarchiwizowana [2026-06-06 10:28] ═══
-
-# last_session.md
-
-**Sesja:** 2026-06-05 · ~20:00-22:55
-**Status:** ✓ Zakończona poprawnie
-**Punkt odniesienia (git):** 6fd4241 @ master
-
----
-
-## ▸ NASTĘPNY KROK (zacznij tutaj)
-
-**Zweryfikować live GitHub Pages, że deploy po merge PR#2 pokazuje sekcję 5 „Reusability"
-z tabelą benchmarku PRNG — `curl -s -o NUL -w "%{http_code}" https://piotr1686.github.io/DriftScope/`
-(oczekiwane 200) + potwierdzić obecność stringów `Reusability` / `MT19937+bias` / `Sensitivity`
-w pobranym HTML.**
-
-Kontekst: PR#2 zmergowany do master (`6fd4241`), co odpaliło `pages build and deployment`.
-Deploy był `in_progress` w momencie /end — trzeba potwierdzić, że live site (nie tylko
-committed `docs/`) faktycznie pokazuje nową sekcję. Jeśli sandbox blokuje HTTP (jak w sesji
-2026-06-05 10:00, curl HTTP=000) — zweryfikować przez Actions tab że run `pages-build-deployment`
-zakończył się ✓, albo poprosić usera o rzut oka na URL.
-
----
-
-## Co zrobiono w tej sesji
-
-- ✓ **/recover na starcie** → naprawione 3 punkty: ignore `artifacts/*.{png,webm,gif}`, tooling
-  sesyjny (`/recover` + archive) wydzielony do osobnego commitu na master (`95a29b3`),
-  `settings.local.json` potwierdzony jako stan lokalny. Push master.
-- ✓ **CI milestone domknięty (PR#1, `4d12f22`):** PR `ci/github-actions`→master, gh auth `--web`,
-  obejrzany bieg. **Otwarte pytanie ZAMKNIĘTE: `numba==0.65.1` działa na ubuntu-latest** (sanity +
-  mypy linux zielone). Po drodze naprawiony placeholder RAM testu (absolutny RSS → delta wokół
-  `run_all_h1`, platform-odporny). Squash-merge + delete branch.
-- ✓ **Forward-strategy rozstrzygnięta** (oryginalny A/B/C już zamknięty = Ścieżka A): w świetle
-  honest-null audytu wybrana **wow Opcja α — PRNG benchmark** (zamienia null w dowód czułości).
-- ✓ **PRNG benchmark ZBUDOWANY + ZMERGOWANY (PR#2, `6fd4241`):**
-  - `ingestion/rng_streams.py` — BitStream (MT19937/Xorshift64/ChaCha20) + unbiased rejection
-    sampling + wstrzykiwanie defektu `favor=(num,prob)`.
-  - `reporting/prng_benchmark.py` — `run_battery`/`run_benchmark` (reuse `pipeline`); cienki CLI
-    `scripts/prng_benchmark.py`.
-  - `report.qmd` sekcja 5 „Reusability" (live) + README + `docs/` re-render (quarto).
-  - **WYNIK n=1500: good/crypto/real → clear, MT19937+bias(7) → FLAG (Family B 1/50 + MMD
-    p≈0.002). Sensitivity ✓ Specificity ✓.** 18 testów, suite 239 passed / 2 skip.
-- ✓ **Fix CI (PR#2): `cryptography` niezadeklarowane** → mypy --strict fail na ubuntu; deklaracja
-  w pyproject + `cryptography.*` w mypy override. Drugi bieg w pełni zielony.
-- ✓ **Pamięć agenta:** nowy `forward_strategy_prng_benchmark.md` + index.
-
-## Co zostało (backlog sesji)
-
-- ⟳ **Weryfikacja live Pages** (NASTĘPNY KROK).
-- ⟳ **Node.js 20 deprecation** — bump `actions/checkout@v4→v5`, `setup-python@v5→v6` w `ci.yml`
-  (niepilny do 2026-06-16).
-- ⟳ Pełna piątka RNG (AES-CTR-DRBG) + defekt period-truncation — stretch wow.
-- ⟳ W9 executive summary, demo Streamlit, głębsza analiza pary (10,25) — opcjonalne.
-- ⟳ Stuby off-core bez zmian: `demo/app.py`, `db/queries.py`+`schema_validation.py`.
-
-## Aktywne pliki
-
-- `src/driftscope/ingestion/rng_streams.py` — nowy (`6fd4241`)
-- `src/driftscope/reporting/prng_benchmark.py` — nowy (`6fd4241`)
-- `scripts/prng_benchmark.py` — nowy (`6fd4241`)
-- `tests/test_rng_streams.py` + `tests/test_prng_benchmark.py` — nowe (`6fd4241`)
-- `src/driftscope/reporting/report.qmd` + `README.md` + `docs/{report,index}.html` — sekcja Reusability (`6fd4241`)
-- `pyproject.toml` — dep cryptography + mypy override (`6fd4241`)
-- `tests/test_vram_invariants.py` — delta RAM test (`4d12f22`)
-- ACTIVE prereg = **v7** (bez zmian — sesja non-methodology, reporting/ingestion poza prereg §0)
-
-## Otwarte pytania
-
-- **Live Pages po deploy** — czy run `pages-build-deployment` zakończył się ✓ i URL pokazuje
-  sekcję Reusability (deploy był in_progress przy /end).
-- **Czy projekt „skończony"?** — jako framework audytowy (Ścieżka A) praktycznie tak; pozostałe
-  to polish (W9/W10) + stretche. Strategiczne domknięcie pivotu A/B/C: zamknięte (A).
-
-## Do MEMORY.md (przeniesiono)
-
-Root MEMORY.md: wpis **[2026-06-05] CI ZIELONE + merge PR#1/#2 + PRNG benchmark SHIPPED**
-(Architektura) + **[2026-06-05] cryptography niezadeklarowane → CI mypy fail** (Rozwiązane
-problemy). Pamięć agenta: `forward_strategy_prng_benchmark.md` (decyzja + komponenty + gotcha).

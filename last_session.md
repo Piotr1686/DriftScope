@@ -1,71 +1,73 @@
 # last_session.md
 
-**Sesja:** 2026-06-07 · ~11:00-12:10
+**Sesja:** 2026-06-07 · ~21:00-21:55
 **Status:** ✓ Zakończona poprawnie
-**Punkt odniesienia (git):** 9c2dc2f @ master (origin: 99b4dea — patrz niżej)
+**Punkt odniesienia (git):** 0e04caf @ master (origin zsynchronizowany)
 
 ---
 
 ## ▸ NASTĘPNY KROK (zacznij tutaj)
 
-**Rozszerzyć per-regime sekcję w `src/driftscope/reporting/report.qmd` o kolumnę „IT (LZ) p"
-na realnym EuroJackpot (R1/R2/R3)** — pokazać, że suplement IT czyta negative control jako
-clear również pod kątem SEKWENCYJNYM (czwarty, niezależny obiektyw obok 3 filarów). Konkretnie:
-w chunku raportu per-regime wywołać `information_detector()(draws_regime)` dla każdego reżimu i
-dodać kolumnę z `p_value`; oczekiwane wartości wysokie (~clear), jak negative control 1-50.
+**Zweryfikować RENDER nowego README na GitHubie oraz live Pages dla `0e04caf`.** Konkretnie:
+(1) potwierdzić, że **oba diagramy Mermaid** (przepływ filarów + architektura) renderują się
+na froncie repo `https://github.com/Piotr1686/DriftScope` — Mermaid o błędnej składni **psuje
+się po cichu** (pokazuje surowy kod zamiast diagramu); (2) potwierdzić, że deploy
+`pages-build-deployment` na `0e04caf` = success i live report pokazuje nową tabelę „IT (LZ) p"
+per-regime. Weryfikacja: `gh run list --workflow=pages-build-deployment` + `gh run view <id>
+--json headSha,conclusion` (sandbox blokuje HTTPS, curl exit 35) LUB poprosić usera o rzut oka
+na URL repo.
 
-Kontekst: IT pozostaje SUPLEMENTEM, NIE wchodzi do `classify()` / Disagreement Protocol
-(DoD-4=3/3 nienaruszone). To domyka narrację „honest null" o sekwencyjny wymiar bez zmiany
-kontraktu. Czysty stretch reporting — brak ścieżki krytycznej (framework Ścieżka A domknięty).
+Kontekst: framework (Ścieżka A) jest domknięty; README przepisany w tej sesji wg briefu
+5-modeli. Render Mermaid to JEDYNE czego nie dało się zweryfikować lokalnie (renderuje go
+GitHub, nie quarto). Brak ścieżki krytycznej — to ostatni punkt walidacyjny po rewrite.
 
 ---
 
 ## Co zrobiono w tej sesji
 
-- ✓ **Naprawa rozjazdów z /start:** dotrackowany `artifacts/{.gitkeep,artifacts_manifest.json}`
-  (DoD-6 deliverable; poprz. sesja błędnie uznała „ignored"), odpięty `settings.local.json` od
-  gita (`git rm --cached` + `.gitignore`) — koniec perpetualnego churnu allowlisty. Commity
-  `7d73cb2`, `28ad0ca`, `1162bc4`. Push origin.
-- ✓ **Faza A — detektor IT** (`reporting/information_theory.py`): złożoność Lempel-Ziv 1976
-  (`@njit cache=True`) + bz2 cross-check; null **order-shuffle** (permutacja bloków losowań →
-  zachowuje marginal+joint, łamie strukturę między-losowaniową). Komplementarny: ślepy na
-  freq_shift/pair_corr, czuły na autocorr/period. `information_detector` = czysta funkcja (DoD-6,
-  digest-seed jak cooccurrence). 10 testów (FPR≤α, power autocorr, ślepota freq_shift, determinizm).
-- ✓ **Faza A.2 — integracja baterii PRNG:** kolumna IT (`it_reject`/`it_p`) w `prng_benchmark.py`
-  (src+scripts), `report.qmd`. IT zapala się WYŁĄCZNIE na `+period(50)` (p≈0.01), milczy na
-  good/crypto/bias i realnym EuroJackpot (p≈0.75).
-- ✓ **Faza B — demo Streamlit** (`demo/app.py`, był stub): 3 zakładki (detection matrix /
-  entropy-lens LZ76 / Turing test), grupa optional-dep `demo`. Buildery czyste, `st.*` pod
-  `render()`/`__main__`. Smoke test + `AppTest` headless (0 wyjątków). Streamlit 1.58 zainstalowany.
-- ✓ **Walidacja:** ruff + mypy strict (`src`+`demo`, 34 plików) clean; **260 passed / 2 skipped**.
-- ✓ **Commity + push:** `e60b888` (IT), `99b4dea` (demo) → origin. README + root MEMORY.md
-  zaktualizowane; `9c2dc2f` (docs readme) — patrz niżej co do push.
+- ✓ **NASTĘPNY KROK z poprz. sesji DOMKNIĘTY — kolumna „IT (LZ) p" per-regime w `report.qmd`**
+  (commit `bfa6731`): suplement IT czyta negative control jako clear również SEKWENCYJNIE per
+  reżim. Realne (n_perm=199): **R1=0.535 · R2=0.855 · R3=0.620, wszystkie reject=False**.
+  Wizualnie odrębny od tabeli 3 filarów (wzmacnia „supplement, NIE 4. filar"; DoD-4=3/3).
+  Reuse `information_detector()`+`split_by_regime()`. Re-render `docs/{report,index}.html`.
+  Weryfikacja: pytest 260/2, render exit 0, grep HTML (tabela + kotwice nietknięte).
+- ✓ **PEŁNY rewrite `README.md`** (commit `822cb36`) wg `docs/research/readme_rewrite/
+  README_REWRITE_BRIEF.md`: lejek laik→statystyk (16 sekcji), 2 diagramy Mermaid, sformułowania
+  uczciwościowe (hallucination=błąd I rodzaju, None=abstynencja, quasi-ground-truth), porównanie
+  do NIST/Dieharder jako KOMPLEMENTARNOŚĆ, roadmap bez fałszywych „done", About-author.
+- ✓ **SPROSTOWANIA METRYK (zmierzone, dyscyplina briefu §0 — stary README miał błędy):**
+  (1) „~4 GB RAM" → pojedynczy audyt **~210 MB / ~4.5 s** (4 GB to budżet sweepu DriftSim);
+  (2) LZ76 full-stream EuroJackpot **p≈0.75 → 0.700**; (3) tabela PRNG ze świeżego renderu.
+  Nuans BOCPD utrwalony: top-1 CP = 2015-01-23 (0.466, aftershock), ground-truthy 2014-11-28/
+  2022-03-29 w top-5 → README mówi „covering both", NIE „top peaks" (nie zawyża).
+- ✓ **Archiwum `0e04caf`:** `DriftScope_readme/` (root) → `docs/research/readme_rewrite/`
+  (brief + 5 recenzji modeli), mirror konwencji `docs/research/external/`. Root posprzątany.
+- ✓ **Walidacja:** 3 commity wypchnięte (`bfa6731`/`822cb36`/`0e04caf`), pytest 260/2 zielone,
+  working tree czysty, HEAD=origin=`0e04caf`.
 
-## Co zostało (backlog sesji)
+## Co zostało (backlog sesji — wszystko OPCJONALNE / stretch)
 
-- ⟳ **Kolumna IT per-regime w report.qmd** — NASTĘPNY KROK.
+- ⟳ Weryfikacja renderu Mermaid + live Pages dla `0e04caf` (NASTĘPNY KROK).
 - ⟳ Pages na `actions/deploy-pages` (usuwa Node20-warning) — stretch CI.
 - ⟳ Głębsza analiza pary (10,25) w R2 — non-finding.
-- ⚠ **`9c2dc2f` (docs readme) i commit stanu sesji NIEWYPCHNIĘTE** — origin na `99b4dea`.
-  Push pozostawiony do decyzji (zob. Otwarte pytania).
 
 ## Aktywne pliki
 
-- `src/driftscope/reporting/information_theory.py` (nowy) + `tests/test_information_theory.py`
-- `src/driftscope/reporting/prng_benchmark.py`, `scripts/prng_benchmark.py`, `report.qmd` (kolumna IT)
-- `demo/app.py` (nowy) + `tests/test_demo_smoke.py`; `pyproject.toml` (mypy override + grupa demo)
-- `README.md`, `MEMORY.md` (root, wpis Architektura [2026-06-07])
-- ACTIVE prereg = **v7** (bez zmian — IT jest suplementem poza prereg)
+- `src/driftscope/reporting/report.qmd` — kolumna IT per-regime (`bfa6731`)
+- `docs/{report,index}.html` — re-render z kolumną IT (`bfa6731`)
+- `README.md` — pełny rewrite (`822cb36`)
+- `docs/research/readme_rewrite/*.md` — zarchiwizowany brief + 5 recenzji (`0e04caf`)
+- ACTIVE prereg = **v7** (bez zmian — sesja reporting/portfolio, poza prereg §0)
 
 ## Otwarte pytania
 
-- **Wypchnąć `9c2dc2f` (docs readme) + commit stanu sesji?** origin stoi na `99b4dea`
-  (feature'y już tam są). Brak ścieżki krytycznej; do decyzji na starcie następnej sesji.
-- **Czy projekt „skończony"?** — jako framework audytowy (Ścieżka A) praktycznie TAK; IT i demo
-  to zrealizowane wow-stretche. Pozostałe pozycje to czyste stretche.
+- **Render Mermaid na GitHubie** — czy oba diagramy w README renderują się (nie surowy kod).
+- **Czy projekt „skończony"?** — jako framework audytowy (Ścieżka A) praktycznie TAK; README
+  i portfolio domknięte. Pozostałe pozycje to czyste stretche bez ścieżki krytycznej.
 
 ## Do MEMORY.md (przeniesiono)
 
-- Root `MEMORY.md` (Architektura): **[2026-06-07] ✓ IT supplement (LZ76) + demo Streamlit** —
-  decyzja suplement-nie-filar, reporting/ poza prereg, order-shuffle null, walidacja, integracja.
-- Pamięć agenta: `it_supplement_lz76.md` (+ wpis w indeksie MEMORY.md agenta).
+- Root `MEMORY.md` (Architektura): **[2026-06-07 sesja 2] IT per-regime + PRZEPISANY README +
+  sprostowania metryk** (RAM ~210 MB nie 4 GB; LZ76 0.700 nie 0.75; nuans BOCPD top-1 aftershock;
+  3 commity; archiwum briefu do docs/research).
+- Pamięć agenta: zaktualizowany `it_supplement_lz76.md` (p≈0.75 → 0.700 + per-rezim).

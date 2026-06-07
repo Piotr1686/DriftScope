@@ -34,3 +34,7 @@ src/driftscope/reporting/figs/
 src/driftscope/reporting/report.html
 src/driftscope/reporting/report_files/
 src/driftscope/reporting/*_files/
+
+# --- Claude Code lokalne nadpisania (per-maszyna) ---
+# settings.json = wspoldzielone; settings.local.json = lokalne (sciezki absolutne, allowlist) -> nie trackowac.
+.claude/settings.local.json

@@ -46,7 +46,7 @@ its presence.
 - 📐 **Pre-registered & reproducible.** Every statistical choice is frozen *before* looking at
   results (`preregistration_v7.md`); a cold-machine re-run is **bit-identical** (SHA-256 manifest).
 - ⚡ **Fast & light.** The full audit runs in **~4.5 s** and peaks at **~210 MB RAM** on a laptop
-  CPU. **260 passing tests** (CI-green on Linux).
+  CPU. **266 passing tests** (CI-green on Linux).
 
 ---
 
@@ -154,6 +154,20 @@ three-way.
 > "no evidence" rather than a forced verdict). For raw bit-level randomness certification, reach for
 > NIST STS or Dieharder; for *framework-level, ground-truth-validated drift auditing*, reach here.
 
+## Reusability — a second real-world game (Multi Multi)
+
+The PRNG benchmark proves sensitivity on *synthetic* streams; the reusability claim is sealed on a
+**second real game**. *Multi Multi* draws **20 numbers from a pool of 80** (vs EuroJackpot's 5-of-50).
+Because every detector reads its pool and draw size from the `DrawRecord` itself, the same battery
+runs with **zero code changes** — only the data source differs (`python scripts/multimulti_audit.py`,
+the most recent 2,000 of 16,827 draws, 1996–2026). After re-calibrating the detectors at pool = 80
+(MMD false-positive rate = **0.035** over 200 honest-null trials, `scripts/calibrate_mmd_pool.py`;
+BOCPD threshold re-derived to **0.34**), the audit reads **clear**: BOCPD, Family B (**0/80**),
+co-occurrence and the LZ supplement all silent. A lone MMD rejection at p ≈ 0.03 is exactly the
+**single-pillar (1/3) false positive the Disagreement Protocol is built to absorb** — expected ≈ 1
+test in 20, and *not* a finding without convergence. A structurally different real game (4× the pool,
+4× the draw size), the same calibrated instrument, the same disciplined silence.
+
 ## Why you can trust it
 
 The value of this project is its honesty, so the trust claims map directly to files and to
@@ -206,7 +220,7 @@ report. Persistence is fully file-based (no database layer).
 | Metric | Value | Conditions |
 |---|---|---|
 | Full audit | **~4.5 s**, **~210 MB** peak RAM | 958 draws, `n_perm=999`, i5-12500H (CPU-only) |
-| Test suite | **260 passing** (+2 skipped) | 262 collected; CI-green on Ubuntu / Python 3.10 |
+| Test suite | **266 passing** (+2 skipped) | 268 collected; CI-green on Ubuntu / Python 3.10 |
 | JIT hot loops | **~2.7×** vs NumPy baseline | permutation PoC (`poc_permutation_engine.py`) |
 
 > The ~4 GB RAM figure sometimes quoted for DriftScope is the **budget for the full DriftSim
@@ -297,9 +311,9 @@ src/driftscope/
 ├── adaptive/       # honest watchlist (returns None unless DoD-3 AND DoD-4 pass)
 ├── pipeline.py     # end-to-end orchestrator: run_audit(draws) -> AuditReport
 └── cli.py          # `driftscope run`
-scripts/            # archive (SHA-256 manifest), prng_benchmark (reusability showcase)
+scripts/            # archive (SHA-256 manifest), prng_benchmark + multimulti_audit (reusability)
 demo/               # Streamlit audit explorer (optional, `pip install -e ".[demo]"`)
-tests/              # 260 tests — calibration, invariants, FPR ≤ α, reproducibility, PRNG, info-theory
+tests/              # 266 tests — calibration, invariants, FPR ≤ α, reproducibility, PRNG, info-theory
 data/seed/          # eurojackpot_history.csv (958 draws, committed)
 docs/               # published HTML report + executive summary (GitHub Pages)
 ```

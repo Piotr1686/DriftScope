@@ -329,7 +329,54 @@ It also cashes the reusability claim directly: DriftScope is a general non-stati
 uniformity auditor (NIST RNG, cryptographic PRNG, financial random-walk are natural targets),
 not a lottery-specific script.
 
-# 6. Reproducibility (DoD-6)
+# 6. Second real-world case study — Multi Multi (20-of-80)
+
+The PRNG benchmark proves *sensitivity* on synthetic streams with a known ground truth. The
+final question is whether the framework generalizes to a **second real game** of a different
+shape — without touching detector code. Multi Multi draws **20 numbers from a pool of 80** (vs
+EuroJackpot's 5-of-50). Every detector derives its pool and draw size from the `DrawRecord`
+itself, so the same battery runs unchanged; only the data source differs (16,827 draws,
+1996–2026; the audit runs on the most recent 2,000, since BOCPD is O(T²)).
+
+**Calibration first.** A null on a new pool is only trustworthy if the detectors are calibrated
+*there*. We re-measured the MMD false-positive rate at pool=80 on an honest uniform null (200
+trials, `scripts/calibrate_mmd_pool.py`): **window=25 → FPR = 0.035**, well within Monte-Carlo
+error of the nominal 0.05 — the detector is not miscalibrated at the larger pool. The BOCPD
+reject threshold was likewise re-derived per pool (80 → 0.34, 95ᵗʰ percentile of the null).
+
+```{python}
+#| label: multimulti-audit
+#| echo: false
+#| output: asis
+#| cache: true
+from driftscope.reporting.multimulti_audit import run_multimulti_audit
+
+# Same battery as the EuroJackpot audit; pool/k derived from the records (pool=80, k=20).
+mm = run_multimulti_audit(window=2000, n_perm=199)
+b = mm.battery
+print("| Detector | value | reject H0 |")
+print("|---|---|---|")
+print(f"| BOCPD (main, temporal) | max={mm.bocpd_max_prob:.3f} (thr {mm.bocpd_threshold:.2f}) | {mm.bocpd_reject} |")
+print(f"| Family B (per-number FDR) | {b.family_b_reject}/{b.family_b_size} rejected | {b.family_b_reject > 0} |")
+print(f"| MMD (distributional) | p={b.mmd_p:.3f} | {b.mmd_reject} |")
+print(f"| Co-occurrence (joint) | p={b.cooc_p:.3f} | {b.cooc_reject} |")
+print(f"| IT / LZ (sequential, supplement) | p={b.it_p:.3f} | {b.it_reject} |")
+```
+
+**Verdict: clear, with a textbook caveat.** BOCPD (below the pool-80 threshold), Family B
+(0/80), co-occurrence and the IT/LZ supplement all read clean. A single pillar — MMD — rejects
+at p≈0.03. Read through the Disagreement Protocol this is **1/3** (one of the three core
+pillars) — the *same* classification as the lone R2 co-occurrence flag in §4. A single-pillar
+rejection at α=0.05 is *expected* (≈1 test in 20; across five families P(≥1)≈23%) and is **not a
+finding**: promotion requires convergence, which a lone flag does not clear. The framework
+neither hides it nor over-reads it — which is precisely why the verdict rests on agreement
+between independent families, not on any single test.
+
+This closes the reusability loop on **real** data. DriftScope is not a EuroJackpot script: the
+same calibrated instrument audits a structurally different real game (4× the pool, 4× the draw
+size) and behaves exactly as designed — quiet where there is no convergent signal.
+
+# 7. Reproducibility (DoD-6)
 
 - **Determinism:** every detector is a pure function of the stream; the RNG is seeded from
   the data contents (⊕ `BASE_SEED`), independent of call order.

@@ -55,6 +55,35 @@ def load_seed_csv(path: Path | None = None) -> list[DrawRecord]:
     return draws
 
 
+def load_generic_seed_csv(path: Path, pool_size: int) -> list[DrawRecord]:
+    """Wczytuje generyczny seed CSV (gra k-z-`pool_size`) → list[DrawRecord].
+
+    Format CSV: pierwsza kolumna = `draw_date`, WSZYSTKIE pozostałe = liczby losowania
+    (np. Multi Multi: `draw_date,n1,...,n20`). Loader jest agnostyczny co do liczby
+    kolumn liczb — działa dla dowolnego k (MM=20, ale reusable na grę 3+).
+
+    `pool_size` (rozmiar puli głównej, MM=80) jest niesiony przez każdy `DrawRecord`
+    (zob. `DrawRecord.generic`), więc detektory wyprowadzają pulę/k z danych. Walidację
+    zakresów 1..pool_size egzekwuje `DrawRecord._validate_shape`.
+    """
+    df = pl.read_csv(path)
+    date_col = df.columns[0]
+    num_cols = df.columns[1:]
+
+    draws: list[DrawRecord] = []
+    for row in df.iter_rows(named=True):
+        numbers = [int(row[c]) for c in num_cols if row[c] is not None]
+        draws.append(
+            DrawRecord.generic(
+                draw_date=date.fromisoformat(str(row[date_col])),
+                numbers=numbers,
+                pool_size=pool_size,
+            )
+        )
+
+    return draws
+
+
 # ---------------------------------------------------------------------------
 # Tier 2 — API developers.lotto.pl (stub, W1+)
 # ---------------------------------------------------------------------------

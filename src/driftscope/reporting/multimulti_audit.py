@@ -74,6 +74,10 @@ def run_multimulti_audit(
     """
     path = seed_csv if seed_csv is not None else _MM_SEED_PATH
     draws = load_generic_seed_csv(path, pool_size=_MM_POOL_SIZE)
+    # BOCPD jest sekwencyjny, a "okno = ostatnie N" zaklada porzadek chronologiczny.
+    # Realny MM seed ma 2 historyczne inwersje dat (2010) — sortujemy defensywnie, by
+    # okno i detekcja change-pointow byly niezalezne od porzadku w pliku zrodlowym.
+    draws.sort(key=lambda d: d.draw_date)
     recent = draws[-window:] if 0 < window < len(draws) else draws
 
     bocpd = run_bocpd(recent, field="main")

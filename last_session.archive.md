@@ -1,3 +1,80 @@
+## ═══ Sesja zarchiwizowana [2026-06-08 22:23] ═══
+
+# last_session.md
+
+**Sesja:** 2026-06-07 · ~22:45-23:20
+**Status:** ✓ Zakończona poprawnie
+**Punkt odniesienia (git):** a21cc92 @ master (commit kodu MM; ten zapis stanu = kolejny commit on top)
+
+---
+
+## ▸ NASTĘPNY KROK (zacznij tutaj)
+
+**Krok 6 planu — runner MM negative-control-only: utworzyć `src/driftscope/reporting/multimulti_audit.py`**
+(ścieżka jak `reporting/prng_benchmark.py`, POZA prereg §0). Wczytać `data/seed/multimulti_history.csv`
+przez generyczny loader (DrawRecord.generic, pool_size=80), na **OGRANICZONYM oknie** (np. ostatnie
+~1500-2000 losowań — NIE pełne 16827, bo BOCPD jest O(T²)), policzyć baterię: BOCPD(field="main") +
+MMD + cooccurrence + Family B + IT (reuse `pipeline.default_pillar_detectors`/
+`family_b_per_number_pvalues`, `information_detector`, `multiple_testing.correct_family_b`). Struktura
+wyniku jak `BenchmarkRow` (flagged/verdict). Oczekiwany wynik: **all-clear**. CLI prezentacji w
+`scripts/multimulti_audit.py`.
+
+Kontekst: kroki 1-5 (parametryzacja + dane + kalibracja) są DONE i zacommitowane (a21cc92), EJ
+regression = 0. Smoke MM na 800 losowaniach już przeszedł all-clear (BOCPD 0.221<0.34, Family B 0/80).
+Brakuje generycznego loadera CSV (obecny `load_seed_csv` jest EJ-specyficzny — main_1..5/euron) →
+dodać `load_generic_seed_csv(path, pool_size)` w `ingestion/lotto_scraper.py` lub w runnerze.
+
+Plan całości: `C:\Users\plazo\.claude\plans\flickering-stirring-lovelace.md` (zatwierdzony).
+
+---
+
+## Co zrobiono w tej sesji
+
+- ✓ **Krok 0 — regression gate**: baseline 260 passed / 2 skipped; mypy --strict clean; ruff src clean
+  (8 błędów ruff to pre-existing dług w notebooks/poc/scripts — POZA src, nie nasze).
+- ✓ **Krok 1 — dane MM**: `data/seed/multimulti_history.csv` (16827 losowań 1996-2026) + konwerter
+  `scripts/convert_mm_seed.py` ze źródła `wynikilotto.net.pl/download/multi_multi.csv`.
+- ✓ **Krok 2 — unified `DrawRecord`** (`core/types.py`): pola EJ opcjonalne + `numbers`/`pool_size`,
+  `model_validator` XOR, `DrawRecord.generic()`. Back-compat EJ zweryfikowany.
+- ✓ **Krok 3 — przekrojowa parametryzacja pool/k**: detektory wyprowadzają pool/k z rekordów
+  (8 modułów: cooccurrence, recurrence, k4_mmd, permutation, block_bootstrap, information_theory,
+  pipeline.family_b, calibration.chi2, h1_classical.run_bocpd). **EJ regression = 0** (260 passed).
+- ✓ **Krok 4 — `generate_generic_uniform`** (`driftsim/null_uniform.py`) — honest null k-z-pool bez euron.
+- ✓ **Krok 5 — kalibracja BOCPD(80,20)**: p95=0.3314 (n=2000, trials=200, FPR@p95=0.05) → próg 0.34
+  w `_MAIN_REJECT_THRESHOLD_BY_POOL`. Skrypt rozszerzony o `calibrate_generic`.
+- ✓ **Smoke MM end-to-end** (800 losowań): all-clear (BOCPD 0.221, Family B 0/80, min_q=0.959).
+- ✓ **Commit kodu** `a21cc92` (feat, 14 plików). mypy + ruff src czyste po wszystkim.
+- ✓ MEMORY.md (root + agent) zaktualizowane.
+
+## Co zostało (backlog sesji)
+
+- ⟳ **Krok 6 — runner MM** (NASTĘPNY KROK) + generyczny loader CSV.
+- ⟳ **Krok 7 — sekcja „Second real-world case study: Multi Multi" w `report.qmd`** + re-render docs + README.
+- ⟳ **Krok 8 — walidacja**: FPR/kalibracja sanity pool=80; pełny suite + nowy `tests/test_generic_pool_invariants.py`.
+- ⟳ Cross-check kalibracji BOCPD n=5000 (opcjonalny, potwierdza niezmienniczość względem długości; ~kilkanaście min O(T²)).
+- ⟳ Push commitów (origin za d8df02f; lokalnie a21cc92 + state on top) — do decyzji.
+
+## Aktywne pliki
+
+- (następna sesja) `reporting/multimulti_audit.py` (nowy), `scripts/multimulti_audit.py` (nowy CLI),
+  `ingestion/lotto_scraper.py` (generyczny loader), `reporting/report.qmd`, `tests/test_generic_pool_invariants.py` (nowy)
+- (zacommitowane a21cc92) `core/types.py`, `methodology/*`, `pipeline.py`, `driftsim/null_uniform.py`,
+  `reporting/information_theory.py`, `data/seed/multimulti_history.csv`, `scripts/{convert_mm_seed,calibrate_bocpd_threshold}.py`
+- ACTIVE prereg = **v7** (bez zmian — MM to reusability/reporting + parametryzacja, poza §0)
+
+## Otwarte pytania
+
+- **Okno analizy runnera MM** — ile ostatnich losowań (1500? 2000?) vs pełne 16827 (BOCPD O(T²) wyklucza pełne).
+- **Lokalizacja generycznego loadera CSV** — `ingestion/lotto_scraper.py` (`load_generic_seed_csv`) vs lokalnie w runnerze.
+- **Czy MM trafia do `report.qmd` jako pełna sekcja** (jak PRNG) czy lżejsza nota.
+
+## Do MEMORY.md (przeniesiono)
+
+- Root `MEMORY.md` (Architektura): **[2026-06-07 sesja 4] IMPLEMENTACJA MM kroki 1-5 DONE** —
+  technika „detektory wyprowadzają pool/k z rekordów", unified DrawRecord, próg BOCPD per-pool
+  (80→0.34, nieintuicyjnie < 50→0.70 bo wyższe K/N), źródło danych, gotcha BOCPD O(T²).
+- Pamięć agenta: `mm_parametrization_pool_k.md` (nowy wpis + index).
+
 ## ═══ Sesja zarchiwizowana [2026-06-07 23:18] ═══
 
 # last_session.md
@@ -301,80 +378,3 @@ Projektowy MEMORY.md: db/ FINDING → ✓ RESOLVED (opis wykonania) + nowy wpis 
 ✓ W9 executive summary ZBUDOWANY** (gotcha print-fit headless-Edge, docs/ ręcznie kopiowane = brak
 render-stepu w CI, render gotcha AVG-proxy plotly→CDN). Pamięć agenta:
 `powershell-git-commit-heredoc-gotcha.md` (`-m @'...'@` wycieka `@` → używać `git commit -F <plik>`).
-
-## ═══ Sesja zarchiwizowana [2026-06-06 21:30] ═══
-
-# last_session.md
-
-**Sesja:** 2026-06-06 · ~10:40-11:55
-**Status:** ✓ Zakończona poprawnie
-**Punkt odniesienia (git):** 5c2237d @ master
-
----
-
-## ▸ NASTĘPNY KROK (zacznij tutaj)
-
-**[CZEKA NA DECYZJĘ USERA — dwie rekomendowane pozycje, obie wstrzymane]**
-
-**(1) db/ cleanup** — usunąć `src/driftscope/db/` (puste stuby, zero użycia w src/tests) ORAZ
-zsynchronizować kontrakt: update CLAUDE.md (drzewo) + PROJECT_BRIEF.md (linie 13/72/145-148/
-169/219/443/546 — w tym narracja data-flow §219 „Reporting czyta przez db/queries.py") z polem
-rationale „access layer SQLite nigdy nie zmaterializował się; persystencja Parquet/CSV; kontrakt==kod".
-**(2) W9 executive summary** — zbudować jako print-friendly standalone HTML one-pager (Quarto→HTML
-+ print-CSS, eksport Ctrl+P→PDF); LaTeX niedostępny, prawdziwy PDF wymagałby ryzykownego `quarto
-install tinytex`.
-
-Kontekst: rdzeń projektu domknięty (DoD-1..6 + reporting + CI + Pages + pełna piątka PRNG).
-Obie pozycje to polish/uczciwość kontraktu, nie ścieżka krytyczna. db/ wstrzymane bo usunięcie =
-rewizja kontraktu w 8+ miejscach (decyzja prezentacyjna usera). W9 wstrzymane bo format (HTML vs
-PDF) zależy od akceptacji ryzyka tinytex.
-
----
-
-## Co zrobiono w tej sesji
-
-- ✓ **PRNG benchmark — pełna piątka (PR#4 `5c2237d`, squash-merge):** `AESCtrDrbgStream`
-  (AES-256 CTR jako DRBG, szkielet NIST SP 800-90A) + defekt **period-truncation**
-  (`draws_from_stream(period=p)` — krótki cykl powtarzany → zamrożone częstości → over-dispersion).
-  favor/period wykluczają się; `period=None` = zachowanie bit-identyczne (zero regresji).
-- ✓ **Money run n=1500:** good/crypto(ChaCha20+AES)/real → clear; **bias(7) → FLAG wąski**
-  (Family B 1/50 + MMD); **period(50) → FLAG szeroki (3/3 filary: Family B 27/50 + MMD + cooc)**.
-  Framework **rozróżnia typ defektu**. Sensitivity ✓ Specificity ✓.
-- ✓ **Walidacja:** suite **246 passed / 2 skip** (+7), ruff(src/tests)+mypy --strict czyste,
-  CI ubuntu zielone 2m53s, `docs/` re-render (Quarto), Pages deploy success. README 2+2+2 + 246.
-- ✓ **Diagnoza db/** — rozbieżność kontrakt↔implementacja zidentyfikowana (NIE wykonano cleanup).
-- ✓ **Diagnoza toolchain** — LaTeX/tinytex niedostępny (executive PDF).
-- ✓ **Pamięć:** 3 wpisy **[2026-06-06]** w MEMORY.md (PR#4, db/ finding, toolchain LaTeX).
-
-## Co zostało (backlog sesji — wszystko OPCJONALNE / stretch)
-
-- ⟳ **db/ cleanup + rewizja kontraktu** (NASTĘPNY KROK (1), czeka na decyzję).
-- ⟳ **W9 executive summary HTML one-pager** (NASTĘPNY KROK (2), czeka na decyzję formatu).
-- ⟳ demo Streamlit (`demo/app.py` stub, off-stack).
-- ⟳ Głębsza analiza pary (10,25) w R2 — non-finding.
-- ⟳ `information_theory.py` (LZ76/MDL) — absent, stretch.
-- ⟳ Node20 na wbudowanym `pages-build-deployment` (przełączyć na `actions/deploy-pages`) — opcjonalne.
-
-## Aktywne pliki
-
-- `src/driftscope/ingestion/rng_streams.py` — AESCtrDrbgStream + period defekt (`5c2237d`)
-- `src/driftscope/reporting/prng_benchmark.py` + `scripts/prng_benchmark.py` — 2+2+2 + `--period` (`5c2237d`)
-- `tests/test_rng_streams.py` + `tests/test_prng_benchmark.py` — +7 testów (`5c2237d`)
-- `src/driftscope/reporting/report.qmd` + `README.md` + `docs/{index,report}.html` — sekcja 5 (`5c2237d`)
-- (PENDING) `src/driftscope/db/*` — kandydat do usunięcia; `CLAUDE.md` + `PROJECT_BRIEF.md` — rewizja kontraktu
-- ACTIVE prereg = **v7** (bez zmian — sesja non-methodology)
-
-## Otwarte pytania
-
-- **db/ — usunąć czy zostawić „deferred"?** Rekomendacja: usunąć + zsynchronizować kontrakt
-  (uczciwość kontrakt↔kod > martwe stuby dla portfolio). Decyzja prezentacyjna usera.
-- **W9 PDF czy HTML?** Rekomendacja: HTML one-pager (zero ryzyka LaTeX). PDF tylko jeśli user
-  zaakceptuje ryzyko `quarto install tinytex` (SSL przez AVG-proxy).
-- **Czy projekt „skończony"?** — jako framework audytowy (Ścieżka A) praktycznie tak.
-
-## Do MEMORY.md (przeniesiono)
-
-3 wpisy **[2026-06-06]** w MEMORY.md: (1) PRNG pełna piątka PR#4 + gotcha Pages-deploy Node20,
-(2) FINDING db/ rozbieżność kontrakt↔impl + rekomendacja (DECYZJA PENDING), (3) toolchain
-LaTeX niedostępny + rekomendacja HTML one-pager dla W9.
-

@@ -9,8 +9,10 @@ reporting NIE podlega dyscyplinie prereg §0).
 BOCPD jest O(T^2) → audyt liczony na OGRANICZONYM oknie ostatnich `window` losowan (default
 2000; pelne 16827 wykluczone budzetowo). Prog BOCPD(pool=80) = 0.34 (skalibrowany na n=2000,
 FPR~=0.05 pod nullem uniform-iid; `_MAIN_REJECT_THRESHOLD_BY_POOL`), wiec okno 2000 jest
-length-matched do kalibracji. Oczekiwany wynik: **all-clear** — Multi Multi to dobrze
+length-matched do kalibracji. Oczekiwany wynik: **clear** — Multi Multi to dobrze
 przetestowany RNG bez pre-rejestrowanego sygnalu (honest null jak negative control 1-50 w EJ).
+Werdykt = Disagreement Protocol po 3 filarach rdzeniowych (BOCPD/MMD/cooc, FLAG >=2/3),
+wiec samotny reject jednego filaru przy alpha=0.05 NIE przewraca werdyktu.
 
 Prezentacja (tabela/CSV) zyje w `scripts/multimulti_audit.py` (CLI).
 """
@@ -22,6 +24,7 @@ from pathlib import Path
 import driftscope
 from driftscope.ingestion.lotto_scraper import load_generic_seed_csv
 from driftscope.methodology.h1_classical import run_bocpd
+from driftscope.reporting.disagreement import DisagreementVerdict, classify
 from driftscope.reporting.prng_benchmark import BenchmarkRow, run_battery
 
 _ROOT = Path(driftscope.__file__).resolve().parents[2]
@@ -35,8 +38,14 @@ class MultiMultiAuditRow:
     """Jeden wiersz audytu MM: BOCPD (filar temporalny) + battery negative-control.
 
     Kompozycja: `battery` niesie Family B (per-number exact binomial) + MMD + co-occurrence
-    + IT (suplement); pola `bocpd_*` dokladaja filar H1 (BOCPD na puli glownej). `flagged`/
-    `verdict` agreguja OBA — jak `BenchmarkRow`, ale rozszerzone o BOCPD.
+    + IT (suplement); pola `bocpd_*` dokladaja filar H1 (BOCPD na puli glownej).
+
+    Werdykt = Disagreement Protocol po 3 filarach RDZENIOWYCH (BOCPD->h1 / MMD /
+    co-occurrence): "FLAG" dopiero przy konwergencji >=2/3, samotny filar (1/3) = clear
+    (oczekiwany false-positive przy alpha=0.05, NIE finding — spojnie z report.qmd §4/§6).
+    IT = suplement (nie filar), Family B = osobna bramka FDR — oba raportowane w macierzy,
+    ale POZA werdyktem. Kontrast do `BenchmarkRow.flagged` (OR), ktory jest poprawny dla
+    benchmarku sensitivity/specificity na PRNG z ground-truth labelem.
     """
 
     source: str
@@ -48,9 +57,25 @@ class MultiMultiAuditRow:
     battery: BenchmarkRow
 
     @property
+    def disagreement(self) -> DisagreementVerdict:
+        """Klasyfikacja Disagreement po 3 filarach rdzeniowych (reuse DoD-4 classify)."""
+        return classify(
+            {
+                "h1": self.bocpd_reject,  # BOCPD = rodzina temporalna H1 (zob. PILLARS)
+                "mmd": self.battery.mmd_reject,
+                "cooccurrence": self.battery.cooc_reject,
+            }
+        )
+
+    @property
+    def core_fraction(self) -> str:
+        """Ulamek zgodnych filarow rdzeniowych ('0/3'..'3/3') do raportow."""
+        return self.disagreement.fraction
+
+    @property
     def flagged(self) -> bool:
-        """Czy KTORYKOLWIEK detektor (BOCPD lub battery) zaplonal."""
-        return self.bocpd_reject or self.battery.flagged
+        """Czy konwergencja filarow rdzeniowych >=2/3 (Disagreement, NIE naiwny OR)."""
+        return self.disagreement.n_agree >= 2
 
     @property
     def verdict(self) -> str:

@@ -6,7 +6,10 @@ DOKLADNIE ten sam battery negative-control co audyt EuroJackpot na drugiej, niez
 
     BOCPD(main) + Family B (per-number exact binomial) + MMD + co-occurrence + IT
 
-Oczekiwany wynik: CLEAR (honest null — framework nie halucynuje sygnalu na drugim strumieniu).
+Werdykt = Disagreement Protocol po 3 filarach rdzeniowych (BOCPD/MMD/cooc): FLAG dopiero
+przy konwergencji >=2/3; samotny filar (1/3) = clear (oczekiwany false-positive przy
+alpha=0.05, NIE finding). IT = suplement, Family B = osobna bramka FDR (w macierzy, poza
+werdyktem). Oczekiwany wynik: CLEAR (honest null — framework nie halucynuje sygnalu).
 
 Uruchomienie:
     python scripts/multimulti_audit.py
@@ -40,6 +43,7 @@ def _to_table(row: MultiMultiAuditRow) -> pl.DataFrame:
                 "cooc_p": round(b.cooc_p, 4),
                 "it_reject": b.it_reject,
                 "it_p": round(b.it_p, 4),
+                "core_fraction": row.core_fraction,
                 "verdict": row.verdict,
             }
         ]
@@ -68,9 +72,18 @@ def main() -> None:
     with pl.Config(tbl_rows=-1, tbl_cols=-1, fmt_str_lengths=40, set_ascii_tables=True):
         print(table)
 
+    b = row.battery
     print(
-        f"\nVerdict: {row.verdict.upper()} | "
-        f"Expected: clear (honest null, reusability — same battery as EuroJackpot)"
+        f"\nCore Disagreement (BOCPD/MMD/cooc): {row.core_fraction} "
+        f"({row.disagreement.label})"
+    )
+    print(
+        f"Supplements (poza werdyktem): Family B {b.family_b_reject}/{b.family_b_size} | "
+        f"IT {'reject' if b.it_reject else 'clear'}"
+    )
+    print(
+        f"Verdict: {row.verdict.upper()} "
+        f"(FLAG wymaga konwergencji >=2/3 filarow rdzeniowych - Disagreement Protocol)"
     )
 
     if args.out is not None:

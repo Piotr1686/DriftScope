@@ -200,7 +200,9 @@
     <li><b>Reproducibility engineering</b> — pure-function detectors, content-seeded RNG, a
       deterministic SHA-256 manifest (cold-machine re-run is bit-identical, DoD-6).</li>
     <li><b>Performance & clean architecture</b> — Numba-JIT permutation hot loops (CPU-only),
-      a detector-agnostic pipeline (a PRNG stream is just a different <code>DrawRecord</code> source).</li>
+      a detector-agnostic pipeline (a PRNG stream is just a different <code>DrawRecord</code> source —
+      proven on a second independent real game, Multi Multi 20/80, which the unchanged battery audited
+      and cleared: no rule change to find).</li>
     <li><b>Intellectual honesty as a feature</b> — the deliverable is a calibrated "we found
       nothing", defended — not a manufactured finding.</li>
   </ul>
@@ -208,7 +210,7 @@
   <footer>
     <span>📊 Live report &amp; interactive plots: <a href="https://piotr1686.github.io/DriftScope/">piotr1686.github.io/DriftScope</a></span>
     <span>Source: <a href="https://github.com/Piotr1686/DriftScope">github.com/Piotr1686/DriftScope</a></span>
-    <span class="pill">246 tests · CI green</span>
+    <span class="pill">268 tests · CI green</span>
     <span class="stack">Python 3.10 · NumPy 2.x + Numba 0.65.1 · statsmodels · ruptures · SciPy · scikit-learn · Polars · Pydantic v2 · Typer · matplotlib + Plotly · Quarto. CPU-only, ~4 GB peak.</span>
   </footer>
 

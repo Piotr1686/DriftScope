@@ -313,7 +313,7 @@ src/driftscope/
 └── cli.py          # `driftscope run`
 scripts/            # archive (SHA-256 manifest), prng_benchmark + multimulti_audit (reusability)
 demo/               # Streamlit audit explorer (optional, `pip install -e ".[demo]"`)
-tests/              # 266 tests — calibration, invariants, FPR ≤ α, reproducibility, PRNG, info-theory
+tests/              # 268 tests — calibration, invariants, FPR ≤ α, reproducibility, PRNG, info-theory
 data/seed/          # eurojackpot_history.csv (958 draws, committed)
 docs/               # published HTML report + executive summary (GitHub Pages)
 ```

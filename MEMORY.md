@@ -211,6 +211,15 @@ Domkniecie drugiej gry liczbowej jako case study reusability. Push `0e04caf..133
 - **Krok 7 — raport** (`133300b`): `report.qmd` nowa sekcja 6 "Second real-world case study — Multi Multi" (Reproducibility→7), narracja uczciwa (clear + lone-FP wchloniety). README sekcja "Reusability — a second real-world game", liczby testow 260→266. Re-render quarto (n_perm=199), `docs/{report,index}.html` zweryfikowane grep-em PRZED kopiowaniem (MM table BOCPD 0.304/MMD 0.030 True, EJ per-rezim, Family B /150, hook .webm inline, plotly CDN).
 - **Stan:** 266 passed / 2 skipped, mypy --strict + ruff czyste. Live Pages zaktualizuje sie po zielonym CI.
 
+**[2026-06-09] DECYZJE SCOPE — gra 3 zaparkowana + MM callout w exec summary (`7ed0ca6`, pushed).**
+Rozstrzygniecie dwoch otwartych pytan z sesji [2026-06-08]:
+- **Gra 3 (Keno/Lotto) = ZAPARKOWANA.** Reusability nasycona przy 2 grach (EJ+MM); generyczny loader pool/k gotowy, ale 3. gra ma sens TYLKO z known ground-truth change-pointem (Keno/Lotto PL go nie maja → bylby tylko kolejny negative-control demo). Robic wtedy ~1h.
+- **`docs/executive_summary.html` = EJ-flagship 1-pager + JEDNO zdanie MM callout** (nie pelna sekcja — brevity 1-pagera). MM wpleciony w bullet "Performance & clean architecture" jako dowod game-agnostic na realnym 2. datasecie; odseparowany od figury "958 real draws" (EJ-only).
+- **Fix correctness:** stale liczba testow exec summary 246→**268**, README 266→**268** (zrodlo prawdy = zywy `pytest --collect-only`). Zmiany czysto dokumentacyjne (HTML/MD), CI uruchomione.
+
+**[2026-06-09 sesja 2] FIX: werdykt runnera MM = Disagreement >=2/3, nie naiwny OR (`3e70fef`, lokalny).**
+Splacony dlug z 2 sesji. `MultiMultiAuditRow.verdict` (reporting/multimulti_audit.py) zwracal "FLAG" przy samotnym MMD (OR po WSZYSTKICH detektorach: BOCPD|FamilyB|MMD|cooc|IT), choc MM jest clear. Teraz werdykt = `reporting/disagreement.classify` po **3 filarach rdzeniowych** (BOCPD→`h1` / MMD / cooccurrence): `flagged = n_agree>=2`, samotny filar (1/3) = clear (oczekiwany FP przy alpha=0.05, NIE finding). Nowe properties `disagreement`/`core_fraction`. IT = suplement, Family B = osobna bramka FDR — oba w macierzy, POZA werdyktem. CLI: kolumna `core_fraction` + usuniete mylace "FLAG | Expected: clear". `BenchmarkRow.flagged` (OR) NIE ruszony — tam OR poprawny dla sensitivity/specificity na PRNG z ground-truth. +6 testow semantyki. Suite 272 passed, ruff/mypy czyste. Smoke: MMD p=0.03 (1/3) → CLEAR. report.qmd §6 bez zmian (proza juz opisywala 1/3→clear).
+
 ---
 
 ## Rozwiązane problemy

@@ -1,72 +1,64 @@
 # last_session.md
 
-**Sesja:** 2026-06-08 · ~21:50-22:25
+**Sesja:** 2026-06-09 · ~22:20-22:45
 **Status:** ✓ Zakończona poprawnie
-**Punkt odniesienia (git):** 133300b @ master (ostatni commit kodu MM; ten zapis stanu = kolejny commit on top)
+**Punkt odniesienia (git):** 3e70fef @ master (fix werdyktu MM; LOKALNY — niepushowany)
 
 ---
 
 ## ▸ NASTĘPNY KROK (zacznij tutaj)
 
-**Naprawić semantykę werdyktu runnera MM: `MultiMultiAuditRow.verdict` (w
-`src/driftscope/reporting/multimulti_audit.py`) używa naiwnego OR po WSZYSTKICH
-detektorach → zwraca "FLAG" przy samotnym MMD, choć MM jest merytorycznie clear.**
-Zmienić na agregację Disagreement: policzyć rejecty wśród **3 filarów rdzeniowych**
-(BOCPD-main / MMD / co-occurrence) → ułamek "k/3"; verdict = "clear" gdy konwergencja
-<2/3, "FLAG" dopiero ≥2/3. IT = suplement (nie filar), Family B = osobna bramka FDR.
-Dodać pole `core_fraction` (lub reuse `reporting/disagreement.classify_from_results`).
-Zaktualizować CLI `scripts/multimulti_audit.py` (drukować ułamek + uczciwy verdict,
-usunąć mylące "FLAG | Expected: clear"). Dodać test do `tests/test_generic_pool_invariants.py`.
+**Push commita `3e70fef` na `origin/master` i zweryfikować zielone CI** (`gh run list
+--branch master --limit 3 --json status,conclusion,headSha` — sandbox blokuje HTTPS, więc
+przez `gh`, nie WebFetch). Ultrareview odpalony w tej sesji **padł na timeout chmury (>30 min)**,
+więc fix `3e70fef` NIE przeszedł cloud review — przed/po pushu rozważyć `/code-review` lokalnie
+na diffie `7ed0ca6..3e70fef` (reporting/multimulti_audit.py + scripts + test) jako tańszą
+weryfikację zamiast ponawiania ultra.
 
-Kontekst: obecny runner drukuje "FLAG" a potem "Expected: clear" — niespójność załatana
-prozą w report.qmd (poprawnie tłumaczy 1/3=not-a-finding), ale sam werdykt CLI/dataklasy
-wciąż kłamie. To czysta poprawka semantyki (reporting, poza prereg §0), reuse istniejącej
-logiki Disagreement Protocol. NIE pilne (MM gra 2 jest funkcjonalnie kompletna), ale to
-najbardziej konkretny dług jakościowy z tej sesji.
+Kontekst: kod zweryfikowany lokalnie (pytest 272 passed, ruff+mypy czyste, smoke CLI =
+MMD 1/3 → CLEAR), ale commit wisi lokalnie i nie ma niezależnego review. To jedyny luźny
+koniec po spłaceniu długu werdyktu MM.
 
 ---
 
 ## Co zrobiono w tej sesji
 
-- ✓ **Krok 6 — runner MM** (`0501b6b`): `load_generic_seed_csv(path, pool_size)` (agnostyczny
-  loader CSV), `reporting/multimulti_audit.py` (`run_multimulti_audit` + `MultiMultiAuditRow`,
-  okno 2000, reuse `prng_benchmark.run_battery`), CLI `scripts/multimulti_audit.py`.
-- ✓ **Krok 8 — kalibracja + testy** (`b02709e`): FINDING ROZSTRZYGNIĘTY — runner dał FLAG
-  przez graniczny MMD (p=0.03); hipoteza inflacji MMD pool=80 OBALONA (200 trials: window=25→
-  FPR=0.035). MM FLAG = lone false-positive (1/3) wchłonięty przez Disagreement. Brak zmiany
-  konfiguracji, prereg v7 nietknięty. `tests/test_generic_pool_invariants.py`. Gotcha: 2 inwersje
-  dat w MM seed (2010) → runner sortuje defensywnie.
-- ✓ **Krok 7 — raport** (`133300b`): `report.qmd` sekcja 6 "Second real-world case study —
-  Multi Multi" (Reproducibility→7), narracja uczciwa. README sekcja reusability + liczby 260→266.
-  Re-render quarto, `docs/{report,index}.html` zweryfikowane grep-em przed kopiowaniem.
-- ✓ **Push** `0e04caf..133300b` na origin/master. **CI = success** (2m57s, ruff+mypy+pytest ubuntu).
-- ✓ MEMORY.md (root: milestone [2026-06-08]; agent: `mm_mmd_fpr_pool80.md` rozstrzygnięcie + index).
+- ✓ **NASTĘPNY KROK z poprz. sesji DOMKNIĘTY — werdykt runnera MM = Disagreement, nie OR**
+  (`3e70fef`, lokalny; dług z 2 sesji spłacony):
+  - `MultiMultiAuditRow`: nowe properties `disagreement` (reuse `reporting/disagreement.classify`)
+    + `core_fraction`; `flagged = disagreement.n_agree >= 2` (FLAG dopiero ≥2/3 filarów
+    rdzeniowych BOCPD→h1 / MMD / cooccurrence). Samotny MMD (1/3) = clear.
+  - IT = suplement, Family B = osobna bramka FDR — oba w macierzy, POZA werdyktem.
+  - CLI `scripts/multimulti_audit.py`: kolumna `core_fraction` + uczciwe podsumowanie
+    (usunięte mylące "FLAG | Expected: clear"; zamiana `—` na `-` dla cp1250).
+  - `tests/test_generic_pool_invariants.py`: +6 testów semantyki werdyktu (regresja na
+    lone-MMD bug; 0/3, 1/3, 2/3, 3/3, IT-sam, Family-B-sama).
+  - `BenchmarkRow.flagged` (OR) NIE ruszony — tam OR poprawny (sensitivity/specificity PRNG).
+  - `report.qmd` §6 bez zmian (proza już opisywała 1/3→clear; nie drukuje `mm.verdict`).
+- ✓ Weryfikacja: `pytest -q` = **272 passed, 2 skipped** (5:48); ruff+mypy czyste;
+  smoke CLI window=2000 n-perm=199 → MMD p=0.03 (1/3) → **Verdict CLEAR**.
+- ✓ Pamięć: root MEMORY.md milestone **[2026-06-09 sesja 2]** (fix werdyktu).
+- ✗ Ultrareview (`/code-review ultra`) odpalony → **failed: cloud session >30 min** (timeout
+  infrastruktury, NIE błąd kodu). Fix bez niezależnego review → patrz NASTĘPNY KROK.
 
 ## Co zostało (backlog sesji)
 
-- ⟳ **Werdykt runnera MM = Disagreement, nie OR** (NASTĘPNY KROK).
-- ⟳ Cross-check kalibracji BOCPD n=5000 pool=80 (opcjonalny, pominięty — próg length-invariant).
-- ⟳ `docs/executive_summary.html` — osobny EJ 1-pager, NIE re-renderowany; liczba testów może
-  być stale (260). Drobne — do rozważenia czy w ogóle MM tam wchodzi.
-- ⟳ Ewentualna gra 3 (Keno/Lotto) — generyczny loader + parametryzacja gotowe; diminishing returns.
+- ⟳ **Push `3e70fef` + check CI** (NASTĘPNY KROK; rozważyć lokalny `/code-review` zamiast retry ultra).
+- ⟳ Wizualny check exec summary Ctrl+P = 1×A4 (ryzyko ~zero — z poprz. sesji).
+- ⟳ Cross-check kalibracji BOCPD n=5000 pool=80 (opcjonalny — próg length-invariant).
 
 ## Aktywne pliki
 
-- `src/driftscope/reporting/multimulti_audit.py` (verdict semantyka — następny krok)
-- `scripts/multimulti_audit.py` (CLI — następny krok)
-- `tests/test_generic_pool_invariants.py` (dodać test werdyktu)
-- (zacommitowane+pushed) `ingestion/lotto_scraper.py`, `scripts/calibrate_mmd_pool.py`,
-  `reporting/report.qmd`, `README.md`, `docs/{report,index}.html`
-- ACTIVE prereg = **v7** (bez zmian — MM = reusability/reporting, poza §0)
+- `src/driftscope/reporting/multimulti_audit.py` (verdict — ZACOMMITOWANE w `3e70fef`)
+- `scripts/multimulti_audit.py` (CLI — ZACOMMITOWANE)
+- `tests/test_generic_pool_invariants.py` (+6 testów — ZACOMMITOWANE)
+- ACTIVE prereg = **v7** (bez zmian — MM = reporting, poza §0)
 
 ## Otwarte pytania
 
-- Czy MM warto dodać do `executive_summary.html` (1-strona), czy zostaje EJ-only.
-- Czy robić grę 3 (reusability już udowodniona 2 grami — wartość krańcowa maleje).
+- Retry ultrareview czy lokalny `/code-review`? (ultra padł na timeout — decyzja w NASTĘPNYM KROKU)
 
 ## Do MEMORY.md (przeniesiono)
 
-- Root `MEMORY.md` (Architektura): **[2026-06-08] MULTI MULTI GRA 2 DOMKNIĘTA** — kroki 6+8+7,
-  3 commity pushed, finding MMD pool=80 rozstrzygnięty (FPR=0.035, lone-FP nie defekt), gotcha
-  inwersje dat, CI success.
-- Pamięć agenta: `mm_mmd_fpr_pool80.md` przepisany na ROZSTRZYGNIĘTE (hipoteza inflacji obalona) + index.
+- Root `MEMORY.md` (Architektura): **[2026-06-09 sesja 2] FIX werdyktu MM** = Disagreement
+  ≥2/3, nie naiwny OR (`3e70fef`); szczegóły properties/CLI/testy + co NIE ruszono.

@@ -1,3 +1,148 @@
+## ═══ Sesja zarchiwizowana [2026-06-09 22:40] ═══
+
+# last_session.md
+
+**Sesja:** 2026-06-09 · ~21:00-21:20
+**Status:** ✓ Zakończona poprawnie
+**Punkt odniesienia (git):** 7ed0ca6 @ master (commit docs MM/exec-summary; pushed na origin)
+
+---
+
+## ▸ NASTĘPNY KROK (zacznij tutaj)
+
+**Naprawić semantykę werdyktu runnera MM: `MultiMultiAuditRow.verdict` (w
+`src/driftscope/reporting/multimulti_audit.py`) używa naiwnego OR po WSZYSTKICH
+detektorach → zwraca "FLAG" przy samotnym MMD, choć MM jest merytorycznie clear.**
+Zmienić na agregację Disagreement: policzyć rejecty wśród **3 filarów rdzeniowych**
+(BOCPD-main / MMD / co-occurrence) → ułamek "k/3"; verdict = "clear" gdy konwergencja
+<2/3, "FLAG" dopiero ≥2/3. IT = suplement (nie filar), Family B = osobna bramka FDR.
+Dodać pole `core_fraction` (lub reuse `reporting/disagreement.classify_from_results`).
+Zaktualizować CLI `scripts/multimulti_audit.py` (drukować ułamek + uczciwy verdict,
+usunąć mylące "FLAG | Expected: clear"). Dodać test do `tests/test_generic_pool_invariants.py`.
+
+Kontekst: ten dług przeszedł z poprzedniej sesji nietknięty (tę sesję poświęciliśmy
+na rozstrzygnięcie 2 otwartych pytań scope, nie na ten krok). Obecny runner drukuje
+"FLAG" a potem "Expected: clear" — niespójność załatana prozą w report.qmd, ale sam
+werdykt CLI/dataklasy wciąż kłamie. Czysta poprawka semantyki (reporting, poza prereg §0),
+reuse istniejącej logiki Disagreement Protocol. NIE pilne, ale najbardziej konkretny dług.
+
+---
+
+## Co zrobiono w tej sesji
+
+- ✓ **Rozstrzygnięto 2 otwarte pytania scope** (decyzja usera przez AskUserQuestion):
+  - **Gra 3 (Keno/Lotto) = ZAPARKOWANA** — reusability nasycona przy 2 grach; robić tylko
+    gdy pojawi się dataset z known ground-truth change-pointem.
+  - **exec summary = EJ-flagship 1-pager + JEDNO zdanie MM callout** (nie pełna sekcja).
+- ✓ **Commit docs** (`7ed0ca6`, pushed `133300b..7ed0ca6`):
+  - `docs/executive_summary.html`: callout reusability MM 20/80 wpleciony w bullet
+    "Performance & clean architecture" (game-agnostic na realnym 2. datasecie; odseparowany
+    od figury "958 real draws" EJ-only).
+  - Fix stale test count: exec summary **246→268**, README **266→268** (źródło prawdy =
+    żywy `pytest --collect-only` = 268).
+- ✓ Pamięć: agent `scope_game3_and_exec_summary.md` + index; root MEMORY.md milestone [2026-06-09].
+- ✓ Weryfikacja: greps zielone (268 zsynchronizowane, zero resztek 246/266, callout obecny).
+
+## Co zostało (backlog sesji)
+
+- ⟳ **Werdykt runnera MM = Disagreement, nie OR** (NASTĘPNY KROK — dług z 2 sesji).
+- ⟳ Wizualny check exec summary Ctrl+P = 1×A4 (ryzyko ~zero — rozszerzony 1 bullet, bez nowego punktu).
+- ⟳ CI na `7ed0ca6` (uruchomione tuż przed /end — sprawdzić zielone; zmiany czysto doc).
+- ⟳ Cross-check kalibracji BOCPD n=5000 pool=80 (opcjonalny — próg length-invariant).
+
+## Aktywne pliki
+
+- `src/driftscope/reporting/multimulti_audit.py` (verdict semantyka — następny krok)
+- `scripts/multimulti_audit.py` (CLI — następny krok)
+- `tests/test_generic_pool_invariants.py` (dodać test werdyktu)
+- (zacommitowane+pushed) `docs/executive_summary.html`, `README.md`
+- ACTIVE prereg = **v7** (bez zmian — MM = reusability/reporting, poza §0)
+
+## Otwarte pytania
+
+- (brak — oba pytania scope z poprzedniej sesji rozstrzygnięte)
+
+## Do MEMORY.md (przeniesiono)
+
+- Root `MEMORY.md` (Architektura): **[2026-06-09] DECYZJE SCOPE** — gra 3 zaparkowana,
+  MM callout w exec summary, fix test count 246/266→268, commit `7ed0ca6` pushed.
+- Pamięć agenta: `scope_game3_and_exec_summary.md` (project) + wpis w MEMORY.md index.
+
+## ═══ Sesja zarchiwizowana [2026-06-09 21:16] ═══
+
+# last_session.md
+
+**Sesja:** 2026-06-08 · ~21:50-22:25
+**Status:** ✓ Zakończona poprawnie
+**Punkt odniesienia (git):** 133300b @ master (ostatni commit kodu MM; ten zapis stanu = kolejny commit on top)
+
+---
+
+## ▸ NASTĘPNY KROK (zacznij tutaj)
+
+**Naprawić semantykę werdyktu runnera MM: `MultiMultiAuditRow.verdict` (w
+`src/driftscope/reporting/multimulti_audit.py`) używa naiwnego OR po WSZYSTKICH
+detektorach → zwraca "FLAG" przy samotnym MMD, choć MM jest merytorycznie clear.**
+Zmienić na agregację Disagreement: policzyć rejecty wśród **3 filarów rdzeniowych**
+(BOCPD-main / MMD / co-occurrence) → ułamek "k/3"; verdict = "clear" gdy konwergencja
+<2/3, "FLAG" dopiero ≥2/3. IT = suplement (nie filar), Family B = osobna bramka FDR.
+Dodać pole `core_fraction` (lub reuse `reporting/disagreement.classify_from_results`).
+Zaktualizować CLI `scripts/multimulti_audit.py` (drukować ułamek + uczciwy verdict,
+usunąć mylące "FLAG | Expected: clear"). Dodać test do `tests/test_generic_pool_invariants.py`.
+
+Kontekst: obecny runner drukuje "FLAG" a potem "Expected: clear" — niespójność załatana
+prozą w report.qmd (poprawnie tłumaczy 1/3=not-a-finding), ale sam werdykt CLI/dataklasy
+wciąż kłamie. To czysta poprawka semantyki (reporting, poza prereg §0), reuse istniejącej
+logiki Disagreement Protocol. NIE pilne (MM gra 2 jest funkcjonalnie kompletna), ale to
+najbardziej konkretny dług jakościowy z tej sesji.
+
+---
+
+## Co zrobiono w tej sesji
+
+- ✓ **Krok 6 — runner MM** (`0501b6b`): `load_generic_seed_csv(path, pool_size)` (agnostyczny
+  loader CSV), `reporting/multimulti_audit.py` (`run_multimulti_audit` + `MultiMultiAuditRow`,
+  okno 2000, reuse `prng_benchmark.run_battery`), CLI `scripts/multimulti_audit.py`.
+- ✓ **Krok 8 — kalibracja + testy** (`b02709e`): FINDING ROZSTRZYGNIĘTY — runner dał FLAG
+  przez graniczny MMD (p=0.03); hipoteza inflacji MMD pool=80 OBALONA (200 trials: window=25→
+  FPR=0.035). MM FLAG = lone false-positive (1/3) wchłonięty przez Disagreement. Brak zmiany
+  konfiguracji, prereg v7 nietknięty. `tests/test_generic_pool_invariants.py`. Gotcha: 2 inwersje
+  dat w MM seed (2010) → runner sortuje defensywnie.
+- ✓ **Krok 7 — raport** (`133300b`): `report.qmd` sekcja 6 "Second real-world case study —
+  Multi Multi" (Reproducibility→7), narracja uczciwa. README sekcja reusability + liczby 260→266.
+  Re-render quarto, `docs/{report,index}.html` zweryfikowane grep-em przed kopiowaniem.
+- ✓ **Push** `0e04caf..133300b` na origin/master. **CI = success** (2m57s, ruff+mypy+pytest ubuntu).
+- ✓ MEMORY.md (root: milestone [2026-06-08]; agent: `mm_mmd_fpr_pool80.md` rozstrzygnięcie + index).
+
+## Co zostało (backlog sesji)
+
+- ⟳ **Werdykt runnera MM = Disagreement, nie OR** (NASTĘPNY KROK).
+- ⟳ Cross-check kalibracji BOCPD n=5000 pool=80 (opcjonalny, pominięty — próg length-invariant).
+- ⟳ `docs/executive_summary.html` — osobny EJ 1-pager, NIE re-renderowany; liczba testów może
+  być stale (260). Drobne — do rozważenia czy w ogóle MM tam wchodzi.
+- ⟳ Ewentualna gra 3 (Keno/Lotto) — generyczny loader + parametryzacja gotowe; diminishing returns.
+
+## Aktywne pliki
+
+- `src/driftscope/reporting/multimulti_audit.py` (verdict semantyka — następny krok)
+- `scripts/multimulti_audit.py` (CLI — następny krok)
+- `tests/test_generic_pool_invariants.py` (dodać test werdyktu)
+- (zacommitowane+pushed) `ingestion/lotto_scraper.py`, `scripts/calibrate_mmd_pool.py`,
+  `reporting/report.qmd`, `README.md`, `docs/{report,index}.html`
+- ACTIVE prereg = **v7** (bez zmian — MM = reusability/reporting, poza §0)
+
+## Otwarte pytania
+
+- Czy MM warto dodać do `executive_summary.html` (1-strona), czy zostaje EJ-only.
+- Czy robić grę 3 (reusability już udowodniona 2 grami — wartość krańcowa maleje).
+
+## Do MEMORY.md (przeniesiono)
+
+- Root `MEMORY.md` (Architektura): **[2026-06-08] MULTI MULTI GRA 2 DOMKNIĘTA** — kroki 6+8+7,
+  3 commity pushed, finding MMD pool=80 rozstrzygnięty (FPR=0.035, lone-FP nie defekt), gotcha
+  inwersje dat, CI success.
+- Pamięć agenta: `mm_mmd_fpr_pool80.md` przepisany na ROZSTRZYGNIĘTE (hipoteza inflacji obalona) + index.
+
 ## ═══ Sesja zarchiwizowana [2026-06-08 22:23] ═══
 
 # last_session.md
@@ -241,140 +386,3 @@ kontraktu. Czysty stretch reporting — brak ścieżki krytycznej (framework Śc
 - Root `MEMORY.md` (Architektura): **[2026-06-07] ✓ IT supplement (LZ76) + demo Streamlit** —
   decyzja suplement-nie-filar, reporting/ poza prereg, order-shuffle null, walidacja, integracja.
 - Pamięć agenta: `it_supplement_lz76.md` (+ wpis w indeksie MEMORY.md agenta).
-
-## ═══ Sesja zarchiwizowana [2026-06-07 12:10] ═══
-
-# last_session.md
-
-**Sesja:** 2026-06-06 · ~21:50-22:15
-**Status:** ✓ Zakończona poprawnie
-**Punkt odniesienia (git):** a24b684 @ master (origin zsynchronizowany)
-
----
-
-## ▸ NASTĘPNY KROK (zacznij tutaj)
-
-**Stretch (opcjonalny): przełączyć GitHub Pages na deploy przez `actions/deploy-pages`.**
-Konkretnie: utworzyć `.github/workflows/pages.yml` (job `build` z `actions/upload-pages-artifact@v3`
-wskazującym `docs/` + job `deploy` z `actions/deploy-pages@v4`, `permissions: pages:write,
-id-token:write`, trigger `push` na `master` przy zmianie `docs/**`), następnie w Settings → Pages
-zmienić Source z „Deploy from a branch" na „GitHub Actions". Cel: usunięcie jedynego pozostałego
-ostrzeżenia Node20 z wbudowanego `pages-build-deployment`.
-
-Kontekst: główny cel projektu (framework audytowy, Ścieżka A) jest **praktycznie domknięty** —
-DoD-1..6, reporting, CI, Pages, pełna piątka PRNG, db/ cleanup i W9 executive summary wszystkie
-gotowe, wypchnięte i zweryfikowane na żywo. To zadanie to czysty polish CI; nie ma ścieżki
-krytycznej. Równorzędne alternatywy: demo Streamlit, analiza pary (10,25), `information_theory.py`.
-
----
-
-## Co zrobiono w tej sesji
-
-- ✓ **NASTĘPNY KROK z poprz. sesji DOMKNIĘTY — live Pages zweryfikowane:** run
-  `pages-build-deployment` `27072126882` → **success**, `headSha=0b3271179e...` (= `0b32711`,
-  commit z W9 executive summary). Weryfikacja przez `gh run list/view --json` (sandbox blokuje HTTPS).
-- ✓ **Live URL potwierdzony przez WebFetch:** `executive_summary.html` serwuje pełny one-pager
-  (heading + kluczowe linie zgadzają się z W9). Callout „executive summary" obecny w wdrożonym
-  `docs/index.html:2229` → linkuje do `executive_summary.html`.
-- ✓ **Push zaległego `a24b684`** (commit zapisu sesji z poprz. `/end`, niewypchnięty) →
-  `origin/master` zsynchronizowany (`0b32711..a24b684`).
-- ✓ **`artifacts/` potwierdzone jako celowo git-ignored** (`git check-ignore` exit 0) — nie wymaga akcji.
-
-## Co zostało (backlog sesji — wszystko OPCJONALNE / stretch)
-
-- ⟳ Pages na `actions/deploy-pages` (usuwa Node20-warning) — NASTĘPNY KROK.
-- ⟳ demo Streamlit (`demo/app.py` stub, off-stack).
-- ⟳ Głębsza analiza pary (10,25) w R2 — non-finding.
-- ⟳ `information_theory.py` (LZ76/MDL) — absent, stretch.
-
-## Aktywne pliki
-
-- (brak zmian w kodzie/docs w tej sesji — sesja czysto weryfikacyjna)
-- `last_session.md` + `last_session.archive.md` — stan sesji (ten commit)
-- ACTIVE prereg = **v7** (bez zmian — sesja non-methodology)
-
-## Otwarte pytania
-
-- **Czy projekt „skończony"?** — jako framework audytowy (Ścieżka A) **praktycznie TAK**.
-  Wszystkie długi polish (db/ kontrakt, W9) zamknięte, wdrożone i zweryfikowane na żywo.
-  Pozostałe pozycje to czyste stretche bez ścieżki krytycznej.
-
-## Do MEMORY.md (przeniesiono)
-
-Brak nowych wpisów — sesja czysto weryfikacyjna (potwierdzenie deployu `0b32711`), bez decyzji
-architektonicznych ani rozwiązań trudnych problemów. Wynik „live Pages OK" jest efemeryczny,
-nie wymaga trwałej pamięci.
-
-## ═══ Sesja zarchiwizowana [2026-06-06 22:15] ═══
-
-# last_session.md
-
-**Sesja:** 2026-06-06 · ~20:50-21:35
-**Status:** ✓ Zakończona poprawnie
-**Punkt odniesienia (git):** 0b32711 @ master (pushed → origin/master)
-
----
-
-## ▸ NASTĘPNY KROK (zacznij tutaj)
-
-**Zweryfikować live GitHub Pages po push `0b32711`:** że landing
-`https://piotr1686.github.io/DriftScope/` serwuje callout „executive summary" ORAZ że
-`https://piotr1686.github.io/DriftScope/executive_summary.html` ładuje się (200 + treść
-one-pagera). Sandbox blokuje HTTPS (curl exit 35) → weryfikować przez
-`gh run list --workflow=pages-build-deployment` + `gh run view <id>` (status success,
-headSha=0b32711), lub poprosić usera o rzut oka na URL. Jeśli OK → projekt praktycznie domknięty.
-
-Kontekst: oba wstrzymane punkty z poprz. sesji (db/ cleanup + W9) WYKONANE i wypchnięte w tej
-sesji. Pozostała tylko potwierdzenie deployu (async po push) — analogicznie jak weryfikowano
-Pages po PR#2/#3 w poprzednich sesjach. Opcjonalny stretch po weryfikacji: przełączyć Pages
-na source „GitHub Actions" + własny `actions/deploy-pages` (usuwa Node20-warning z wbudowanego
-`pages-build-deployment`).
-
----
-
-## Co zrobiono w tej sesji
-
-- ✓ **db/ cleanup + sync kontraktu (commit `d2048e5`, pushed):** `git rm -r src/driftscope/db/`
-  (4 puste stuby, zero importów). Kontrakt zsynchronizowany z kodem: PROJECT_BRIEF.md (nota
-  rewizji §0 z `revision_reason`, §3 storage→Parquet/CSV inline, §4.1 drzewo, §4.2 DAG→`artifacts/`,
-  §4.3 data-flow, §10 synergy, DoD-6) + CLAUDE.md (Storage/Nigdy/drzewo/lfs-glob) + `scripts/archive.py`
-  (martwy glob `*.sqlite`). Walidacja: 246 passed / 2 skip, mypy --strict src czyste (32 pliki), ruff czyste.
-- ✓ **W9 executive summary (commit `0b32711`, pushed):** `docs/executive_summary.html` — standalone
-  print-friendly 1-page one-pager (recruiter TL;DR, odrębny od `report.html`). `@media print` → 1 strona
-  A4 (zweryfikowane headless Edge → PDF page-count=1). Linki: README + callout w `report.qmd`. Re-render
-  Quarto → `docs/{index,report}.html` (plotly via CDN; AVG-proxy build-fetch fail nieszkodliwy).
-- ✓ **Push:** `5c2237d..0b32711` → `origin/master` (2 commity).
-- ✓ **Pamięć:** projektowy MEMORY.md — db/ finding oznaczony ✓ RESOLVED + wpis ✓ W9 ZBUDOWANY
-  (gotcha print-fit, docs/ ręcznie kopiowane, render gotcha). Pamięć agenta: nowy wpis
-  `powershell-git-commit-heredoc-gotcha.md`.
-
-## Co zostało (backlog sesji — wszystko OPCJONALNE / stretch)
-
-- ⟳ Weryfikacja live Pages po push (NASTĘPNY KROK).
-- ⟳ Pages na `actions/deploy-pages` (usuwa Node20-warning) — opcjonalne.
-- ⟳ demo Streamlit (`demo/app.py` stub, off-stack).
-- ⟳ Głębsza analiza pary (10,25) w R2 — non-finding.
-- ⟳ `information_theory.py` (LZ76/MDL) — absent, stretch.
-
-## Aktywne pliki
-
-- `docs/executive_summary.html` — nowy one-pager (`0b32711`)
-- `docs/{index,report}.html` — re-render z callout (`0b32711`)
-- `src/driftscope/reporting/report.qmd` — callout do executive summary (`0b32711`)
-- `README.md` — link executive summary (`0b32711`)
-- `PROJECT_BRIEF.md` + `CLAUDE.md` + `scripts/archive.py` — sync kontraktu po usunięciu db/ (`d2048e5`)
-- ACTIVE prereg = **v7** (bez zmian — sesja non-methodology)
-
-## Otwarte pytania
-
-- **Live Pages po deploy** — czy `pages-build-deployment` na `0b32711` = success i URL serwuje
-  one-pager + callout (deploy async po push).
-- **Czy projekt „skończony"?** — jako framework audytowy (Ścieżka A) praktycznie TAK; oba ostatnie
-  długi polish (db/ kontrakt + W9) zamknięte. Pozostałe pozycje to czyste stretche.
-
-## Do MEMORY.md (przeniesiono)
-
-Projektowy MEMORY.md: db/ FINDING → ✓ RESOLVED (opis wykonania) + nowy wpis **[2026-06-06 sesja 2]
-✓ W9 executive summary ZBUDOWANY** (gotcha print-fit headless-Edge, docs/ ręcznie kopiowane = brak
-render-stepu w CI, render gotcha AVG-proxy plotly→CDN). Pamięć agenta:
-`powershell-git-commit-heredoc-gotcha.md` (`-m @'...'@` wycieka `@` → używać `git commit -F <plik>`).

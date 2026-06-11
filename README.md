@@ -210,7 +210,7 @@ flowchart LR
 
 **Stack rationale.** CPU-only by design. **Polars** (not pandas) for type-safe, vectorised data
 handling. **Numba** `@njit(cache=True)` on the permutation / MMD / co-occurrence hot loops — a
-measured **~2.7×** over the NumPy baseline on the permutation PoC (`poc_permutation_engine.py`),
+measured **~2.7×** over the NumPy baseline on the permutation PoC (`notebooks/poc_permutation_engine.py`),
 with the O(N²) kernels benefiting more. **Pydantic v2** for validated config, **Typer** for the
 CLI, **Parquet + Zstd** for artifacts, **Quarto + Plotly + matplotlib** for the reproducible
 report. Persistence is fully file-based (no database layer).
@@ -221,7 +221,7 @@ report. Persistence is fully file-based (no database layer).
 |---|---|---|
 | Full audit | **~4.5 s**, **~210 MB** peak RAM | 958 draws, `n_perm=999`, i5-12500H (CPU-only) |
 | Test suite | **266 passing** (+2 skipped) | 268 collected; CI-green on Ubuntu / Python 3.10 |
-| JIT hot loops | **~2.7×** vs NumPy baseline | permutation PoC (`poc_permutation_engine.py`) |
+| JIT hot loops | **~2.7×** vs NumPy baseline | permutation PoC (`notebooks/poc_permutation_engine.py`) |
 
 > The ~4 GB RAM figure sometimes quoted for DriftScope is the **budget for the full DriftSim
 > calibration sweep** (63 synthetic datasets × all tests × 10⁴ permutations), *not* the headline

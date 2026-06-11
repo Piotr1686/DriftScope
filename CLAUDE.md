@@ -106,44 +106,75 @@
 | `/status`  | Szybki podgląd (bez modyfikacji)    | Wyświetla aktualny stan z last_session.md        |
 
 ## Struktura katalogów
+
+> Drzewo zsynchronizowane z `git ls-files` 1:1 [2026-06-11]. Katalogi czysto
+> archiwalne (`docs/research/rd_archive/`, `docs/research/readme_rewrite/`) zwinięte
+> do licznika + pointera (mają własne README) — reszta wyliczona plik po pliku.
+
 ```
 DriftScope/
 ├── pyproject.toml                    # PEP 621, single source of truth wersji
-├── .env.example                      # 7 kluczy konfiguracyjnych
+├── .env.example                      # klucze konfiguracyjne
+├── .gitignore
 ├── PROJECT_BRIEF.md                  # architectural contract
-├── CLAUDE.md / MEMORY.md / last_session.md
-├── poc_permutation_engine.py         # Krok 6 PoC (DONE 2026-05-17)
-├── data/
-│   └── seed/
-│       └── eurojackpot_history.csv   # committed; Tier-1 fallback
+├── README.md                         # front door (publiczny)
+├── LICENSE                           # MIT
+├── CLAUDE.md                         # instrukcje projektu (ten plik)
+├── MEMORY.md                         # długoterminowa pamięć projektu
+├── last_session.md                   # stan ostatniej sesji
+├── last_session.archive.md           # archiwum 5 ostatnich sesji
+├── WORKFLOW.md                       # workflow sesyjny
+├── HARDWARE_PUSH_CATALOG.md          # meta-katalog technik (linkowany wyżej)
+├── TASK_REPO_STRUCTURE_OPUS48.md     # task refaktoryzacji struktury (2026-06-11)
+├── .claude/commands/                 # skille sesyjne: start/save/recover/end/status.md
+├── .github/workflows/ci.yml          # CI: ruff + mypy --strict + pytest (ubuntu, py3.10)
+├── data/seed/
+│   ├── eurojackpot_history.csv       # committed; Tier-1 fallback (958 losowań)
+│   └── multimulti_history.csv        # committed; gra 2 (16827 losowań, pool=80)
 ├── scripts/
-│   ├── smoke_test.py                 # deps import + CPU/GPU check + wersje
-│   ├── archive.py                    # SHA-256 manifest generator (git-lfs)
-│   └── manual_import.py              # CSV upload fallback (Tier-2)
-├── docs/
-│   ├── report.html                   # Quarto output (W8)
-│   └── hook.webm                     # 10-second hook animation (W8)
+│   ├── smoke_test.py                 # deps import + CPU check + wersje
+│   ├── archive.py                    # SHA-256 manifest generator
+│   ├── manual_import.py              # CSV upload fallback (Tier-3)
+│   ├── check_api_key.py              # probe klucza developers.lotto.pl (← test_api_key)
+│   ├── convert_mm_seed.py            # konwerter źródłowego CSV Multi Multi → seed
+│   ├── calibrate_bocpd_threshold.py  # kalibracja progu BOCPD per-pole (null)
+│   ├── calibrate_mmd_pool.py         # kalibracja FPR MMD per pool (np. 80)
+│   ├── multimulti_audit.py           # CLI runner audytu MM (gra 2)
+│   ├── prng_benchmark.py             # CLI PRNG benchmark (reusability showcase)
+│   └── scraper_selectors.md          # nota W0.1 (deliverable kontraktu — zob. PROJECT_BRIEF)
+├── docs/                             # GitHub Pages source (Deploy from branch /docs)
+│   ├── index.html                    # landing
+│   ├── report.html                   # Quarto output (kanoniczny raport)
+│   ├── executive_summary.html        # 1-pager rekruterski (W9)
+│   ├── templates/
+│   │   └── universal_session_setup_prompt.md   # (← root)
+│   └── research/
+│       ├── external/
+│       │   └── 2026-05-27_eurojackpot_take_rate.md
+│       ├── readme_rewrite/           # brief + 5 recenzji README (6 plików)
+│       └── rd_archive/               # archiwum cross-review R&D (30 plików + README mapujący)
 ├── notebooks/                        # exploratory — NIE part of pipeline
+│   ├── 00_power_preview.py           # W0 power preview
+│   └── poc_permutation_engine.py     # Krok 6 PoC (← root, DONE 2026-05-17)
 ├── demo/
-│   └── app.py                        # Streamlit app (W9+ stretch)
-├── artifacts/                        # git-lfs tracked (*.parquet)
-│   ├── raw_draws.parquet
-│   ├── regime_{1,2,3}.parquet
-│   ├── permutations/{test}/{regime}/worker_{id}.parquet
-│   ├── driftsim_runs/
-│   ├── calibration_curves/
-│   └── artifacts_manifest.json
+│   └── app.py                        # Streamlit (off-stack, optional-dep `demo`)
+├── artifacts/                        # manifest SHA-256 trackowany; binaria ignorowane (rewizja [2026-06-11])
+│   ├── .gitkeep
+│   └── artifacts_manifest.json       # SHA-256 manifest (DoD-6); *.parquet odtwarzalne przez --resume
 ├── src/driftscope/
 │   ├── __init__.py                   # __version__ = "0.1.0"
-│   ├── cli.py                        # Typer entrypoint, --resume
+│   ├── py.typed                      # marker PEP 561 (mypy --strict konsumentom)
+│   ├── cli.py                        # Typer entrypoint (driftscope run)
+│   ├── pipeline.py                   # orkiestrator run_audit (integracja DoD-1..6, regime-aware)
 │   ├── core/
 │   │   ├── config.py                 # Pydantic Settings (BASE_SEED, paths)
-│   │   ├── types.py                  # DrawRecord, RegimeSpec, TestResult
+│   │   ├── types.py                  # DrawRecord (unified pool/k), Detector alias, TestResult
 │   │   ├── seeds.py                  # make_worker_seeds(base, n) → list[SeedSequence]
 │   │   └── guards.py                 # @with_timeout, assert_memory_below
 │   ├── ingestion/
-│   │   ├── lotto_scraper.py          # httpx + selectolax + tenacity
-│   │   └── regime_split.py           # 2014/2022 split → regime_{1,2,3}.parquet
+│   │   ├── lotto_scraper.py          # httpx + selectolax + tenacity; load_seed_csv / load_generic_seed_csv
+│   │   ├── regime_split.py           # 2014/2022 split → regime_{1,2,3} (warstwa danych)
+│   │   └── rng_streams.py            # PRNG: MT19937/Xorshift/ChaCha20/AES-CTR-DRBG + defekty
 │   ├── methodology/
 │   │   ├── preregistration_v1.md     # SUPERSEDED przez v2 (history)
 │   │   ├── preregistration_v2.md     # SUPERSEDED przez v3 (history)
@@ -152,34 +183,54 @@ DriftScope/
 │   │   ├── preregistration_v5.md     # SUPERSEDED przez v6 (history)
 │   │   ├── preregistration_v6.md     # SUPERSEDED przez v7 (history)
 │   │   ├── preregistration_v7.md     # ACTIVE — frozen choices + revision log
-│   │   ├── cooccurrence.py           # test wspolwystapien par (§5c, curveball null)
-│   │   ├── h1_classical.py           # ADF, KPSS, Bayesian CP, Welch, ACF
-│   │   ├── k4_mmd.py                 # Gaussian RBF na freq vectors (Δ⁴⁹)
-│   │   ├── permutation.py            # shuffle test + @njit(cache=True) hot loop
+│   │   ├── h1_classical.py           # ADF, KPSS, BOCPD (compute_bocpd_curve), Welch, ACF
+│   │   ├── k4_mmd.py                 # Gaussian RBF na freq vectors (Δⁿ)
+│   │   ├── cooccurrence.py           # test współwystąpień par (§5c, curveball null)
+│   │   ├── permutation.py            # shuffle test + @njit(cache=True) hot loop (DoD-2)
 │   │   ├── block_bootstrap.py        # alternative null (block ∈ {5,10,20})
-│   │   ├── multiple_testing.py       # Family A (12, BH) + Family B (450, Benjamini-Yekutieli)
+│   │   ├── multiple_testing.py       # Family A (BH) + Family B (Benjamini-Yekutieli)
 │   │   ├── specification.py          # spec curve 9 points (3 windows × 3 bw)
-│   │   └── recurrence.py             # gap test (perm-calibrated) + Nelson-Aalen + EVT (W6)
+│   │   └── recurrence.py             # gap test (perm-calibrated) + Nelson-Aalen + EVT
 │   ├── driftsim/
-│   │   ├── planted_signals.py        # 5 sygnały × 4 effect sizes = 20 scenarios
-│   │   ├── null_uniform.py           # honest null generator (baseline)
-│   │   └── calibration.py            # sensitivity/specificity curves
+│   │   ├── planted_signals.py        # 5 sygnałów × 4 effect sizes = 63 datasety
+│   │   ├── null_uniform.py           # honest null generator (+ generic pool)
+│   │   └── calibration.py            # sensitivity/specificity curves + chi2
 │   ├── reporting/
 │   │   ├── plots_static.py           # matplotlib (paper + .webm export)
 │   │   ├── plots_interactive.py      # Plotly (HTML w Quarto)
-│   │   ├── disagreement.py           # Disagreement Protocol (3/3, 2/3, 1/3, 0/3)
+│   │   ├── disagreement.py           # Disagreement Protocol (3/3, 2/3, 1/3, 0/3) (DoD-4)
+│   │   ├── information_theory.py     # suplement LZ76 (NIE 4. filar)
+│   │   ├── prng_benchmark.py         # bateria reusability (PRNG ground-truth)
+│   │   ├── multimulti_audit.py       # runner gra 2 (Multi Multi, negative control)
 │   │   └── report.qmd                # Quarto source
 │   └── adaptive/
-│       └── honest_watchlist.py       # TYLKO gdy DoD-1..5 pass; else None
-└── tests/
+│       └── honest_watchlist.py       # TYLKO gdy DoD-3 (FDR) + DoD-4 pass; else None (DoD-5)
+└── tests/                            # 25 plików test_*.py + conftest (macierz DoD-1..6 + reporting + reuse)
     ├── conftest.py                   # pytest.approx defaults, seed fixtures
     ├── test_environment.py           # Numba + Win11 + numpy 2.x (Oś 0)
     ├── test_vram_invariants.py       # RAM budget niezmienniki (CPU-only)
-    ├── test_h1_invariants.py         # ADF/KPSS/CP invariants
-    ├── test_mmd_properties.py        # MMD properties + N=200 stability
-    ├── test_permutation_null.py      # FPR ≤ α=0.05 ± MC error
+    ├── test_h1_invariants.py         # ADF/KPSS/BOCPD invariants
+    ├── test_mmd_properties.py        # MMD properties + stability
+    ├── test_cooccurrence.py          # co-occurrence (curveball, max-pair)
+    ├── test_permutation_null.py      # FPR ≤ α=0.05 ± MC error (DoD-2)
+    ├── test_block_bootstrap.py       # moving block bootstrap null
+    ├── test_multiple_testing.py      # Family A/B FDR (DoD-3)
+    ├── test_specification.py         # spec curve 9 punktów
+    ├── test_recurrence.py            # gap + Nelson-Aalen + EVT
     ├── test_driftsim_calibration.py  # planted signal detection
-    ├── test_disagreement.py          # Disagreement Protocol logic
+    ├── test_disagreement.py          # Disagreement Protocol logic (DoD-4)
+    ├── test_honest_watchlist.py      # honest gate → None (DoD-5)
+    ├── test_reproducibility.py       # seeds + pure-function reseed + manifest (DoD-6)
+    ├── test_pipeline.py              # run_audit end-to-end (pos/neg control)
+    ├── test_regime_split.py          # granice reżimów + Parquet determinizm
+    ├── test_rng_streams.py           # PRNG streams + defekty (favor/period)
+    ├── test_prng_benchmark.py        # bateria reusability
+    ├── test_generic_pool_invariants.py  # loader + wyprowadzanie pool z rekordów (gra 2)
+    ├── test_information_theory.py     # LZ76 suplement (komplementarność)
+    ├── test_plots_static.py          # figury matplotlib (ścieżki/suffix)
+    ├── test_plots_interactive.py      # figury Plotly (struktura + HTML)
+    ├── test_demo_smoke.py            # Streamlit AppTest headless
+    ├── test_cli.py                   # CLI driftscope run
     └── test_artifacts_smoke.py       # artifact path + content smoke tests
 ```
 

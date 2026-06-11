@@ -1,0 +1,29 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it as below."
+title: "DriftScope"
+abstract: >-
+  Research-grade audit framework for detecting non-stationarity in streaming
+  discrete-valued processes assumed uniform. Three complementary pillars
+  (classical stationarity tests, kernel two-sample MMD on frequency vectors,
+  pre-registered co-occurrence test) converge on conclusions; every reported
+  finding must pass a shuffle test, family-aware FDR correction and a
+  specification curve. Flagship case study: EuroJackpot with two known
+  change-points (2014, 2022) as ground truth; reusable to PRNG streams and
+  other large-alphabet lotteries.
+type: software
+authors:
+  - family-names: "Łazowski"
+    given-names: "Piotr"
+version: "0.1.0"
+license: MIT
+date-released: "2026-06-11"
+repository-code: "https://github.com/Piotr1686/DriftScope"
+url: "https://piotr1686.github.io/DriftScope/"
+keywords:
+  - non-stationarity
+  - change-point-detection
+  - maximum-mean-discrepancy
+  - permutation-test
+  - false-discovery-rate
+  - reproducibility
+  - python

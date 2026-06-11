@@ -1,6 +1,6 @@
 """Quick test weryfikujacy klucz API developers.lotto.pl.
 
-Uruchomienie: python scripts/test_api_key.py
+Uruchomienie: python scripts/check_api_key.py
 Wymaga: .env z LOTTO_API_KEY
 """
 import json

@@ -205,4 +205,4 @@ DriftScope/
 | DoD-3 | `methodology/multiple_testing.py` | Family-aware FDR (A: 12, BH; B: 450, Benjamini-Yekutieli) |
 | DoD-4 | `reporting/disagreement.py` | Każdy signal classified: 3/3, 2/3, 1/3, 0/3 |
 | DoD-5 | `driftsim/calibration.py` | Adaptive watchlist zwraca None gdy DoD-1..4 fail |
-| DoD-6 | `core/seeds.py` + git-lfs | Cold-machine re-run = bit-identical SHA-256 CSV |
+| DoD-6 | `core/seeds.py` + SHA-256 manifest | Cold-machine re-run = bit-identical SHA-256 CSV |

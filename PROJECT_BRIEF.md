@@ -13,6 +13,7 @@
 - **Permanent pattern (Piotr's template):** `pyproject.toml` jako single source of truth; `artifacts/` na root; `@dataclass Config` per moduł dla standalone CLI; *gdy* potrzebny dostęp do DB → `db/queries.py` zamiast Repository pattern (solo dev) — **w DriftScope niezinstancjonowane** (persystencja plikowa, zob. rewizja [2026-06-06]); PowerShell 5.1 compatible; zmiany w istniejących plikach, nie patch-documenty.
 - **Global determinism:** `BASE_SEED=42` (deklarowany w `.env.example` i `core/config.py`). Wszystkie strumienie RNG derive z `np.random.SeedSequence(BASE_SEED)`.
 - **Rewizja [2026-06-06] — `db/` access layer usunięty (revision_reason: kontrakt==kod):** planowana warstwa dostępu SQLite (`db/queries.py`, `schema_validation.py`, `schema.sql`) **nigdy się nie zmaterializowała**. Persystencja pozostała w pełni plikowa: Parquet (Zstd) dla reżimów/permutacji + CSV dla seed/wyników; reporting czyta **bezpośrednio z plików** (`load_seed_csv`, `scan_parquet`), nie przez access layer. Kontrakt zsynchronizowany z kodem w: §0 (permanent pattern), §3 (storage — metadata), §4.1 (drzewo), §4.2 (DAG), §4.3 (konwencje data-flow), §10 (synergy table), DoD-6. Decyzja prezentacyjna: martwe stuby usunięte zamiast utrzymywane jako „deferred".
+- **Rewizja [2026-06-11] — polityka data versioning: `git lfs` → manifest SHA-256 (revision_reason: kontrakt==kod):** deklaracja `git lfs track "*.parquet"` **nigdy się nie zmaterializowała** — brak `.gitattributes` w repo, żaden `*.parquet` nie jest commitowany, `.gitignore` ignoruje binaria artefaktów (`artifacts/*.{csv,png,webm,gif}`), trackowany jest wyłącznie `artifacts_manifest.json`. Realna polityka: **manifest SHA-256 zawartości logicznej** (`scripts/archive.py`) w repo + binaria **odtwarzalne lokalnie przez `--resume`** (nie wersjonowane). To realizuje DoD-6 (bit-identyczny re-run) bez zależności od git-lfs (limity na darmowym GitHub). Kontrakt zsynchronizowany w: §0, §3 (data versioning), §4.1 (drzewo), §6.1 (disk budget), §10 (synergy table), DoD-6. CLAUDE.md: DoD-6 + drzewo `artifacts/`.
 
 ---
 
@@ -71,7 +72,7 @@ GitHub renderuje `<video>` natywnie w MD.
 | Storage — raw/cleaned data | **Parquet** (`pyarrow`) | — | Zstd compression. Frequency vectors jako `pl.List(pl.Float64)` (Arrow nested list) |
 | Storage — permutation results | **Parquet shards per worker** | `pyarrow` | `artifacts/permutations/{test}/{regime}/worker_{id}.parquet`. Reduce w Polars LazyFrame `scan_parquet(glob).collect()`. Zero-contention writes, naturalny checkpoint |
 | Storage — metadata | **Parquet/CSV inline** (file-based) | `pyarrow` | Metadane reżimów + wyniki kalibracji trzymane w plikowych artefaktach (`regime_{1,2,3}.parquet`, `prng_benchmark.csv`). ~~SQLite `regime_meta.sqlite`~~ — **deferred, nigdy nie zmaterializowane** (rewizja [2026-06-06]); skala MVP (~958 rows) nie uzasadnia osobnej bazy |
-| Data versioning | **`git lfs`** + `scripts/archive.py` | git-lfs 3.x | `git lfs track "*.parquet"` + SHA-256 manifest zawartości logicznej (sorted ORDER BY) |
+| Data versioning | **SHA-256 manifest** + `scripts/archive.py` | — | Manifest SHA-256 zawartości logicznej (sorted ORDER BY) w repo (`artifacts_manifest.json`); binaria artefaktów odtwarzalne przez `--resume`, **nie commitowane**. git-lfs nie zmaterializowany (rewizja [2026-06-11]) |
 | Config | **Pydantic Settings** v2 + `.env` | 2.x | `core/config.py` |
 | Data validation | **Pydantic** v2 | 2.x | `DrawRecord` z `Field(ge=1, le=50)` (main) / `Field(ge=1, le=12)` (euron). Fail-fast przy ingestion |
 | Runtime guards | **`core/guards.py`** + `psutil` | stdlib + psutil | ~40 LOC: `@with_timeout(seconds)`, `assert_memory_below(gb)` dekoratory dla entry points |
@@ -159,7 +160,7 @@ driftscope/
 │   ├── test_driftsim_calibration.py
 │   ├── test_recurrence.py
 │   └── test_disagreement.py
-├── artifacts/                  # git-lfs tracked
+├── artifacts/                  # manifest SHA-256 trackowany; binaria ignorowane (rewizja [2026-06-11])
 │   ├── raw_draws.parquet
 │   ├── regime_{1,2,3}.parquet
 │   ├── permutations/{test}/{regime}/worker_{id}.parquet  # sharded
@@ -361,7 +362,7 @@ Wykonuje się TYLKO jeśli ≥1 wzorzec przeszedł DoD-1..5 z FDR<0.05. W przeci
 | Quarto render | <1 GB | <50 MB output | <5 min | — |
 
 **VRAM budget:** N/A — pipeline CPU-only.
-**Total disk budget:** ~1.5–2 GB. git-lfs handles, no remote config required for MVP.
+**Total disk budget:** ~1.5–2 GB. Binaria odtwarzalne lokalnie (`--resume`); w repo tylko manifest SHA-256, brak remote config (rewizja [2026-06-11]).
 
 ### 6.2 CPU Transcendence Stack (aplikowane Osie z HARDWARE_PUSH_CATALOG)
 
@@ -436,7 +437,7 @@ Wykonanie kolejności: (1) DriftSim sweep → (2) permutation runs → (3) spec 
 | Numba JIT × joblib.Parallel (nad konfigami) | ✓ | PoC verified; `@njit(cache=True)` picklable wrapper |
 | Numba JIT × Polars | ✓ | Konwersja via `.to_numpy()` przed JIT hot path |
 | Parquet shards × joblib parallel writes | ✓ | Każdy worker pisze do własnego pliku — zero contention |
-| git-lfs × parquet | ✓ | LFS handles binary; deterministic via sorted CSV hash |
+| manifest SHA-256 × parquet | ✓ | Binaria odtwarzalne lokalnie (`--resume`); determinizm via sorted CSV hash (NIE lfs — rewizja [2026-06-11]) |
 | Pydantic Settings × `.env` | ✓ | Permanent pattern |
 | Quarto × Polars | ✓ | Python chunks via jupyter kernel |
 | `matplotlib.animation` × ffmpeg → .webm | ✓ | Standard pipeline; VP9 codec for GitHub `<video>` rendering |
@@ -453,7 +454,7 @@ Wykonanie kolejności: (1) DriftSim sweep → (2) permutation runs → (3) spec 
 | **W0** (8h) | Data + power preview | Scraper probe (W0.1: selektory) → live scraper PoC; cached CSV committed; analytic power preview notebook | — |
 | **W1** (30h) | Environment + H1 core + DoD-1 | `test_environment.py` green; ADF + KPSS + Bayesian CP detect 2014/2022 blind; skeleton committed | DoD-1a, DoD-1b |
 | **W2** (32h) | DriftSim part I | 5 planted signal generators × 4 effect sizes; uniform null; unit tests; 63 datasetów wygenerowane | — |
-| **W3** (32h) | DriftSim part II — calibration | Sensitivity/specificity curves per H1 test per regime; first artifacts under git-lfs | DoD-5 (foundation) |
+| **W3** (32h) | DriftSim part II — calibration | Sensitivity/specificity curves per H1 test per regime; first artifacts (manifest SHA-256, NIE lfs) | DoD-5 (foundation) |
 | **W4** (24h) | K4-MMD core | MMD impl on frequency vectors; pre-registered choices w `preregistration_v2.md`; PoC: asymptotic stability at N=200 vs shuffled null | DoD-4 (foundation) |
 | **W5 — DECISION GATE** (16h) | Triangulation check | H1 + MMD detect planted signals z power >70%? **TAK** → W6. **NIE** → Plan B (§7.3) | DoD-3 |
 | **W6** (24h) | Rigor layer | Family-aware FDR (A: 12 BH, B: 450 BY); `recurrence.py` (gap/Nelson-Aalen/EVT, permutation-calibrated); 9-point spec curve; Storey sanity Family A | DoD-2 (full) |
@@ -538,7 +539,7 @@ Z SWOT TOP 1: jeśli H1 + MMD nie wykrywają planted signals → projekt staje s
 | DoD-3 — Multiple testing correction | `methodology/multiple_testing.py` | Family-aware: BH w Family A (12 hyp), Benjamini-Yekutieli w Family B (450 hyp) — osobno |
 | DoD-4 — Complementary pillars | H1 + MMD + DriftSim via `reporting/disagreement.py` | Każdy reported signal classified per Disagreement Protocol (§5 Krok 9.1): 3/3, 2/3, 1/3, lub 0/3 |
 | DoD-5 — Honest predictor (kalibracja) | `driftsim/calibration.py` | Adaptive watchlist generuje output IFF passed DoD-1..4; w przeciwnym razie None |
-| DoD-6 — Reproducibility | `core/seeds.py` + git-lfs + GitHub Action | Cold-machine re-run produces bit-identical SHA-256 hash z `ORDER BY (test, regime, seed)` CSV eksportu (CSV, nie format binarny) z committed `BASE_SEED=42` |
+| DoD-6 — Reproducibility | `core/seeds.py` + SHA-256 manifest + GitHub Action | Cold-machine re-run produces bit-identical SHA-256 hash z `ORDER BY (test, regime, seed)` CSV eksportu (CSV, nie format binarny) z committed `BASE_SEED=42` |
 
 ---
 

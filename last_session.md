@@ -1,64 +1,88 @@
 # last_session.md
 
-**Sesja:** 2026-06-09 · ~22:20-22:45
+**Sesja:** 2026-06-11 · ~20:45-22:00 (wznowiona po przerwanym /code-review z limitu sesji)
 **Status:** ✓ Zakończona poprawnie
-**Punkt odniesienia (git):** 3e70fef @ master (fix werdyktu MM; LOKALNY — niepushowany)
+**Punkt odniesienia (git):** f8a8d06 @ master (task struktury repo; LOKALNE — niepushowane: 3e70fef, 448fd1a, f8a8d06 + commit stanu)
 
 ---
 
 ## ▸ NASTĘPNY KROK (zacznij tutaj)
 
-**Push commita `3e70fef` na `origin/master` i zweryfikować zielone CI** (`gh run list
---branch master --limit 3 --json status,conclusion,headSha` — sandbox blokuje HTTPS, więc
-przez `gh`, nie WebFetch). Ultrareview odpalony w tej sesji **padł na timeout chmury (>30 min)**,
-więc fix `3e70fef` NIE przeszedł cloud review — przed/po pushu rozważyć `/code-review` lokalnie
-na diffie `7ed0ca6..3e70fef` (reporting/multimulti_audit.py + scripts + test) jako tańszą
-weryfikację zamiast ponawiania ultra.
+**Naprawić 4 findingi doc-sync z code-review JEDNYM commitem `docs:` i dopiero potem
+push na origin/master + check CI** (`gh run list --branch master --limit 3 --json
+status,conclusion,headSha`):
+1. Liczniki testów 266/268 → **272 passed / 274 collected**: `README.md:49` ("266 passing"),
+   `:223` ("266 passing / 268 collected"), `:316` ("268 tests") oraz
+   `docs/executive_summary.html:213` ("268 tests · CI green"). Źródło prawdy: żywy
+   `pytest --collect-only -q`.
+2. Docstring `run_multimulti_audit` (`src/driftscope/reporting/multimulti_audit.py:96`):
+   "Oczekiwany: all-clear" → "Oczekiwany: clear (Disagreement; samotny filar 1/3 = clear)".
+3. `scripts/calibrate_mmd_pool.py:3`: dopisać kwalifikator "(FLAG pod ówczesnym werdyktem
+   naive-OR, zmienionym w 3e70fef na Disagreement >=2/3)".
+4. Opcjonalnie w tym samym commicie: `report.qmd:366` — drukować werdykt MM z kodu
+   (`mm.core_fraction` + `mm.disagreement.label` + `mm.verdict` w chunku linie 347-355,
+   wzór = sekcja 3 EJ) zamiast statycznej prozy; wymaga re-renderu Quarto → jeśli za drogie
+   teraz, przenieść do backlogu.
 
-Kontekst: kod zweryfikowany lokalnie (pytest 272 passed, ruff+mypy czyste, smoke CLI =
-MMD 1/3 → CLEAR), ale commit wisi lokalnie i nie ma niezależnego review. To jedyny luźny
-koniec po spłaceniu długu werdyktu MM.
+Kontekst: code-review max na `3e70fef` zakończony — fix poprawny, push NIEBLOKOWANY, ale
+punkty 1-3 to dokładnie ta klasa dryfu liczników/dokumentacji, którą naprawiał `7ed0ca6`;
+push bez nich od razu reintrodukuje rozjazd na publicznym Pages. Pełna lista 15 findingów
+w MEMORY.md [2026-06-11].
 
 ---
 
 ## Co zrobiono w tej sesji
 
-- ✓ **NASTĘPNY KROK z poprz. sesji DOMKNIĘTY — werdykt runnera MM = Disagreement, nie OR**
-  (`3e70fef`, lokalny; dług z 2 sesji spłacony):
-  - `MultiMultiAuditRow`: nowe properties `disagreement` (reuse `reporting/disagreement.classify`)
-    + `core_fraction`; `flagged = disagreement.n_agree >= 2` (FLAG dopiero ≥2/3 filarów
-    rdzeniowych BOCPD→h1 / MMD / cooccurrence). Samotny MMD (1/3) = clear.
-  - IT = suplement, Family B = osobna bramka FDR — oba w macierzy, POZA werdyktem.
-  - CLI `scripts/multimulti_audit.py`: kolumna `core_fraction` + uczciwe podsumowanie
-    (usunięte mylące "FLAG | Expected: clear"; zamiana `—` na `-` dla cp1250).
-  - `tests/test_generic_pool_invariants.py`: +6 testów semantyki werdyktu (regresja na
-    lone-MMD bug; 0/3, 1/3, 2/3, 3/3, IT-sam, Family-B-sama).
-  - `BenchmarkRow.flagged` (OR) NIE ruszony — tam OR poprawny (sensitivity/specificity PRNG).
-  - `report.qmd` §6 bez zmian (proza już opisywała 1/3→clear; nie drukuje `mm.verdict`).
-- ✓ Weryfikacja: `pytest -q` = **272 passed, 2 skipped** (5:48); ruff+mypy czyste;
-  smoke CLI window=2000 n-perm=199 → MMD p=0.03 (1/3) → **Verdict CLEAR**.
-- ✓ Pamięć: root MEMORY.md milestone **[2026-06-09 sesja 2]** (fix werdyktu).
-- ✗ Ultrareview (`/code-review ultra`) odpalony → **failed: cloud session >30 min** (timeout
-  infrastruktury, NIE błąd kodu). Fix bez niezależnego review → patrz NASTĘPNY KROK.
+- ✓ **NASTĘPNY KROK z poprz. sesji DOMKNIĘTY — lokalny `/code-review max` na diffie
+  `origin/master..HEAD` (3e70fef)** zamiast retry ultra (który padł na timeout):
+  - Pełny pipeline: 9 finderów (5 correctness + 3 cleanup + altitude) → dedup 22→15
+    kandydatów → weryfikacja per-kandydat (Phase 2) → sweep (Phase 3, +4) → **finalny
+    raport 15 findingów** (ranking w rozmowie; skondensowane w MEMORY.md).
+  - **Werdykt: fix poprawny, push nieblokowany.** Top: (1) wiersz EJ 'real' w §5 nadal
+    OR → możliwy "EuroJackpot FLAG" po aktualizacji seed CSV; (2) koszt ≥2/3 = ślepota
+    nagłówka na defekty strukturalnie-1/3 (pair_corr, constant-bias); (3) 4 szybkie
+    doc-sync (liczniki, all-clear, calibrate, report.qmd §6).
+  - Sesja przerwana limitem w Phase 2 (2 weryfikatorów padło) — wznowiona bezszwowo.
+- ✓ **Review struktury repo + `TASK_REPO_STRUCTURE_OPUS48.md`** (`f8a8d06`): samowystarczalny
+  task dla Opus 4.8 — findingi F1-F11 (P0: drzewo CLAUDE.md mocno nieaktualne, martwa
+  deklaracja git-lfs bez .gitattributes, brak py.typed; P1: root clutter + `R&D/`;
+  P2: scripts + prereg v1-v6 w wheel [DECYZJA USERA]), struktura docelowa, kolejność
+  commitów ze STOP-ami, kryteria DoD. Fundamenty (src-layout, PEP 621, CI) ocenione OK.
+- ✓ Pamięć: root MEMORY.md wpis **[2026-06-11]** (wyniki review + task struktury).
 
 ## Co zostało (backlog sesji)
 
-- ⟳ **Push `3e70fef` + check CI** (NASTĘPNY KROK; rozważyć lokalny `/code-review` zamiast retry ultra).
-- ⟳ Wizualny check exec summary Ctrl+P = 1×A4 (ryzyko ~zero — z poprz. sesji).
+- ⟳ **NASTĘPNY KROK:** 4× doc-sync → commit `docs:` → push (3e70fef..stan) → CI check.
+- ⟳ Findingi code-review wymagające DECYZJI (nie ruszać bez usera):
+  - #1: polityka werdyktu dla `klass='real'` w benchmarku §5 (OR → Disagreement?
+    dotyka `prng_benchmark.py:57`, `report.qmd:299`, `scripts/prng_benchmark.py:85`,
+    `demo/app.py:150`).
+  - #2: udokumentować/zmitygować ślepotę ≥2/3 na sygnały 1/3-strukturalne (zdanie
+    w docstringu/raporcie; ew. eskalacja przy q<<α w Family B).
+- ⟳ Findingi cleanup (przy okazji następnej pracy w tych plikach): walidacja `--window>0`
+  + help dla `--alpha`; `DisagreementVerdict.is_convergent` zamiast magic `>=2`;
+  testy wiringu filarów (asercje `agreeing`, lone-cooc, mmd+cooc); CSV '1/3' Excel-data;
+  alias `core_fraction`; duplikacje prozy ≥2/3 i formatowania Family B.
+- ⟳ **TASK_REPO_STRUCTURE_OPUS48.md** — odpalić jako osobne zadanie (Opus 4.8); decyzje
+  usera w kroku 7 taska (F2 git-lfs vs manifest, F8 prereg w wheel).
+- ⟳ Wizualny check exec summary Ctrl+P = 1×A4 (z poprz. sesji, ryzyko ~zero).
 - ⟳ Cross-check kalibracji BOCPD n=5000 pool=80 (opcjonalny — próg length-invariant).
 
 ## Aktywne pliki
 
-- `src/driftscope/reporting/multimulti_audit.py` (verdict — ZACOMMITOWANE w `3e70fef`)
-- `scripts/multimulti_audit.py` (CLI — ZACOMMITOWANE)
-- `tests/test_generic_pool_invariants.py` (+6 testów — ZACOMMITOWANE)
-- ACTIVE prereg = **v7** (bez zmian — MM = reporting, poza §0)
+- `TASK_REPO_STRUCTURE_OPUS48.md` (NOWY — `f8a8d06`)
+- Czytane (review, bez zmian): `src/driftscope/reporting/{multimulti_audit,disagreement,prng_benchmark}.py`,
+  `scripts/multimulti_audit.py`, `tests/test_generic_pool_invariants.py`, `report.qmd`,
+  `README.md`, `pyproject.toml`, `.gitignore`, `.github/workflows/ci.yml`
+- ACTIVE prereg = **v7** (bez zmian — sesja czysto review/docs)
 
 ## Otwarte pytania
 
-- Retry ultrareview czy lokalny `/code-review`? (ultra padł na timeout — decyzja w NASTĘPNYM KROKU)
+- Finding #1: czy wiersz EJ 'real' w benchmarku ma przejść na Disagreement (spójność) czy
+  zostać na OR z caveat w prozie (prostota)? — decyzja przy domykaniu findingów.
+- Task struktury: kiedy odpalić Opus 4.8 i które decyzje F2/F8 user wybiera.
 
 ## Do MEMORY.md (przeniesiono)
 
-- Root `MEMORY.md` (Architektura): **[2026-06-09 sesja 2] FIX werdyktu MM** = Disagreement
-  ≥2/3, nie naiwny OR (`3e70fef`); szczegóły properties/CLI/testy + co NIE ruszono.
+- Root `MEMORY.md` (Architektura): **[2026-06-11] CODE-REVIEW max 3e70fef** — werdykt,
+  15 findingów (pełne ścieżki/linie), 4× doc-sync przed pushem, task struktury `f8a8d06`.

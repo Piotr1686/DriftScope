@@ -1,3 +1,70 @@
+## ═══ Sesja zarchiwizowana [2026-06-11 22:00] ═══
+
+# last_session.md
+
+**Sesja:** 2026-06-09 · ~22:20-22:45
+**Status:** ✓ Zakończona poprawnie
+**Punkt odniesienia (git):** 3e70fef @ master (fix werdyktu MM; LOKALNY — niepushowany)
+
+---
+
+## ▸ NASTĘPNY KROK (zacznij tutaj)
+
+**Push commita `3e70fef` na `origin/master` i zweryfikować zielone CI** (`gh run list
+--branch master --limit 3 --json status,conclusion,headSha` — sandbox blokuje HTTPS, więc
+przez `gh`, nie WebFetch). Ultrareview odpalony w tej sesji **padł na timeout chmury (>30 min)**,
+więc fix `3e70fef` NIE przeszedł cloud review — przed/po pushu rozważyć `/code-review` lokalnie
+na diffie `7ed0ca6..3e70fef` (reporting/multimulti_audit.py + scripts + test) jako tańszą
+weryfikację zamiast ponawiania ultra.
+
+Kontekst: kod zweryfikowany lokalnie (pytest 272 passed, ruff+mypy czyste, smoke CLI =
+MMD 1/3 → CLEAR), ale commit wisi lokalnie i nie ma niezależnego review. To jedyny luźny
+koniec po spłaceniu długu werdyktu MM.
+
+---
+
+## Co zrobiono w tej sesji
+
+- ✓ **NASTĘPNY KROK z poprz. sesji DOMKNIĘTY — werdykt runnera MM = Disagreement, nie OR**
+  (`3e70fef`, lokalny; dług z 2 sesji spłacony):
+  - `MultiMultiAuditRow`: nowe properties `disagreement` (reuse `reporting/disagreement.classify`)
+    + `core_fraction`; `flagged = disagreement.n_agree >= 2` (FLAG dopiero ≥2/3 filarów
+    rdzeniowych BOCPD→h1 / MMD / cooccurrence). Samotny MMD (1/3) = clear.
+  - IT = suplement, Family B = osobna bramka FDR — oba w macierzy, POZA werdyktem.
+  - CLI `scripts/multimulti_audit.py`: kolumna `core_fraction` + uczciwe podsumowanie
+    (usunięte mylące "FLAG | Expected: clear"; zamiana `—` na `-` dla cp1250).
+  - `tests/test_generic_pool_invariants.py`: +6 testów semantyki werdyktu (regresja na
+    lone-MMD bug; 0/3, 1/3, 2/3, 3/3, IT-sam, Family-B-sama).
+  - `BenchmarkRow.flagged` (OR) NIE ruszony — tam OR poprawny (sensitivity/specificity PRNG).
+  - `report.qmd` §6 bez zmian (proza już opisywała 1/3→clear; nie drukuje `mm.verdict`).
+- ✓ Weryfikacja: `pytest -q` = **272 passed, 2 skipped** (5:48); ruff+mypy czyste;
+  smoke CLI window=2000 n-perm=199 → MMD p=0.03 (1/3) → **Verdict CLEAR**.
+- ✓ Pamięć: root MEMORY.md milestone **[2026-06-09 sesja 2]** (fix werdyktu).
+- ✗ Ultrareview (`/code-review ultra`) odpalony → **failed: cloud session >30 min** (timeout
+  infrastruktury, NIE błąd kodu). Fix bez niezależnego review → patrz NASTĘPNY KROK.
+
+## Co zostało (backlog sesji)
+
+- ⟳ **Push `3e70fef` + check CI** (NASTĘPNY KROK; rozważyć lokalny `/code-review` zamiast retry ultra).
+- ⟳ Wizualny check exec summary Ctrl+P = 1×A4 (ryzyko ~zero — z poprz. sesji).
+- ⟳ Cross-check kalibracji BOCPD n=5000 pool=80 (opcjonalny — próg length-invariant).
+
+## Aktywne pliki
+
+- `src/driftscope/reporting/multimulti_audit.py` (verdict — ZACOMMITOWANE w `3e70fef`)
+- `scripts/multimulti_audit.py` (CLI — ZACOMMITOWANE)
+- `tests/test_generic_pool_invariants.py` (+6 testów — ZACOMMITOWANE)
+- ACTIVE prereg = **v7** (bez zmian — MM = reporting, poza §0)
+
+## Otwarte pytania
+
+- Retry ultrareview czy lokalny `/code-review`? (ultra padł na timeout — decyzja w NASTĘPNYM KROKU)
+
+## Do MEMORY.md (przeniesiono)
+
+- Root `MEMORY.md` (Architektura): **[2026-06-09 sesja 2] FIX werdyktu MM** = Disagreement
+  ≥2/3, nie naiwny OR (`3e70fef`); szczegóły properties/CLI/testy + co NIE ruszono.
+
 ## ═══ Sesja zarchiwizowana [2026-06-09 22:40] ═══
 
 # last_session.md
@@ -313,76 +380,3 @@ eksploracyjne non-controls, nie ground truth.
   (alfabet 80/skala/dystynktywność), zakres uogólnienia pool=50/k=5 (przekrojowy), plan.
 
 
-## ═══ Sesja zarchiwizowana [2026-06-07 21:51] ═══
-
-# last_session.md
-
-**Sesja:** 2026-06-07 · ~11:00-12:10
-**Status:** ✓ Zakończona poprawnie
-**Punkt odniesienia (git):** 9c2dc2f @ master (origin: 99b4dea — patrz niżej)
-
----
-
-## ▸ NASTĘPNY KROK (zacznij tutaj)
-
-**Rozszerzyć per-regime sekcję w `src/driftscope/reporting/report.qmd` o kolumnę „IT (LZ) p"
-na realnym EuroJackpot (R1/R2/R3)** — pokazać, że suplement IT czyta negative control jako
-clear również pod kątem SEKWENCYJNYM (czwarty, niezależny obiektyw obok 3 filarów). Konkretnie:
-w chunku raportu per-regime wywołać `information_detector()(draws_regime)` dla każdego reżimu i
-dodać kolumnę z `p_value`; oczekiwane wartości wysokie (~clear), jak negative control 1-50.
-
-Kontekst: IT pozostaje SUPLEMENTEM, NIE wchodzi do `classify()` / Disagreement Protocol
-(DoD-4=3/3 nienaruszone). To domyka narrację „honest null" o sekwencyjny wymiar bez zmiany
-kontraktu. Czysty stretch reporting — brak ścieżki krytycznej (framework Ścieżka A domknięty).
-
----
-
-## Co zrobiono w tej sesji
-
-- ✓ **Naprawa rozjazdów z /start:** dotrackowany `artifacts/{.gitkeep,artifacts_manifest.json}`
-  (DoD-6 deliverable; poprz. sesja błędnie uznała „ignored"), odpięty `settings.local.json` od
-  gita (`git rm --cached` + `.gitignore`) — koniec perpetualnego churnu allowlisty. Commity
-  `7d73cb2`, `28ad0ca`, `1162bc4`. Push origin.
-- ✓ **Faza A — detektor IT** (`reporting/information_theory.py`): złożoność Lempel-Ziv 1976
-  (`@njit cache=True`) + bz2 cross-check; null **order-shuffle** (permutacja bloków losowań →
-  zachowuje marginal+joint, łamie strukturę między-losowaniową). Komplementarny: ślepy na
-  freq_shift/pair_corr, czuły na autocorr/period. `information_detector` = czysta funkcja (DoD-6,
-  digest-seed jak cooccurrence). 10 testów (FPR≤α, power autocorr, ślepota freq_shift, determinizm).
-- ✓ **Faza A.2 — integracja baterii PRNG:** kolumna IT (`it_reject`/`it_p`) w `prng_benchmark.py`
-  (src+scripts), `report.qmd`. IT zapala się WYŁĄCZNIE na `+period(50)` (p≈0.01), milczy na
-  good/crypto/bias i realnym EuroJackpot (p≈0.75).
-- ✓ **Faza B — demo Streamlit** (`demo/app.py`, był stub): 3 zakładki (detection matrix /
-  entropy-lens LZ76 / Turing test), grupa optional-dep `demo`. Buildery czyste, `st.*` pod
-  `render()`/`__main__`. Smoke test + `AppTest` headless (0 wyjątków). Streamlit 1.58 zainstalowany.
-- ✓ **Walidacja:** ruff + mypy strict (`src`+`demo`, 34 plików) clean; **260 passed / 2 skipped**.
-- ✓ **Commity + push:** `e60b888` (IT), `99b4dea` (demo) → origin. README + root MEMORY.md
-  zaktualizowane; `9c2dc2f` (docs readme) — patrz niżej co do push.
-
-## Co zostało (backlog sesji)
-
-- ⟳ **Kolumna IT per-regime w report.qmd** — NASTĘPNY KROK.
-- ⟳ Pages na `actions/deploy-pages` (usuwa Node20-warning) — stretch CI.
-- ⟳ Głębsza analiza pary (10,25) w R2 — non-finding.
-- ⚠ **`9c2dc2f` (docs readme) i commit stanu sesji NIEWYPCHNIĘTE** — origin na `99b4dea`.
-  Push pozostawiony do decyzji (zob. Otwarte pytania).
-
-## Aktywne pliki
-
-- `src/driftscope/reporting/information_theory.py` (nowy) + `tests/test_information_theory.py`
-- `src/driftscope/reporting/prng_benchmark.py`, `scripts/prng_benchmark.py`, `report.qmd` (kolumna IT)
-- `demo/app.py` (nowy) + `tests/test_demo_smoke.py`; `pyproject.toml` (mypy override + grupa demo)
-- `README.md`, `MEMORY.md` (root, wpis Architektura [2026-06-07])
-- ACTIVE prereg = **v7** (bez zmian — IT jest suplementem poza prereg)
-
-## Otwarte pytania
-
-- **Wypchnąć `9c2dc2f` (docs readme) + commit stanu sesji?** origin stoi na `99b4dea`
-  (feature'y już tam są). Brak ścieżki krytycznej; do decyzji na starcie następnej sesji.
-- **Czy projekt „skończony"?** — jako framework audytowy (Ścieżka A) praktycznie TAK; IT i demo
-  to zrealizowane wow-stretche. Pozostałe pozycje to czyste stretche.
-
-## Do MEMORY.md (przeniesiono)
-
-- Root `MEMORY.md` (Architektura): **[2026-06-07] ✓ IT supplement (LZ76) + demo Streamlit** —
-  decyzja suplement-nie-filar, reporting/ poza prereg, order-shuffle null, walidacja, integracja.
-- Pamięć agenta: `it_supplement_lz76.md` (+ wpis w indeksie MEMORY.md agenta).

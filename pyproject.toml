@@ -60,6 +60,10 @@ driftscope = "driftscope.cli:app"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/driftscope"]
+# Historia preregistration (v1-v7) to dokumentacja kontraktowa colokowana z
+# methodology/ w drzewie zrodel, ale NIE nalezy do dystrybuowanego wheel.
+# Kod .py oraz py.typed (PEP 561) wchodza normalnie; wykluczamy tylko *.md.
+exclude = ["**/*.md"]
 
 [tool.ruff]
 line-length = 100

@@ -93,7 +93,8 @@ def run_multimulti_audit(
 
     Wczytuje realny strumien MM (`load_generic_seed_csv`, pool_size=80), tnie do `window`
     ostatnich losowan i liczy: BOCPD(field="main") + pelny battery (`run_battery` reuse).
-    Wszystkie detektory wyprowadzaja pool/k z rekordow (kroki 1–5). Oczekiwany: all-clear.
+    Wszystkie detektory wyprowadzaja pool/k z rekordow (kroki 1–5). Oczekiwany: clear
+    (Disagreement; samotny filar 1/3 = clear, NIE finding).
 
     `seed_csv`: nadpisanie sciezki (testy/inne zrodla); None → `data/seed/multimulti_history.csv`.
     """

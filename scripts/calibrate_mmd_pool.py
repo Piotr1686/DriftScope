@@ -1,7 +1,9 @@
 """Kalibracja FPR detektora MMD dla generycznej puli (Multi Multi N=80, K=20).
 
 Krok 8 planu MM. Runner MM (`reporting/multimulti_audit`) dal FLAG przez graniczny MMD
-(p=0.03); 12-seedowy probny FPR sugerowal lekkie zawyzenie (2/12). `mmd_uniform_detector`
+(p=0.03) — to byl werdykt pod STARA, naiwna polityka OR (dowolny filar zapala FLAG);
+pod Disagreement Protocol samotny filar 1/3 = clear, NIE finding. 12-seedowy probny FPR
+sugerowal lekkie zawyzenie (2/12), wiec kalibracja i tak zasadna. `mmd_uniform_detector`
 (window=25) byl walidowany dla EJ (pool=50, k=5) — ten skrypt sprawdza FPR na uczciwym
 nullu uniform k-z-pool dla pool=80 i przemiata `window`, by znalezc konfiguracje FPR~=0.05.
 

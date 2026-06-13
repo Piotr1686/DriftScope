@@ -118,6 +118,9 @@ _MAIN_REJECT_THRESHOLD_BY_POOL: dict[int, float] = {
     50: 0.70,  # EuroJackpot N=50, K=5, warmup=10; p95 null = 0.699
     80: 0.34,  # Multi Multi N=80, K=20, warmup=4; p95 null = 0.3314 (n=2000, trials=200)
                # → round-up do 0.34 (konwencja EJ: prog >= p95, FPR<=0.05)
+               # cross-walidacja n=5000/trials=200: p95=0.3314 (delta=0.0000), FPR@0.34=0.04
+               # → length-invariant (burn-in transient, prereg v6 §0): prog trzyma
+               #   niezaleznie od dlugosci serii MM
 }
 
 

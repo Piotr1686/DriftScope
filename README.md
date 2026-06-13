@@ -46,7 +46,7 @@ its presence.
 - 📐 **Pre-registered & reproducible.** Every statistical choice is frozen *before* looking at
   results (`preregistration_v7.md`); a cold-machine re-run is **bit-identical** (SHA-256 manifest).
 - ⚡ **Fast & light.** The full audit runs in **~4.5 s** and peaks at **~210 MB RAM** on a laptop
-  CPU. **272 passing tests** (CI-green on Linux).
+  CPU. **276 passing tests** (CI-green on Linux).
 
 ---
 
@@ -220,7 +220,7 @@ report. Persistence is fully file-based (no database layer).
 | Metric | Value | Conditions |
 |---|---|---|
 | Full audit | **~4.5 s**, **~210 MB** peak RAM | 958 draws, `n_perm=999`, i5-12500H (CPU-only) |
-| Test suite | **272 passing** (+2 skipped) | 274 collected; CI-green on Ubuntu / Python 3.10 |
+| Test suite | **276 passing** (+2 skipped) | 278 collected; CI-green on Ubuntu / Python 3.10 |
 | JIT hot loops | **~2.7×** vs NumPy baseline | permutation PoC (`notebooks/poc_permutation_engine.py`) |
 
 > The ~4 GB RAM figure sometimes quoted for DriftScope is the **budget for the full DriftSim
@@ -313,7 +313,7 @@ src/driftscope/
 └── cli.py          # `driftscope run`
 scripts/            # archive (SHA-256 manifest), prng_benchmark + multimulti_audit (reusability)
 demo/               # Streamlit audit explorer (optional, `pip install -e ".[demo]"`)
-tests/              # 274 tests — calibration, invariants, FPR ≤ α, reproducibility, PRNG, info-theory
+tests/              # 278 tests — calibration, invariants, FPR ≤ α, reproducibility, PRNG, info-theory
 data/seed/          # eurojackpot_history.csv (958 draws, committed)
 docs/               # published HTML report + executive summary (GitHub Pages)
 ```

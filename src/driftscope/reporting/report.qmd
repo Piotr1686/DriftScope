@@ -268,6 +268,18 @@ single-pillar flag on a clean main pool clears neither. So no pattern clears the
 the framework **proposes nothing**. This is deliberate: a raw signal is reported as raw,
 absence of convergent evidence as absence of evidence.
 
+**A note on the 1/3 cell — and why we do not hard-gate on ≥2/3.** Some departures are, *by
+construction*, visible to only **one** family: a pure pairwise correlation leaves every
+marginal and every windowed frequency exactly uniform, so neither Family B nor MMD can see it
+— **only co-occurrence** can (the "clean cell" of the complementarity proof, §6.5). Such a
+genuine signal would surface as **1/3**, not 3/3. A naive "≥2/3 = real" rule would therefore be
+**structurally blind** to an entire class of real defects. We do not use that rule: the watchlist's
+*primary* gate is the per-number **FDR** (Family B), with convergence only required at **≥1**
+pillar — so a true single-family signal that also clears FDR can still surface, while a lone flag
+*without* FDR support (the R2 co-occurrence pair above) does not. The 1/3 classification is thus
+a routing decision ("requires power context"), not a dismissal: the cost of demanding convergence
+is named, and the safeguard against it is explicit.
+
 # 5. Reusability — the same audit on PRNGs
 
 A null result on EuroJackpot ("we found nothing") is only worth trusting if the instrument
@@ -312,6 +324,11 @@ the windowed distribution (MMD), *and* pair structure (co-occurrence) simultaneo
 framework therefore reports not just *whether* a stream is defective but *what kind* of defect
 it is. The two good PRNGs, **both** cryptographic PRNGs, and real EuroJackpot all come back
 **clear** — specificity holds across two distinct crypto primitives (stream vs block cipher).
+The **Verdict** column applies the same Disagreement logic as the main pipeline: `FLAG` requires
+**≥2 of the three core families** (marginal / distributional / joint) to reject — a lone family is
+*not* a finding (it clears), which is what keeps the specificity claim robust to a single borderline
+detector. Both defects clear that bar (bias: Family B + MMD; period: all three); good / crypto / real
+fire none.
 
 A fourth, **supplementary** lens — an information-theoretic **Lempel-Ziv 1976** complexity test
 (`reporting/information_theory.py`, order-shuffle null over draw blocks) — adds a *sequential*

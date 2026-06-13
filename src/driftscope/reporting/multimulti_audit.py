@@ -44,8 +44,9 @@ class MultiMultiAuditRow:
     co-occurrence): "FLAG" dopiero przy konwergencji >=2/3, samotny filar (1/3) = clear
     (oczekiwany false-positive przy alpha=0.05, NIE finding — spojnie z report.qmd §4/§6).
     IT = suplement (nie filar), Family B = osobna bramka FDR — oba raportowane w macierzy,
-    ale POZA werdyktem. Kontrast do `BenchmarkRow.flagged` (OR), ktory jest poprawny dla
-    benchmarku sensitivity/specificity na PRNG z ground-truth labelem.
+    ale POZA werdyktem. `BenchmarkRow.flagged` (PRNG) stosuje TE SAMA zasade >=2, ale na
+    trojce {Family B, MMD, co-occurrence} — battery PRNG nie ma filaru BOCPD/h1, wiec os
+    marginalna niesie tam Family B (zob. `prng_benchmark.BenchmarkRow.core_votes`).
     """
 
     source: str

@@ -54,14 +54,35 @@ class BenchmarkRow:
     it_p: float
 
     @property
-    def flagged(self) -> bool:
-        """Czy KTORYKOLWIEK detektor zaplonal (FLAG vs clear)."""
+    def core_votes(self) -> int:
+        """Liczba NIEZALEZNYCH rodzin rdzeniowych odrzucajacych H0 (trzy ortogonalne osie).
+
+        Family B (per-number binomial FDR = os MARGINALNA), MMD (os ROZKLADOWA),
+        co-occurrence (os PAR / joint). Te trzy sa wzajemnie nie-redundantne w duchu
+        Disagreement Protocol (§6.5). IT (LZ76) = suplement sekwencyjny, NIE glosuje.
+
+        Uwaga: w PRNG battery rodzine marginalna niesie Family B (brak osobnego filaru
+        BOCPD/h1 — to battery negative-control na puli glownej, nie pelny pipeline). W
+        `MultiMultiAuditRow` filar marginalny to BOCPD/h1, a Family B jest osobna bramka
+        FDR poza werdyktem — stad inny sklad trojki przy tej samej zasadzie >=2.
+        """
         return (
-            self.family_b_reject > 0
-            or self.mmd_reject
-            or self.cooc_reject
-            or self.it_reject
+            int(self.family_b_reject > 0)
+            + int(self.mmd_reject)
+            + int(self.cooc_reject)
         )
+
+    @property
+    def flagged(self) -> bool:
+        """FLAG dopiero przy konwergencji >=2 niezaleznych rodzin rdzeniowych.
+
+        Spojne z reporting/disagreement.py i `MultiMultiAuditRow`: pojedyncza rodzina to
+        NIE finding (samotny filar = clear, oczekiwany false-positive przy alpha). Wczesniej
+        naiwny OR — graniczny POJEDYNCZY detektor falszywie przerzucal real/crypto na FLAG,
+        podkopujac wlasnie claim specificity, ktory benchmark ma udowodnic. Sensitivity
+        zachowana: bias(k) i period(p) zapalaja Family B + MMD (>=2). IT = suplement (non-voting).
+        """
+        return self.core_votes >= 2
 
     @property
     def verdict(self) -> str:

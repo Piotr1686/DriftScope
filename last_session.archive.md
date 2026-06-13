@@ -1,3 +1,76 @@
+## ═══ Sesja zarchiwizowana [2026-06-13 22:50] ═══
+
+# last_session.md
+
+**Sesja:** 2026-06-13 · 11:30-12:30
+**Status:** ✓ Zakończona poprawnie
+**Punkt odniesienia (git):** 79c03e9 @ master (zsynchronizowany z origin/master, CI green)
+
+---
+
+## ▸ NASTĘPNY KROK (zacznij tutaj)
+
+**Podjąć DECYZJĘ na Finding code-review #1 z 2026-06-11: polityka werdyktu wiersza
+`klass='real'` (EuroJackpot) w benchmarku §5 — czy `family_b_per_number_pvalues`
+powinno być regime-split.** Konkretnie: benchmark PRNG (`reporting/prng_benchmark.py`,
+`run_battery`) liczy Family B na PEŁNYM strumieniu EJ (full-stream), podczas gdy główny
+pipeline robi to per-reżim (R1/R2/R3, BY pooled /150). Pytanie: ujednolicić EJ-real
+w benchmarku do per-reżim (spójność z headline) czy zostawić full-stream z caveat
+w prozie? (Reporting-only, bez prereg.)
+
+Kontekst: werdykt OR→Disagreement (#1) i honest-disclosure 1/3 (#2) ZROBIONE w tej sesji
+(`e553820`/`79c03e9`). Pozostała sub-decyzja granularności Family B dla wiersza 'real' —
+zaparkowana, bo wymaga rozstrzygnięcia user (spójność vs prostota benchmarku).
+
+---
+
+## Co zrobiono w tej sesji
+
+- ✓ **PUSH zaległości** — 14 commitów taska struktury (`7ed0ca6..38aec30`) wypchnięte,
+  CI green (`27461790549`).
+- ✓ **Doc-sync** (`e890b08`) — liczniki testów 266/268→272/274 (README:49/223/316 +
+  `executive_summary.html:213`), docstring `run_multimulti_audit` „all-clear"→„clear",
+  kwalifikator naive-OR w `calibrate_mmd_pool.py:3`.
+- ✓ **Finding #1** (`e553820`) — `BenchmarkRow.flagged` OR → **Disagreement ≥2 z {Family B,
+  MMD, co-occurrence}**, IT non-voting (nowe `core_votes`). Spójne z `MultiMultiAuditRow`
+  + prozą §5. Sensitivity zachowana (bias=2, period=3; n=600 i n=1500). Przy n=1500
+  wartości Verdict bez zmian (usuwa kruchość specificity, nie headline). 4 testy regresyjne.
+  Komentarz MM `:47` zaktualizowany.
+- ✓ **Finding #2** (`e553820`, `report.qmd §4`) — honest-disclosure: sygnał widoczny tylko
+  jednej rodzinie (pair_corr→cooc) = 1/3; twarda reguła ≥2/3 byłaby strukturalnie ślepa;
+  bramka watchlisty = FDR primary + konwergencja ≥1 (NIE hard ≥2/3). Bez zmian kodu.
+- ✓ **Re-render Pages** (`79c03e9`) — `report.qmd` (§4+§5) → quarto → `docs/index.html`+
+  `report.html`, zweryfikowane grep-em PRZED kopią (per-reżim, /150, period(50), webm). CI green.
+- ✓ Liczniki podbite 274→278 (po +4 testach). Walidacja: pytest **276/2skip**, ruff+mypy --strict czyste, CI 2× green.
+- ✓ Pamięć: projektowy MEMORY.md wpis [2026-06-13]; agent-memory gotcha `cd`→podwojone ścieżki.
+
+## Co zostało (backlog sesji)
+
+- ⟳ **NASTĘPNY KROK:** decyzja #1 — granularność Family B dla wiersza EJ-'real' w §5 (full-stream vs per-reżim).
+- ⟳ Dług ruff `scripts/{check_api_key,smoke_test}.py` (4×: I001 + unused `data`) —
+  pre-existing, POZA scope CI; sprzątnąć przy pracy w tych plikach.
+- ⟳ Wizualny check exec summary Ctrl+P = 1×A4; cross-check kalibracji BOCPD n=5000 pool=80.
+- ⟳ Stretche: pełna piątka RNG domknięta; demo Streamlit zbudowane — Ścieżka A kompletna.
+
+## Aktywne pliki
+
+- ZMIENIONE (commited): `src/driftscope/reporting/{prng_benchmark,multimulti_audit,report.qmd}.py/.qmd`,
+  `tests/test_prng_benchmark.py`, `README.md`, `docs/{executive_summary,index,report}.html`,
+  `scripts/{multimulti_audit,calibrate_mmd_pool}.py`
+- ACTIVE prereg = **v7** (bez zmian — reporting-only, methodology/ nietknięte)
+
+## Otwarte pytania
+
+- Finding #1 (sub-decyzja): wiersz EJ 'real' w benchmarku §5 — Family B full-stream czy per-reżim?
+- Finding #2 domknięty prozą; czy dodać analogiczny akapit do README (obecnie tylko report.qmd §4)?
+
+## Do MEMORY.md (przeniesiono)
+
+- Projektowy `MEMORY.md` (Architektura): **[2026-06-13]** push zaległości + doc-sync +
+  Finding #1 (werdykt PRNG OR→Disagreement ≥2) + Finding #2 (honest-disclosure 1/3),
+  HEAD=`79c03e9`, pushed, CI green. Gotcha narzędziowy `cd`→podwojone ścieżki.
+- Agent-memory: `bash-cd-persists-doubled-paths.md` (feedback).
+
 ## ═══ Sesja zarchiwizowana [2026-06-13 12:27] ═══
 
 # last_session.md
@@ -303,79 +376,3 @@ reuse istniejącej logiki Disagreement Protocol. NIE pilne, ale najbardziej konk
 - Root `MEMORY.md` (Architektura): **[2026-06-09] DECYZJE SCOPE** — gra 3 zaparkowana,
   MM callout w exec summary, fix test count 246/266→268, commit `7ed0ca6` pushed.
 - Pamięć agenta: `scope_game3_and_exec_summary.md` (project) + wpis w MEMORY.md index.
-
-## ═══ Sesja zarchiwizowana [2026-06-09 21:16] ═══
-
-# last_session.md
-
-**Sesja:** 2026-06-08 · ~21:50-22:25
-**Status:** ✓ Zakończona poprawnie
-**Punkt odniesienia (git):** 133300b @ master (ostatni commit kodu MM; ten zapis stanu = kolejny commit on top)
-
----
-
-## ▸ NASTĘPNY KROK (zacznij tutaj)
-
-**Naprawić semantykę werdyktu runnera MM: `MultiMultiAuditRow.verdict` (w
-`src/driftscope/reporting/multimulti_audit.py`) używa naiwnego OR po WSZYSTKICH
-detektorach → zwraca "FLAG" przy samotnym MMD, choć MM jest merytorycznie clear.**
-Zmienić na agregację Disagreement: policzyć rejecty wśród **3 filarów rdzeniowych**
-(BOCPD-main / MMD / co-occurrence) → ułamek "k/3"; verdict = "clear" gdy konwergencja
-<2/3, "FLAG" dopiero ≥2/3. IT = suplement (nie filar), Family B = osobna bramka FDR.
-Dodać pole `core_fraction` (lub reuse `reporting/disagreement.classify_from_results`).
-Zaktualizować CLI `scripts/multimulti_audit.py` (drukować ułamek + uczciwy verdict,
-usunąć mylące "FLAG | Expected: clear"). Dodać test do `tests/test_generic_pool_invariants.py`.
-
-Kontekst: obecny runner drukuje "FLAG" a potem "Expected: clear" — niespójność załatana
-prozą w report.qmd (poprawnie tłumaczy 1/3=not-a-finding), ale sam werdykt CLI/dataklasy
-wciąż kłamie. To czysta poprawka semantyki (reporting, poza prereg §0), reuse istniejącej
-logiki Disagreement Protocol. NIE pilne (MM gra 2 jest funkcjonalnie kompletna), ale to
-najbardziej konkretny dług jakościowy z tej sesji.
-
----
-
-## Co zrobiono w tej sesji
-
-- ✓ **Krok 6 — runner MM** (`0501b6b`): `load_generic_seed_csv(path, pool_size)` (agnostyczny
-  loader CSV), `reporting/multimulti_audit.py` (`run_multimulti_audit` + `MultiMultiAuditRow`,
-  okno 2000, reuse `prng_benchmark.run_battery`), CLI `scripts/multimulti_audit.py`.
-- ✓ **Krok 8 — kalibracja + testy** (`b02709e`): FINDING ROZSTRZYGNIĘTY — runner dał FLAG
-  przez graniczny MMD (p=0.03); hipoteza inflacji MMD pool=80 OBALONA (200 trials: window=25→
-  FPR=0.035). MM FLAG = lone false-positive (1/3) wchłonięty przez Disagreement. Brak zmiany
-  konfiguracji, prereg v7 nietknięty. `tests/test_generic_pool_invariants.py`. Gotcha: 2 inwersje
-  dat w MM seed (2010) → runner sortuje defensywnie.
-- ✓ **Krok 7 — raport** (`133300b`): `report.qmd` sekcja 6 "Second real-world case study —
-  Multi Multi" (Reproducibility→7), narracja uczciwa. README sekcja reusability + liczby 260→266.
-  Re-render quarto, `docs/{report,index}.html` zweryfikowane grep-em przed kopiowaniem.
-- ✓ **Push** `0e04caf..133300b` na origin/master. **CI = success** (2m57s, ruff+mypy+pytest ubuntu).
-- ✓ MEMORY.md (root: milestone [2026-06-08]; agent: `mm_mmd_fpr_pool80.md` rozstrzygnięcie + index).
-
-## Co zostało (backlog sesji)
-
-- ⟳ **Werdykt runnera MM = Disagreement, nie OR** (NASTĘPNY KROK).
-- ⟳ Cross-check kalibracji BOCPD n=5000 pool=80 (opcjonalny, pominięty — próg length-invariant).
-- ⟳ `docs/executive_summary.html` — osobny EJ 1-pager, NIE re-renderowany; liczba testów może
-  być stale (260). Drobne — do rozważenia czy w ogóle MM tam wchodzi.
-- ⟳ Ewentualna gra 3 (Keno/Lotto) — generyczny loader + parametryzacja gotowe; diminishing returns.
-
-## Aktywne pliki
-
-- `src/driftscope/reporting/multimulti_audit.py` (verdict semantyka — następny krok)
-- `scripts/multimulti_audit.py` (CLI — następny krok)
-- `tests/test_generic_pool_invariants.py` (dodać test werdyktu)
-- (zacommitowane+pushed) `ingestion/lotto_scraper.py`, `scripts/calibrate_mmd_pool.py`,
-  `reporting/report.qmd`, `README.md`, `docs/{report,index}.html`
-- ACTIVE prereg = **v7** (bez zmian — MM = reusability/reporting, poza §0)
-
-## Otwarte pytania
-
-- Czy MM warto dodać do `executive_summary.html` (1-strona), czy zostaje EJ-only.
-- Czy robić grę 3 (reusability już udowodniona 2 grami — wartość krańcowa maleje).
-
-## Do MEMORY.md (przeniesiono)
-
-- Root `MEMORY.md` (Architektura): **[2026-06-08] MULTI MULTI GRA 2 DOMKNIĘTA** — kroki 6+8+7,
-  3 commity pushed, finding MMD pool=80 rozstrzygnięty (FPR=0.035, lone-FP nie defekt), gotcha
-  inwersje dat, CI success.
-- Pamięć agenta: `mm_mmd_fpr_pool80.md` przepisany na ROZSTRZYGNIĘTE (hipoteza inflacji obalona) + index.
-

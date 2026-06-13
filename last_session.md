@@ -1,70 +1,59 @@
 # last_session.md
 
-**Sesja:** 2026-06-13 · 11:30-12:30
+**Sesja:** 2026-06-13 · 21:00-22:50 (sesja 2)
 **Status:** ✓ Zakończona poprawnie
-**Punkt odniesienia (git):** 79c03e9 @ master (zsynchronizowany z origin/master, CI green)
+**Punkt odniesienia (git):** da3b50d @ master (zsynchronizowany z origin/master)
 
 ---
 
 ## ▸ NASTĘPNY KROK (zacznij tutaj)
 
-**Podjąć DECYZJĘ na Finding code-review #1 z 2026-06-11: polityka werdyktu wiersza
-`klass='real'` (EuroJackpot) w benchmarku §5 — czy `family_b_per_number_pvalues`
-powinno być regime-split.** Konkretnie: benchmark PRNG (`reporting/prng_benchmark.py`,
-`run_battery`) liczy Family B na PEŁNYM strumieniu EJ (full-stream), podczas gdy główny
-pipeline robi to per-reżim (R1/R2/R3, BY pooled /150). Pytanie: ujednolicić EJ-real
-w benchmarku do per-reżim (spójność z headline) czy zostawić full-stream z caveat
-w prozie? (Reporting-only, bez prereg.)
+**Cały backlog z 2026-06-13 domknięty — brak narzuconego następnego kroku.**
+Najbardziej naturalny kandydat: **decyzja, czy przełączyć GitHub Pages na source
+"GitHub Actions" + własny `actions/deploy-pages`**, by wyciszyć Node20-deprecation
+annotation we wbudowanym `pages-build-deployment` (używa wewnętrznie `checkout@v4`/
+`upload-artifact@v4`). To jedyny znany otwarty „dług hygieniczny" CI (zob. MEMORY
+[2026-06-06] gotcha Pages-deploy). Alternatywnie: analiza pary (10,25) z R2 (single-pillar
+co-occurrence 1/3) jako mini-study, albo zostawić framework jako domknięty (Ścieżka A).
 
-Kontekst: werdykt OR→Disagreement (#1) i honest-disclosure 1/3 (#2) ZROBIONE w tej sesji
-(`e553820`/`79c03e9`). Pozostała sub-decyzja granularności Family B dla wiersza 'real' —
-zaparkowana, bo wymaga rozstrzygnięcia user (spójność vs prostota benchmarku).
+Kontekst: framework (Ścieżka A) jest kompletny i opublikowany; ta sesja zamknęła dwa
+findingi code-review + trzy polish. Nie ma „następnego kroku roadmapy" — pozostałe pozycje
+to opcjonalne stretche/hygiena, nie zobowiązania.
 
 ---
 
 ## Co zrobiono w tej sesji
 
-- ✓ **PUSH zaległości** — 14 commitów taska struktury (`7ed0ca6..38aec30`) wypchnięte,
-  CI green (`27461790549`).
-- ✓ **Doc-sync** (`e890b08`) — liczniki testów 266/268→272/274 (README:49/223/316 +
-  `executive_summary.html:213`), docstring `run_multimulti_audit` „all-clear"→„clear",
-  kwalifikator naive-OR w `calibrate_mmd_pool.py:3`.
-- ✓ **Finding #1** (`e553820`) — `BenchmarkRow.flagged` OR → **Disagreement ≥2 z {Family B,
-  MMD, co-occurrence}**, IT non-voting (nowe `core_votes`). Spójne z `MultiMultiAuditRow`
-  + prozą §5. Sensitivity zachowana (bias=2, period=3; n=600 i n=1500). Przy n=1500
-  wartości Verdict bez zmian (usuwa kruchość specificity, nie headline). 4 testy regresyjne.
-  Komentarz MM `:47` zaktualizowany.
-- ✓ **Finding #2** (`e553820`, `report.qmd §4`) — honest-disclosure: sygnał widoczny tylko
-  jednej rodzinie (pair_corr→cooc) = 1/3; twarda reguła ≥2/3 byłaby strukturalnie ślepa;
-  bramka watchlisty = FDR primary + konwergencja ≥1 (NIE hard ≥2/3). Bez zmian kodu.
-- ✓ **Re-render Pages** (`79c03e9`) — `report.qmd` (§4+§5) → quarto → `docs/index.html`+
-  `report.html`, zweryfikowane grep-em PRZED kopią (per-reżim, /150, period(50), webm). CI green.
-- ✓ Liczniki podbite 274→278 (po +4 testach). Walidacja: pytest **276/2skip**, ruff+mypy --strict czyste, CI 2× green.
-- ✓ Pamięć: projektowy MEMORY.md wpis [2026-06-13]; agent-memory gotcha `cd`→podwojone ścieżki.
+- ✓ **PUSH zaległego commitu sesyjnego** (`79c03e9..4fd16f9`) — stan z poprzedniej sesji wypchnięty na origin.
+- ✓ **Sub-Finding #1: granularność Family B dla EJ-`'real'` w §5** (`adb7e74`) — decyzja usera = **full-stream (50) + caveat**, NIE per-reżim. Caveat (EN) w `report.qmd §5` + nota docstring `run_battery` + zdanie w README. Re-render `docs/{index,report}.html` (grep-zweryfikowany przed kopią). Reporting-only, prereg v7 nietknięty.
+- ✓ **Finding #2 → README** (`d2abd12`) — akapit „Why we do not hard-gate on ≥2/3" (analog `report.qmd §4`, strukturalna ślepota na 1/3). README-only, bez re-renderu.
+- ✓ **Polish 1: ruff `scripts/{check_api_key,smoke_test}.py`** (`90e4e38`) — 3× I001 (auto-fix) + 1× F841 (`data = check(...)`→`check(...)`). Pre-existing dług sprzątnięty.
+- ✓ **Polish 2: exec summary 1×A4** — ZWERYFIKOWANE headless Edge `--print-to-pdf` → `/Type /Page` = 1 strona. Verify-only.
+- ✓ **Polish 3: BOCPD cross-walidacja progu pool=80 @ n=5000** (`da3b50d`) — p95=**0.3314 = identyczne z n=2000** (Δ=0.0000), FPR@0.34=0.04. Length-invariance potwierdzona (prereg v6 §0). Komentarz w `h1_classical.py`.
+- ✓ **Polska wersja README (prywatna, POZA repo)** — `D:\Programming_Projects\zz_INNE\README_PL\README.md` (383 linie). Nagłówek HTML = prywatna/nieoficjalna; niewersjonowana.
+- ✓ Walidacja: ruff+mypy --strict na dotkniętych plikach czyste; wszystkie 4 commity na origin/master, drzewo czyste.
 
 ## Co zostało (backlog sesji)
 
-- ⟳ **NASTĘPNY KROK:** decyzja #1 — granularność Family B dla wiersza EJ-'real' w §5 (full-stream vs per-reżim).
-- ⟳ Dług ruff `scripts/{check_api_key,smoke_test}.py` (4×: I001 + unused `data`) —
-  pre-existing, POZA scope CI; sprzątnąć przy pracy w tych plikach.
-- ⟳ Wizualny check exec summary Ctrl+P = 1×A4; cross-check kalibracji BOCPD n=5000 pool=80.
-- ⟳ Stretche: pełna piątka RNG domknięta; demo Streamlit zbudowane — Ścieżka A kompletna.
+- ⟳ **Hygiena Pages-deploy (opcjonalna):** przełączyć Pages source na „GitHub Actions" + `actions/deploy-pages`, by wyciszyć Node20 annotation w `pages-build-deployment` (nasz `ci.yml` już zbumpowany).
+- ⟳ **Analiza pary (10,25)** z R2 (single-pillar co-occurrence 1/3) — opcjonalne mini-study, NIE finding (nie przeszło bramki konwergencji+FDR).
+- ⟳ Stretche domknięte: pełna piątka RNG, demo Streamlit, IT supplement, MM gra 2 — Ścieżka A kompletna.
 
 ## Aktywne pliki
 
-- ZMIENIONE (commited): `src/driftscope/reporting/{prng_benchmark,multimulti_audit,report.qmd}.py/.qmd`,
-  `tests/test_prng_benchmark.py`, `README.md`, `docs/{executive_summary,index,report}.html`,
-  `scripts/{multimulti_audit,calibrate_mmd_pool}.py`
-- ACTIVE prereg = **v7** (bez zmian — reporting-only, methodology/ nietknięte)
+- ZMIENIONE (committed, pushed): `src/driftscope/reporting/{prng_benchmark.py,report.qmd}`,
+  `src/driftscope/methodology/h1_classical.py`, `README.md`, `docs/{index,report}.html`,
+  `scripts/{check_api_key,smoke_test}.py`
+- POZA REPO (prywatne): `D:\Programming_Projects\zz_INNE\README_PL\README.md`
+- ACTIVE prereg = **v7** (bez zmian — reporting/docs/style-only)
 
 ## Otwarte pytania
 
-- Finding #1 (sub-decyzja): wiersz EJ 'real' w benchmarku §5 — Family B full-stream czy per-reżim?
-- Finding #2 domknięty prozą; czy dodać analogiczny akapit do README (obecnie tylko report.qmd §4)?
+- Brak nierozstrzygniętych. Oba findingi (#1 full-stream, #2 honest-disclosure) i sub-decyzja Family B zamknięte decyzją usera.
+- Strategiczne (nie blokujące): czy framework jest „done" (Ścieżka A), czy podejmować opcjonalne hygiena/stretche?
 
 ## Do MEMORY.md (przeniesiono)
 
-- Projektowy `MEMORY.md` (Architektura): **[2026-06-13]** push zaległości + doc-sync +
-  Finding #1 (werdykt PRNG OR→Disagreement ≥2) + Finding #2 (honest-disclosure 1/3),
-  HEAD=`79c03e9`, pushed, CI green. Gotcha narzędziowy `cd`→podwojone ścieżki.
-- Agent-memory: `bash-cd-persists-doubled-paths.md` (feedback).
+- Projektowy `MEMORY.md` (Architektura): **[2026-06-13 sesja 2]** — sub-Finding #1 full-stream+caveat,
+  Finding #2→README, 3 polish (ruff/exec-1A4/BOCPD length-invariance), polska wersja README poza repo.
+  HEAD=`da3b50d`, pushed. Highlight: BOCPD p95(n=5000)=p95(n=2000)=0.3314 (Δ=0.0000) — empiryczne domknięcie length-invariance prereg v6 §0.

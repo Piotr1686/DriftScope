@@ -3,8 +3,8 @@
 Weryfikuje: importy wszystkich zaleznosci, Numba JIT, CPU/RAM, GPU (informacyjnie).
 Uruchomienie: python scripts/smoke_test.py
 """
-import sys
 import subprocess
+import sys
 
 
 def _check_import(module: str) -> tuple[bool, str]:

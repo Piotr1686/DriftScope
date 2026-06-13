@@ -4,11 +4,12 @@ Uruchomienie: python scripts/check_api_key.py
 Wymaga: .env z LOTTO_API_KEY
 """
 import json
-import sys
 import os
+import sys
 
 # Laduj .env recznie (bez pydantic-settings, zeby test byl standalone)
 from pathlib import Path
+
 
 def load_env(path: Path) -> dict:
     env = {}
@@ -30,8 +31,9 @@ API_KEY = ENV.get("LOTTO_API_KEY", os.getenv("LOTTO_API_KEY", ""))
 
 
 def check(label: str, url: str, params: dict | None = None) -> dict | None:
-    import httpx
     import warnings
+
+    import httpx
     headers = {"secret": API_KEY}
     try:
         # verify=False: obejscie bledu SSL certyfikatow Miniconda na Win11
@@ -73,7 +75,7 @@ def main() -> int:
     print(f"\nKlucz zaladowany: {API_KEY[:6]}...{API_KEY[-4:]}")
 
     # Test 1: ostatnie wyniki wszystkich gier
-    data = check(
+    check(
         "last-results (wszystkie gry)",
         f"{BASE_URL}/api/open/v1/lotteries/draw-results/last-results",
     )

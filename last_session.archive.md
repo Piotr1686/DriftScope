@@ -1,3 +1,81 @@
+## ═══ Sesja zarchiwizowana [2026-06-13 12:27] ═══
+
+# last_session.md
+
+**Sesja:** 2026-06-11 · sesja 2 (wieczór)
+**Status:** ✓ Zakończona poprawnie
+**Punkt odniesienia (git):** 7348fee @ master (NIEpushowane — 13 commitów przed origin/master)
+
+---
+
+## ▸ NASTĘPNY KROK (zacznij tutaj)
+
+**`git push origin master` + weryfikacja CI**, potem domknąć pending doc-sync
+z drugiego taska. Konkretnie:
+1. `git push origin master` (wyśle 13 commitów: 9 strukturalnych z tej sesji
+   `74bd82d..7348fee` + 4 wcześniejsze niepushowane `3e70fef`/`448fd1a`/`f8a8d06`/`6313461`).
+   Push HTTPS przez credential manager (bez promptu wg historii).
+2. Sprawdzić CI: `gh run list --branch master --limit 3 --json status,conclusion,headSha`
+   lub `gh run watch --exit-status`. **UWAGA:** czytać X/✓ per krok, NIE polegać na
+   „exit 0" powiadomienia tła. CI scope = `ruff check src tests` + `mypy src` + `pytest`
+   (scripts/ POZA scope → 4 pre-existing ruff w scripts/ NIE wywalą CI).
+3. Po zielonym CI: domknąć **pending doc-sync z code-review** (osobny task, NIE ruszany
+   w tej sesji): liczniki testów 266/268 → **272/274** w `README.md:49,223,316` +
+   `docs/executive_summary.html:213`; docstring `multimulti_audit.py:96` „all-clear"→„clear";
+   `calibrate_mmd_pool.py:3` kwalifikator naive-OR. (Pełna lista MEMURY.md [2026-06-11].)
+
+Kontekst: task struktury repo WYKONANY i ZWALIDOWANY (pytest 272/2skip, ruff src/tests
++ mypy czyste, wheel zweryfikowany), ale user odłożył push na jutro. Push to jedyna
+niezrobiona pozycja DoD taska (kryterium „CI green na pushu").
+
+---
+
+## Co zrobiono w tej sesji
+
+- ✓ **TASK_REPO_STRUCTURE_OPUS48.md WYKONANY** — 9 commitów strukturalnych
+  `74bd82d..7348fee`. Decyzje usera (AskUserQuestion): F2=manifest SHA-256,
+  F8=minimal (exclude *.md z wheel), F7=zostaw scraper_selectors, F9=CITATION.cff/F10=nie.
+  - **F3** py.typed (PEP 561); **F4a** poc→notebooks/ +ref README; **F4b**
+    universal-session→docs/templates/ (snake_case); **F6** test_api_key→check_api_key
+    (audyt: zero sekretu); **F5** R&D/→docs/research/rd_archive/ (30 plików snake_case
+    + README mapujący); **F8-min** exclude `**/*.md` z wheel; **F2** kontraktowa rewizja
+    git-lfs→manifest SHA-256 (PROJECT_BRIEF §0 nota + 6 linii sync, CLAUDE.md DoD-6);
+    **F1** drzewo CLAUDE.md przepisane 1:1 z git ls-files; **F9** CITATION.cff.
+- ✓ **Walidacja DoD taska:** pytest **272 passed / 2 skipped** (zero regresji),
+  `ruff check src tests` + `mypy src` czyste, **wheel zbudowany** (py.typed=True, *.md=0,
+  prereg=brak), `git --follow` zachowuje historię przenosin.
+- ✓ Pamięć: root MEMORY.md wpis **[2026-06-11 sesja 2]** (pełne hashe/decyzje/walidacja/dług).
+
+## Co zostało (backlog sesji)
+
+- ⟳ **NASTĘPNY KROK:** push 13 commitów + CI check + pending doc-sync (zob. wyżej).
+- ⟳ **Pending doc-sync z code-review** (drugi task, sekcja 6 „Poza zakresem" struktury):
+  liczniki 266/268→272/274, docstring all-clear→clear, kwalifikator calibrate_mmd_pool.
+- ⟳ Findingi code-review wymagające DECYZJI: #1 polityka werdyktu `klass='real'` §5
+  (OR→Disagreement?); #2 udokumentować ślepotę ≥2/3 na sygnały 1/3-strukturalne.
+- ⟳ Dług ruff `scripts/{check_api_key,smoke_test}.py` (4×: I001 + unused `data`) —
+  pre-existing, POZA scope CI; do sprzątnięcia przy pracy w tych plikach (zmiana semantyki).
+- ⟳ Wizualny check exec summary Ctrl+P = 1×A4; cross-check kalibracji BOCPD n=5000 pool=80.
+
+## Aktywne pliki
+
+- ZMIENIONE (commited): `pyproject.toml` (py.typed pkg + wheel exclude), `CLAUDE.md`
+  (DoD-6 + drzewo 1:1), `PROJECT_BRIEF.md` (rewizja §0 lfs→manifest), `README.md`
+  (poc path), `CITATION.cff` (NOWY), `src/driftscope/py.typed` (NOWY)
+- PRZENIESIONE: `notebooks/poc_permutation_engine.py`, `docs/templates/universal_session_setup_prompt.md`,
+  `scripts/check_api_key.py`, `docs/research/rd_archive/` (30+README)
+- ACTIVE prereg = **v7** (bez zmian — task strukturalny, methodology/ nietknięte poza wheel-exclude)
+
+## Otwarte pytania
+
+- Kiedy push? (user: jutro). Czy bundlować pending doc-sync w ten sam push czy osobno.
+- Finding #1: wiersz EJ 'real' w benchmarku §5 → Disagreement czy OR z caveat?
+
+## Do MEMORY.md (przeniesiono)
+
+- Root `MEMORY.md` (Architektura): **[2026-06-11 sesja 2] TASK_REPO_STRUCTURE WYKONANY** —
+  9 commitów, decyzje F2/F7/F8/F9, walidacja, F2 rewizja kontraktowa lfs→manifest, dług ruff scripts/.
+
 ## ═══ Sesja zarchiwizowana [2026-06-11 23:50] ═══
 
 # last_session.md
@@ -301,79 +379,3 @@ najbardziej konkretny dług jakościowy z tej sesji.
   inwersje dat, CI success.
 - Pamięć agenta: `mm_mmd_fpr_pool80.md` przepisany na ROZSTRZYGNIĘTE (hipoteza inflacji obalona) + index.
 
-## ═══ Sesja zarchiwizowana [2026-06-08 22:23] ═══
-
-# last_session.md
-
-**Sesja:** 2026-06-07 · ~22:45-23:20
-**Status:** ✓ Zakończona poprawnie
-**Punkt odniesienia (git):** a21cc92 @ master (commit kodu MM; ten zapis stanu = kolejny commit on top)
-
----
-
-## ▸ NASTĘPNY KROK (zacznij tutaj)
-
-**Krok 6 planu — runner MM negative-control-only: utworzyć `src/driftscope/reporting/multimulti_audit.py`**
-(ścieżka jak `reporting/prng_benchmark.py`, POZA prereg §0). Wczytać `data/seed/multimulti_history.csv`
-przez generyczny loader (DrawRecord.generic, pool_size=80), na **OGRANICZONYM oknie** (np. ostatnie
-~1500-2000 losowań — NIE pełne 16827, bo BOCPD jest O(T²)), policzyć baterię: BOCPD(field="main") +
-MMD + cooccurrence + Family B + IT (reuse `pipeline.default_pillar_detectors`/
-`family_b_per_number_pvalues`, `information_detector`, `multiple_testing.correct_family_b`). Struktura
-wyniku jak `BenchmarkRow` (flagged/verdict). Oczekiwany wynik: **all-clear**. CLI prezentacji w
-`scripts/multimulti_audit.py`.
-
-Kontekst: kroki 1-5 (parametryzacja + dane + kalibracja) są DONE i zacommitowane (a21cc92), EJ
-regression = 0. Smoke MM na 800 losowaniach już przeszedł all-clear (BOCPD 0.221<0.34, Family B 0/80).
-Brakuje generycznego loadera CSV (obecny `load_seed_csv` jest EJ-specyficzny — main_1..5/euron) →
-dodać `load_generic_seed_csv(path, pool_size)` w `ingestion/lotto_scraper.py` lub w runnerze.
-
-Plan całości: `C:\Users\plazo\.claude\plans\flickering-stirring-lovelace.md` (zatwierdzony).
-
----
-
-## Co zrobiono w tej sesji
-
-- ✓ **Krok 0 — regression gate**: baseline 260 passed / 2 skipped; mypy --strict clean; ruff src clean
-  (8 błędów ruff to pre-existing dług w notebooks/poc/scripts — POZA src, nie nasze).
-- ✓ **Krok 1 — dane MM**: `data/seed/multimulti_history.csv` (16827 losowań 1996-2026) + konwerter
-  `scripts/convert_mm_seed.py` ze źródła `wynikilotto.net.pl/download/multi_multi.csv`.
-- ✓ **Krok 2 — unified `DrawRecord`** (`core/types.py`): pola EJ opcjonalne + `numbers`/`pool_size`,
-  `model_validator` XOR, `DrawRecord.generic()`. Back-compat EJ zweryfikowany.
-- ✓ **Krok 3 — przekrojowa parametryzacja pool/k**: detektory wyprowadzają pool/k z rekordów
-  (8 modułów: cooccurrence, recurrence, k4_mmd, permutation, block_bootstrap, information_theory,
-  pipeline.family_b, calibration.chi2, h1_classical.run_bocpd). **EJ regression = 0** (260 passed).
-- ✓ **Krok 4 — `generate_generic_uniform`** (`driftsim/null_uniform.py`) — honest null k-z-pool bez euron.
-- ✓ **Krok 5 — kalibracja BOCPD(80,20)**: p95=0.3314 (n=2000, trials=200, FPR@p95=0.05) → próg 0.34
-  w `_MAIN_REJECT_THRESHOLD_BY_POOL`. Skrypt rozszerzony o `calibrate_generic`.
-- ✓ **Smoke MM end-to-end** (800 losowań): all-clear (BOCPD 0.221, Family B 0/80, min_q=0.959).
-- ✓ **Commit kodu** `a21cc92` (feat, 14 plików). mypy + ruff src czyste po wszystkim.
-- ✓ MEMORY.md (root + agent) zaktualizowane.
-
-## Co zostało (backlog sesji)
-
-- ⟳ **Krok 6 — runner MM** (NASTĘPNY KROK) + generyczny loader CSV.
-- ⟳ **Krok 7 — sekcja „Second real-world case study: Multi Multi" w `report.qmd`** + re-render docs + README.
-- ⟳ **Krok 8 — walidacja**: FPR/kalibracja sanity pool=80; pełny suite + nowy `tests/test_generic_pool_invariants.py`.
-- ⟳ Cross-check kalibracji BOCPD n=5000 (opcjonalny, potwierdza niezmienniczość względem długości; ~kilkanaście min O(T²)).
-- ⟳ Push commitów (origin za d8df02f; lokalnie a21cc92 + state on top) — do decyzji.
-
-## Aktywne pliki
-
-- (następna sesja) `reporting/multimulti_audit.py` (nowy), `scripts/multimulti_audit.py` (nowy CLI),
-  `ingestion/lotto_scraper.py` (generyczny loader), `reporting/report.qmd`, `tests/test_generic_pool_invariants.py` (nowy)
-- (zacommitowane a21cc92) `core/types.py`, `methodology/*`, `pipeline.py`, `driftsim/null_uniform.py`,
-  `reporting/information_theory.py`, `data/seed/multimulti_history.csv`, `scripts/{convert_mm_seed,calibrate_bocpd_threshold}.py`
-- ACTIVE prereg = **v7** (bez zmian — MM to reusability/reporting + parametryzacja, poza §0)
-
-## Otwarte pytania
-
-- **Okno analizy runnera MM** — ile ostatnich losowań (1500? 2000?) vs pełne 16827 (BOCPD O(T²) wyklucza pełne).
-- **Lokalizacja generycznego loadera CSV** — `ingestion/lotto_scraper.py` (`load_generic_seed_csv`) vs lokalnie w runnerze.
-- **Czy MM trafia do `report.qmd` jako pełna sekcja** (jak PRNG) czy lżejsza nota.
-
-## Do MEMORY.md (przeniesiono)
-
-- Root `MEMORY.md` (Architektura): **[2026-06-07 sesja 4] IMPLEMENTACJA MM kroki 1-5 DONE** —
-  technika „detektory wyprowadzają pool/k z rekordów", unified DrawRecord, próg BOCPD per-pool
-  (80→0.34, nieintuicyjnie < 50→0.70 bo wyższe K/N), źródło danych, gotcha BOCPD O(T²).
-- Pamięć agenta: `mm_parametrization_pool_k.md` (nowy wpis + index).

@@ -118,7 +118,9 @@ the controls, not an assumption of perfect uniformity.*
 To show the silence on EuroJackpot is *calibration* and not *blindness*, the **exact same battery**
 is pointed at random-number generators with a known ground truth — two well-behaved generators, two
 cryptographic ones, the same generator with two deliberately injected defects of different kinds,
-and real EuroJackpot for reference (`python scripts/prng_benchmark.py`, n = 1500):
+and real EuroJackpot for reference (`python scripts/prng_benchmark.py`, n = 1500). Here Family B
+runs **full-stream** (50 numbers) for parity with the synthetic sources — PRNG streams have no
+calendar regimes; the regime-split headline (0/150) above is the canonical EuroJackpot reading:
 
 | Source | Class | Family B (reject/size) | MMD p | Co-occ p | IT (LZ) p | Verdict |
 |---|---|---|---|---|---|---|

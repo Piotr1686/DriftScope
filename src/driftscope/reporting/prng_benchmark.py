@@ -101,6 +101,12 @@ def run_battery(
 
     Te same detektory co `pipeline.default_pillar_detectors` / `family_b_per_number_pvalues`
     — zero duplikacji methodology.
+
+    Family B liczone na PELNYM strumieniu (50 liczb), NIE per-rezim — decyzja parytetu:
+    syntetyczne PRNG nie maja rezimow kalendarzowych, wiec battery aplikowany IDENTYCZNIE
+    do kazdego zrodla (= claim reusability §5). Headline EJ per-rezim (150) zyje w
+    `pipeline.run_audit`/`report.qmd §4`; oba czytaja real EJ jako clear (pula 1-50
+    niezmienna przez CP 2014/2022). Zob. caveat w `report.qmd §5`.
     """
     labels, pvals = family_b_per_number_pvalues(draws)
     fb = correct_family_b(pvals, labels, alpha=alpha)

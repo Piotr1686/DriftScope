@@ -330,6 +330,13 @@ The **Verdict** column applies the same Disagreement logic as the main pipeline:
 detector. Both defects clear that bar (bias: Family B + MMD; period: all three); good / crypto / real
 fire none.
 
+One caveat on the EuroJackpot row: here **Family B runs on the full stream** (50 numbers),
+for parity with the synthetic sources — a PRNG stream has no calendar regimes, so the *exact
+same* battery is applied identically to every source, which is precisely the reusability claim
+this section makes. The regime-split treatment (50 × 3 regimes = 150 hypotheses, §4) is the
+canonical EuroJackpot headline; both readings return **clear**, since the 1–50 main pool is
+invariant across the 2014/2022 change-points.
+
 A fourth, **supplementary** lens — an information-theoretic **Lempel-Ziv 1976** complexity test
 (`reporting/information_theory.py`, order-shuffle null over draw blocks) — adds a *sequential*
 view orthogonal to the three core families: it conditions on both the marginal *and* the

@@ -105,6 +105,16 @@ that *are* there. EuroJackpot is the ideal proving ground because it carries its
   (50 numbers × 3 regimes, Benjamini–Yekutieli) rejects **0/150**. The honest watchlist returns
   **None**.
 
+**Why we do not hard-gate on ≥2/3.** Some real departures are, *by construction*, visible to
+only **one** family: a pure pairwise correlation leaves every marginal and every windowed
+frequency exactly uniform, so only co-occurrence can see it (the "clean cell" of the
+complementarity proof). Such a genuine signal would surface as **1/3, not 3/3** — a naive
+"≥2/3 = real" rule would be **structurally blind** to an entire class of defects. So the
+watchlist's *primary* gate is the per-number **FDR** (Family B), with convergence required only
+at **≥1** pillar: a true single-family signal that also clears FDR can still surface, while a
+lone flag *without* FDR support (the R2 pair above) does not. The 1/3 label is a routing
+decision ("requires power context"), not a dismissal.
+
 The framework confirms the known signal and proposes nothing where there is no convergent
 evidence. *Quasi-ground-truth caveat: EuroJackpot is a physical process, not an ideal RNG. What is
 genuinely known is the* rule changes *(ex ante) and the invariance of the 1–50 pool — and those are

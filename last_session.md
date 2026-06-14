@@ -1,59 +1,60 @@
 # last_session.md
 
-**Sesja:** 2026-06-13 · 21:00-22:50 (sesja 2)
+**Sesja:** 2026-06-14 · 21:00-21:45
 **Status:** ✓ Zakończona poprawnie
-**Punkt odniesienia (git):** da3b50d @ master (zsynchronizowany z origin/master)
+**Punkt odniesienia (git):** bfa5754 @ master (zsynchronizowany z origin/master)
 
 ---
 
 ## ▸ NASTĘPNY KROK (zacznij tutaj)
 
-**Cały backlog z 2026-06-13 domknięty — brak narzuconego następnego kroku.**
-Najbardziej naturalny kandydat: **decyzja, czy przełączyć GitHub Pages na source
-"GitHub Actions" + własny `actions/deploy-pages`**, by wyciszyć Node20-deprecation
-annotation we wbudowanym `pages-build-deployment` (używa wewnętrznie `checkout@v4`/
-`upload-artifact@v4`). To jedyny znany otwarty „dług hygieniczny" CI (zob. MEMORY
-[2026-06-06] gotcha Pages-deploy). Alternatywnie: analiza pary (10,25) z R2 (single-pillar
-co-occurrence 1/3) jako mini-study, albo zostawić framework jako domknięty (Ścieżka A).
+**Ostatni merytoryczny stretch (mini-study pary 10,25) domknięty — brak narzuconego
+następnego kroku.** Framework (Ścieżka A) kompletny i opublikowany. Jedyny pozostały
+konkretny item techniczny to **zaakceptowany dług hygieniczny Pages-deploy** (Opcja 1,
+świadomie odłożona w tej sesji jako złe ryzyko/zysk):
 
-Kontekst: framework (Ścieżka A) jest kompletny i opublikowany; ta sesja zamknęła dwa
-findingi code-review + trzy polish. Nie ma „następnego kroku roadmapy" — pozostałe pozycje
-to opcjonalne stretche/hygiena, nie zobowiązania.
+- Przełączyć GitHub Pages source z „Deploy from branch /docs" na **„GitHub Actions"** +
+  własny workflow `actions/deploy-pages` (+`actions/upload-pages-artifact`), by wyciszyć
+  Node20-deprecation annotation we wbudowanym `pages-build-deployment` (używa wewnętrznie
+  `checkout@v4`/`upload-artifact@v4`). To **kosmetyka** (warning, nie failure) tykająca
+  żywy deployment → realne ryzyko zepsucia opublikowanej strony za zerowy zysk merytoryczny.
+  Zob. MEMORY [2026-06-06] gotcha Pages-deploy.
+
+Kontekst: tej sesji wybrano Opcję 2 z trzech kandydatów (mini-study) i ją domknięto;
+Opcja 3 = „framework done" pozostaje w pełni uprawniona. Alternatywnie — pivot
+predykcyjny (zob. agent-memory `project_pivot_prediction.md`), jeśli kierunek się zmieni.
 
 ---
 
 ## Co zrobiono w tej sesji
 
-- ✓ **PUSH zaległego commitu sesyjnego** (`79c03e9..4fd16f9`) — stan z poprzedniej sesji wypchnięty na origin.
-- ✓ **Sub-Finding #1: granularność Family B dla EJ-`'real'` w §5** (`adb7e74`) — decyzja usera = **full-stream (50) + caveat**, NIE per-reżim. Caveat (EN) w `report.qmd §5` + nota docstring `run_battery` + zdanie w README. Re-render `docs/{index,report}.html` (grep-zweryfikowany przed kopią). Reporting-only, prereg v7 nietknięty.
-- ✓ **Finding #2 → README** (`d2abd12`) — akapit „Why we do not hard-gate on ≥2/3" (analog `report.qmd §4`, strukturalna ślepota na 1/3). README-only, bez re-renderu.
-- ✓ **Polish 1: ruff `scripts/{check_api_key,smoke_test}.py`** (`90e4e38`) — 3× I001 (auto-fix) + 1× F841 (`data = check(...)`→`check(...)`). Pre-existing dług sprzątnięty.
-- ✓ **Polish 2: exec summary 1×A4** — ZWERYFIKOWANE headless Edge `--print-to-pdf` → `/Type /Page` = 1 strona. Verify-only.
-- ✓ **Polish 3: BOCPD cross-walidacja progu pool=80 @ n=5000** (`da3b50d`) — p95=**0.3314 = identyczne z n=2000** (Δ=0.0000), FPR@0.34=0.04. Length-invariance potwierdzona (prereg v6 §0). Komentarz w `h1_classical.py`.
-- ✓ **Polska wersja README (prywatna, POZA repo)** — `D:\Programming_Projects\zz_INNE\README_PL\README.md` (383 linie). Nagłówek HTML = prywatna/nieoficjalna; niewersjonowana.
-- ✓ Walidacja: ruff+mypy --strict na dotkniętych plikach czyste; wszystkie 4 commity na origin/master, drzewo czyste.
+- ✓ **PUSH zaległego commitu sesyjnego** (`da3b50d..d716f09`) — stan `/end` z poprzedniej sesji wypchnięty na origin.
+- ✓ **Mini-study pary (10,25) w R2 — Opcja 2** (`bfa5754`, pushed). Reporting/docs-only, prereg v7 nietknięty, zero zmian logiki `src/`:
+  - Odtworzono deterministycznie jedyną flagę negative-controlu: R2 (n=389) współwystąpienia → para **(10,25)**, p=0.024@999 / 0.010@199, z≈4.6. R1/R3 clear (`R1 0/3 · R2 1/3 · R3 0/3`).
+  - Analiza „clean cell": O=9 vs E≈2.19, ale marginesy niewinne (#10=28 najrzadsza, z_marg=−1.84; #25=38 średnia, z_marg=−0.15) → czysto łączna anomalia. Para stabilna względem n_perm. Expected-rate P≈14% na ≥1 flagę w 3 reżimach.
+  - Deliverable: (1) nota `docs/research/2026-06-14_r2_cooccurrence_pair_10_25.md` (PL, pełna anatomia + argument dlaczego FDR strukturalnie nie potwierdza → 1/3, nie finding). (2) `report.qmd §4` data-driven chunk `r2-cooccurrence-pair` (nazywa parę + liczy marginesy z `report`/`draws`, p NIE hardcoded). (3) re-render `docs/{index,report}.html` (grep-zweryfikowany przed kopią).
+- ✓ Walidacja: render OK (ostrzeżenia SSL avgMonFltProxy/cdn.plot.ly = znany fallback proxy AVG); commit + push, drzewo czyste, origin zsynchronizowany.
 
 ## Co zostało (backlog sesji)
 
-- ⟳ **Hygiena Pages-deploy (opcjonalna):** przełączyć Pages source na „GitHub Actions" + `actions/deploy-pages`, by wyciszyć Node20 annotation w `pages-build-deployment` (nasz `ci.yml` już zbumpowany).
-- ⟳ **Analiza pary (10,25)** z R2 (single-pillar co-occurrence 1/3) — opcjonalne mini-study, NIE finding (nie przeszło bramki konwergencji+FDR).
-- ⟳ Stretche domknięte: pełna piątka RNG, demo Streamlit, IT supplement, MM gra 2 — Ścieżka A kompletna.
+- ⟳ **Hygiena Pages-deploy (opcjonalna, zaakceptowany dług):** source → „GitHub Actions" + `actions/deploy-pages` (wycisza Node20 annotation). Świadomie odłożona — złe ryzyko/zysk.
+- ⟳ Stretche domknięte: pełna piątka RNG, demo Streamlit, IT supplement, MM gra 2, mini-study R2 — Ścieżka A kompletna.
+- ⟳ Strategiczne (nie blokujące): czy framework „done", czy pivot predykcyjny (`project_pivot_prediction.md`).
 
 ## Aktywne pliki
 
-- ZMIENIONE (committed, pushed): `src/driftscope/reporting/{prng_benchmark.py,report.qmd}`,
-  `src/driftscope/methodology/h1_classical.py`, `README.md`, `docs/{index,report}.html`,
-  `scripts/{check_api_key,smoke_test}.py`
-- POZA REPO (prywatne): `D:\Programming_Projects\zz_INNE\README_PL\README.md`
-- ACTIVE prereg = **v7** (bez zmian — reporting/docs/style-only)
+- ZMIENIONE (committed, pushed): `src/driftscope/reporting/report.qmd` (§4 chunk),
+  `docs/{index,report}.html` (re-render), `docs/research/2026-06-14_r2_cooccurrence_pair_10_25.md` (NOWY)
+- ACTIVE prereg = **v7** (bez zmian — reporting/docs-only)
 
 ## Otwarte pytania
 
-- Brak nierozstrzygniętych. Oba findingi (#1 full-stream, #2 honest-disclosure) i sub-decyzja Family B zamknięte decyzją usera.
-- Strategiczne (nie blokujące): czy framework jest „done" (Ścieżka A), czy podejmować opcjonalne hygiena/stretche?
+- Brak blokujących. Mini-study (Opcja 2) domknięty zgodnie z decyzją usera.
+- Strategiczne: framework „done" (Ścieżka A) vs hygiena Pages-deploy vs pivot predykcyjny.
 
 ## Do MEMORY.md (przeniesiono)
 
-- Projektowy `MEMORY.md` (Architektura): **[2026-06-13 sesja 2]** — sub-Finding #1 full-stream+caveat,
-  Finding #2→README, 3 polish (ruff/exec-1A4/BOCPD length-invariance), polska wersja README poza repo.
-  HEAD=`da3b50d`, pushed. Highlight: BOCPD p95(n=5000)=p95(n=2000)=0.3314 (Δ=0.0000) — empiryczne domknięcie length-invariance prereg v6 §0.
+- Projektowy `MEMORY.md` (Architektura): **[2026-06-14] Mini-study pary (10,25) w R2** —
+  konkretyzacja jedynej flagi negative-controlu, „clean cell", dlaczego 1/3 nie finding,
+  expected-rate 14%, deliverable (nota + §4 chunk + re-render). HEAD=`bfa5754`, pushed.
+- Agent-memory: bez nowego wpisu (czysta realizacja zaplanowanego stretcha, w pełni zapisana w repo).

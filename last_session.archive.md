@@ -1,3 +1,65 @@
+## ═══ Sesja zarchiwizowana [2026-06-14 21:45] ═══
+
+# last_session.md
+
+**Sesja:** 2026-06-13 · 21:00-22:50 (sesja 2)
+**Status:** ✓ Zakończona poprawnie
+**Punkt odniesienia (git):** da3b50d @ master (zsynchronizowany z origin/master)
+
+---
+
+## ▸ NASTĘPNY KROK (zacznij tutaj)
+
+**Cały backlog z 2026-06-13 domknięty — brak narzuconego następnego kroku.**
+Najbardziej naturalny kandydat: **decyzja, czy przełączyć GitHub Pages na source
+"GitHub Actions" + własny `actions/deploy-pages`**, by wyciszyć Node20-deprecation
+annotation we wbudowanym `pages-build-deployment` (używa wewnętrznie `checkout@v4`/
+`upload-artifact@v4`). To jedyny znany otwarty „dług hygieniczny" CI (zob. MEMORY
+[2026-06-06] gotcha Pages-deploy). Alternatywnie: analiza pary (10,25) z R2 (single-pillar
+co-occurrence 1/3) jako mini-study, albo zostawić framework jako domknięty (Ścieżka A).
+
+Kontekst: framework (Ścieżka A) jest kompletny i opublikowany; ta sesja zamknęła dwa
+findingi code-review + trzy polish. Nie ma „następnego kroku roadmapy" — pozostałe pozycje
+to opcjonalne stretche/hygiena, nie zobowiązania.
+
+---
+
+## Co zrobiono w tej sesji
+
+- ✓ **PUSH zaległego commitu sesyjnego** (`79c03e9..4fd16f9`) — stan z poprzedniej sesji wypchnięty na origin.
+- ✓ **Sub-Finding #1: granularność Family B dla EJ-`'real'` w §5** (`adb7e74`) — decyzja usera = **full-stream (50) + caveat**, NIE per-reżim. Caveat (EN) w `report.qmd §5` + nota docstring `run_battery` + zdanie w README. Re-render `docs/{index,report}.html` (grep-zweryfikowany przed kopią). Reporting-only, prereg v7 nietknięty.
+- ✓ **Finding #2 → README** (`d2abd12`) — akapit „Why we do not hard-gate on ≥2/3" (analog `report.qmd §4`, strukturalna ślepota na 1/3). README-only, bez re-renderu.
+- ✓ **Polish 1: ruff `scripts/{check_api_key,smoke_test}.py`** (`90e4e38`) — 3× I001 (auto-fix) + 1× F841 (`data = check(...)`→`check(...)`). Pre-existing dług sprzątnięty.
+- ✓ **Polish 2: exec summary 1×A4** — ZWERYFIKOWANE headless Edge `--print-to-pdf` → `/Type /Page` = 1 strona. Verify-only.
+- ✓ **Polish 3: BOCPD cross-walidacja progu pool=80 @ n=5000** (`da3b50d`) — p95=**0.3314 = identyczne z n=2000** (Δ=0.0000), FPR@0.34=0.04. Length-invariance potwierdzona (prereg v6 §0). Komentarz w `h1_classical.py`.
+- ✓ **Polska wersja README (prywatna, POZA repo)** — `D:\Programming_Projects\zz_INNE\README_PL\README.md` (383 linie). Nagłówek HTML = prywatna/nieoficjalna; niewersjonowana.
+- ✓ Walidacja: ruff+mypy --strict na dotkniętych plikach czyste; wszystkie 4 commity na origin/master, drzewo czyste.
+
+## Co zostało (backlog sesji)
+
+- ⟳ **Hygiena Pages-deploy (opcjonalna):** przełączyć Pages source na „GitHub Actions" + `actions/deploy-pages`, by wyciszyć Node20 annotation w `pages-build-deployment` (nasz `ci.yml` już zbumpowany).
+- ⟳ **Analiza pary (10,25)** z R2 (single-pillar co-occurrence 1/3) — opcjonalne mini-study, NIE finding (nie przeszło bramki konwergencji+FDR).
+- ⟳ Stretche domknięte: pełna piątka RNG, demo Streamlit, IT supplement, MM gra 2 — Ścieżka A kompletna.
+
+## Aktywne pliki
+
+- ZMIENIONE (committed, pushed): `src/driftscope/reporting/{prng_benchmark.py,report.qmd}`,
+  `src/driftscope/methodology/h1_classical.py`, `README.md`, `docs/{index,report}.html`,
+  `scripts/{check_api_key,smoke_test}.py`
+- POZA REPO (prywatne): `D:\Programming_Projects\zz_INNE\README_PL\README.md`
+- ACTIVE prereg = **v7** (bez zmian — reporting/docs/style-only)
+
+## Otwarte pytania
+
+- Brak nierozstrzygniętych. Oba findingi (#1 full-stream, #2 honest-disclosure) i sub-decyzja Family B zamknięte decyzją usera.
+- Strategiczne (nie blokujące): czy framework jest „done" (Ścieżka A), czy podejmować opcjonalne hygiena/stretche?
+
+## Do MEMORY.md (przeniesiono)
+
+- Projektowy `MEMORY.md` (Architektura): **[2026-06-13 sesja 2]** — sub-Finding #1 full-stream+caveat,
+  Finding #2→README, 3 polish (ruff/exec-1A4/BOCPD length-invariance), polska wersja README poza repo.
+  HEAD=`da3b50d`, pushed. Highlight: BOCPD p95(n=5000)=p95(n=2000)=0.3314 (Δ=0.0000) — empiryczne domknięcie length-invariance prereg v6 §0.
+
 ## ═══ Sesja zarchiwizowana [2026-06-13 22:50] ═══
 
 # last_session.md
@@ -306,73 +368,3 @@ koniec po spłaceniu długu werdyktu MM.
 
 - Root `MEMORY.md` (Architektura): **[2026-06-09 sesja 2] FIX werdyktu MM** = Disagreement
   ≥2/3, nie naiwny OR (`3e70fef`); szczegóły properties/CLI/testy + co NIE ruszono.
-
-## ═══ Sesja zarchiwizowana [2026-06-09 22:40] ═══
-
-# last_session.md
-
-**Sesja:** 2026-06-09 · ~21:00-21:20
-**Status:** ✓ Zakończona poprawnie
-**Punkt odniesienia (git):** 7ed0ca6 @ master (commit docs MM/exec-summary; pushed na origin)
-
----
-
-## ▸ NASTĘPNY KROK (zacznij tutaj)
-
-**Naprawić semantykę werdyktu runnera MM: `MultiMultiAuditRow.verdict` (w
-`src/driftscope/reporting/multimulti_audit.py`) używa naiwnego OR po WSZYSTKICH
-detektorach → zwraca "FLAG" przy samotnym MMD, choć MM jest merytorycznie clear.**
-Zmienić na agregację Disagreement: policzyć rejecty wśród **3 filarów rdzeniowych**
-(BOCPD-main / MMD / co-occurrence) → ułamek "k/3"; verdict = "clear" gdy konwergencja
-<2/3, "FLAG" dopiero ≥2/3. IT = suplement (nie filar), Family B = osobna bramka FDR.
-Dodać pole `core_fraction` (lub reuse `reporting/disagreement.classify_from_results`).
-Zaktualizować CLI `scripts/multimulti_audit.py` (drukować ułamek + uczciwy verdict,
-usunąć mylące "FLAG | Expected: clear"). Dodać test do `tests/test_generic_pool_invariants.py`.
-
-Kontekst: ten dług przeszedł z poprzedniej sesji nietknięty (tę sesję poświęciliśmy
-na rozstrzygnięcie 2 otwartych pytań scope, nie na ten krok). Obecny runner drukuje
-"FLAG" a potem "Expected: clear" — niespójność załatana prozą w report.qmd, ale sam
-werdykt CLI/dataklasy wciąż kłamie. Czysta poprawka semantyki (reporting, poza prereg §0),
-reuse istniejącej logiki Disagreement Protocol. NIE pilne, ale najbardziej konkretny dług.
-
----
-
-## Co zrobiono w tej sesji
-
-- ✓ **Rozstrzygnięto 2 otwarte pytania scope** (decyzja usera przez AskUserQuestion):
-  - **Gra 3 (Keno/Lotto) = ZAPARKOWANA** — reusability nasycona przy 2 grach; robić tylko
-    gdy pojawi się dataset z known ground-truth change-pointem.
-  - **exec summary = EJ-flagship 1-pager + JEDNO zdanie MM callout** (nie pełna sekcja).
-- ✓ **Commit docs** (`7ed0ca6`, pushed `133300b..7ed0ca6`):
-  - `docs/executive_summary.html`: callout reusability MM 20/80 wpleciony w bullet
-    "Performance & clean architecture" (game-agnostic na realnym 2. datasecie; odseparowany
-    od figury "958 real draws" EJ-only).
-  - Fix stale test count: exec summary **246→268**, README **266→268** (źródło prawdy =
-    żywy `pytest --collect-only` = 268).
-- ✓ Pamięć: agent `scope_game3_and_exec_summary.md` + index; root MEMORY.md milestone [2026-06-09].
-- ✓ Weryfikacja: greps zielone (268 zsynchronizowane, zero resztek 246/266, callout obecny).
-
-## Co zostało (backlog sesji)
-
-- ⟳ **Werdykt runnera MM = Disagreement, nie OR** (NASTĘPNY KROK — dług z 2 sesji).
-- ⟳ Wizualny check exec summary Ctrl+P = 1×A4 (ryzyko ~zero — rozszerzony 1 bullet, bez nowego punktu).
-- ⟳ CI na `7ed0ca6` (uruchomione tuż przed /end — sprawdzić zielone; zmiany czysto doc).
-- ⟳ Cross-check kalibracji BOCPD n=5000 pool=80 (opcjonalny — próg length-invariant).
-
-## Aktywne pliki
-
-- `src/driftscope/reporting/multimulti_audit.py` (verdict semantyka — następny krok)
-- `scripts/multimulti_audit.py` (CLI — następny krok)
-- `tests/test_generic_pool_invariants.py` (dodać test werdyktu)
-- (zacommitowane+pushed) `docs/executive_summary.html`, `README.md`
-- ACTIVE prereg = **v7** (bez zmian — MM = reusability/reporting, poza §0)
-
-## Otwarte pytania
-
-- (brak — oba pytania scope z poprzedniej sesji rozstrzygnięte)
-
-## Do MEMORY.md (przeniesiono)
-
-- Root `MEMORY.md` (Architektura): **[2026-06-09] DECYZJE SCOPE** — gra 3 zaparkowana,
-  MM callout w exec summary, fix test count 246/266→268, commit `7ed0ca6` pushed.
-- Pamięć agenta: `scope_game3_and_exec_summary.md` (project) + wpis w MEMORY.md index.

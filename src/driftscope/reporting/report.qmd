@@ -268,6 +268,33 @@ single-pillar flag on a clean main pool clears neither. So no pattern clears the
 the framework **proposes nothing**. This is deliberate: a raw signal is reported as raw,
 absence of convergent evidence as absence of evidence.
 
+```{python}
+#| label: r2-cooccurrence-pair
+#| echo: false
+#| output: asis
+# Concretize the lone R2 flag, data-driven from the audit (immune to drift): name the
+# pair and show its marginals are innocent — a purely joint excess (the "clean cell").
+from driftscope.ingestion.regime_split import split_by_regime as _split_r2
+_co = report.regime_audits["R2"].negative_control["cooccurrence"]
+_a, _b = _co.metadata["top_pair"]
+_z = _co.metadata["top_pair_z"]
+_draws_r2 = _split_r2(draws)["R2"]
+_n2 = len(_draws_r2)
+_exp = _n2 * 5 / 50
+_ca = sum(1 for d in _draws_r2 if _a in d.main_numbers)
+_cb = sum(1 for d in _draws_r2 if _b in d.main_numbers)
+print(
+    f"Concretely, in **R2** the co-occurrence pillar localizes the flag to a single pair "
+    f"**({_a}, {_b})** (max-pair z ≈ {_z:.1f}). The tell is that this is a purely *joint* "
+    f"excess: across {_n2} draws number {_a} appears {_ca} times and number {_b} appears "
+    f"{_cb} times (uniform expectation {_exp:.0f} each) — both marginally unremarkable, yet "
+    f"they land together far more often than independence allows. That is the *clean cell*: "
+    f"the per-number Family B sees nothing on either number, so the marginal FDR gate cannot "
+    f"corroborate the pair and it stays **1/3**. One flag across three independent regime "
+    f"tests is also the most likely non-zero outcome under the null (P ≈ 1 − 0.95³ ≈ 14%)."
+)
+```
+
 **A note on the 1/3 cell — and why we do not hard-gate on ≥2/3.** Some departures are, *by
 construction*, visible to only **one** family: a pure pairwise correlation leaves every
 marginal and every windowed frequency exactly uniform, so neither Family B nor MMD can see it

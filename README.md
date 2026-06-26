@@ -35,28 +35,32 @@ its presence.
 - 🎯 **A built-in answer key.** Audited on **958 real EuroJackpot draws (2012–2026)**, a process
   whose rules are *known* to have changed twice (the euro-number pool, in 2014 and 2022) while the
   main 1–50 pool *never* changed — a natural **positive *and* negative control** in one dataset.
-- ✅ **It finds the real change and invents none.** Detects change-points at the known transitions
-  (**2014-11-28**, **2022-03-29**); on the unchanged 1–50 pool it returns **0 findings**, an
-  *honest null* — not an empty list, a deliberate "no evidence" (see [§ Why you can trust it](#why-you-can-trust-it)).
-- 🔬 **Three independent detectors that must agree.** A *Disagreement Protocol* over three
-  mathematically non-overlapping families — each blind to what the others catch.
+- ✅ **It finds the real changes, and invents none on the control.** Detects change-points
+  covering both known transitions (**2014-11-28**, **2022-03-29**); on the unchanged 1–50 pool it
+  returns **0 findings**, an *honest null* — not an empty list, a deliberate "no evidence" (see
+  [§ Why you can trust it](#why-you-can-trust-it)).
+- 🔬 **Three complementary detectors that must agree.** A *Disagreement Protocol* over three
+  families with deliberately different blind spots — in particular, the joint (pair) signal is
+  caught by **only one** of them, so agreement is meaningful.
 - 🧪 **The instrument is calibrated, and you can prove it.** Point the same battery at PRNGs with
-  a known ground truth: it **clears two crypto-grade generators**, **flags two planted defects** —
-  and the *pattern* of which detectors fire tells you the *kind* of defect.
+  a known ground truth: it stays silent on well-behaved and crypto-grade generators (a negative
+  control for the benchmark itself) and **flags two planted defects** — and the *pattern* of which
+  detectors fire tells you the *kind* of defect.
 - 📐 **Pre-registered & reproducible.** Every statistical choice is frozen *before* looking at
-  results (`preregistration_v7.md`); a cold-machine re-run is **bit-identical** (SHA-256 manifest).
+  results (`preregistration_v7.md`); a re-run in the same pinned environment is **bit-identical**
+  (SHA-256 manifest over the CSV outputs).
 - ⚡ **Fast & light.** The full audit runs in **~4.5 s** and peaks at **~210 MB RAM** on a laptop
-  CPU. **276 passing tests** (CI-green on Linux).
+  CPU. **278 tests**, CI-green on Ubuntu / Python 3.10.
 
 ---
 
 ## How it works — three detectors that must agree
 
-Think of three independent expert witnesses, each looking at the same stream through a different
+Think of three expert witnesses, each looking at the same stream through a different
 lens. One watches *when* the distribution shifts over time. One watches *whether* the frequencies
 drift away from uniform. One watches *which pairs of numbers* show up together more than chance
-allows. None of them can see what the others see — and that is the point. A claim is only trusted
-to the degree the witnesses **agree** (a signal is graded 3/3 · 2/3 · 1/3 · 0/3).
+allows. No single one is sensitive to every kind of deviation — and that is the point. A claim is
+only trusted to the degree the witnesses **agree** (a signal is graded 3/3 · 2/3 · 1/3 · 0/3).
 
 ```mermaid
 flowchart TD
@@ -77,10 +81,11 @@ flowchart TD
 | **MMD** | distributional | windowed frequencies departing from uniform (shifts, trends) | pair structure |
 | **Co-occurrence** | joint | over-represented number *pairs* under uniform margins (`pair_corr`) | marginal signal |
 
-The non-redundancy is provable, not asserted: a pure pair-correlation signal is invisible to
-H1/MMD whenever the per-number margins are preserved (their power collapses to the false-positive
-rate), and is caught **only** by co-occurrence. Every class of deviation has at least one champion
-detector, and no two detectors overlap — so agreement is meaningful.
+The complementarity is concrete, not merely asserted: a pure pair-correlation signal that
+preserves every per-number margin is invisible to H1 and MMD — both marginal detectors, which
+here share a blind spot — and is caught **only** by co-occurrence (their power collapses to the
+false-positive rate; this is near-analytic by construction and confirmed empirically on planted
+signals). Every class of deviation has at least one champion detector, so agreement is meaningful.
 
 > **Design note.** The H1 pillar is represented by BOCPD (Bayesian Online Change-Point Detection,
 > Adams–MacKay 2007), calibrated *per field*. The classical stationarity tests (ADF, KPSS, Welch
@@ -95,12 +100,21 @@ that *are* there. EuroJackpot is the ideal proving ground because it carries its
 - **Positive control (euro numbers).** The pool of euro numbers was expanded by rule changes in
   2014 and 2022. BOCPD, run blind on the full stream, detects change-points covering **both** known
   transitions — the first draw containing a "9" on **2014-11-28** (posterior ≈ 0.41) and the first
-  "11" on **2022-03-29** (≈ 0.40). The detector fires where a real change exists.
+  "11" on **2022-03-29** (≈ 0.40), both above threshold and in the top-5. *In full honesty:* its
+  single **highest**-posterior change-point is actually **2015-01-23** (≈ 0.47) — not a rule change
+  but a physical aftershock of the 2014 expansion, as new euro symbols kept first-appearing for
+  months afterwards. So the largest peak is itself a genuine distributional shift, not a spurious
+  one; the detector fires where real change exists, and never invents a change in the negative
+  control below.
 - **Negative control (main 1–50 pool).** This pool was never touched. Evaluated *within each rule
   regime* (R1 = 133, R2 = 389, R3 = 436 draws) by all three pillars, the verdict is
-  **R1 0/3 · R2 1/3 · R3 0/3**. The lone single-pillar flag in R2 (one number pair) is **not
-  suppressed and not promoted** — it is classified as *"single-pillar, requires power context"*,
-  consistent with the ~14% chance that one of three regimes throws a spurious flag at α = 0.05.
+  **R1 0/3 · R2 1/3 · R3 0/3**. These nulls are statements *within the power of the test*: R1, at
+  n = 133, is the thinnest regime, where small per-regime effects (e.g. a per-number shift of
+  ~1%) are below detection — as the W0 power preview established — so "0/3" there is a clean
+  control, not a guarantee of exact uniformity. The lone single-pillar flag in R2 (one number
+  pair) is **not suppressed and not promoted** — it is classified as *"single-pillar, requires
+  power context"*, consistent with the ~14% chance that one of three regimes throws a spurious
+  flag at α = 0.05.
 - **The rigor gate holds.** A per-number false-discovery-rate correction over **150 hypotheses**
   (50 numbers × 3 regimes, Benjamini–Yekutieli) rejects **0/150**. The honest watchlist returns
   **None**.
@@ -194,14 +208,16 @@ calibrated guarantees — not adjectives.
   pillars. `None` is deliberate **decision abstention** ("insufficient grounds"), distinct from an
   empty result, and distinct from extrapolation (**DoD-5**, `adaptive/honest_watchlist.py`).
 - **Multiplicity is controlled.** Family-aware FDR — Benjamini–Hochberg / **Benjamini–Yekutieli**
-  (the latter valid under the negative dependence of the 5/50 counts) — over the real hypothesis
+  (the latter valid under *arbitrary* dependence, used because the 5/50 presence counts are
+  negatively dependent — which makes BH's PRDS assumption unsafe) — over the real hypothesis
   family (**DoD-3**, `methodology/multiple_testing.py`).
 - **Choices are frozen before the data is seen.** Every statistic, null, threshold and effect-size
   grid lives in `methodology/preregistration_v7.md`. Each revision carries a `revision_reason`,
   explicitly split into *clean* vs *data-informed* — the §0 discipline.
 - **Reproducibility is bit-exact.** Every detector is a *pure function* of the stream; the RNG is
   seeded from the data contents (⊕ `BASE_SEED`), independent of call order. `scripts/archive.py`
-  emits a deterministic SHA-256 manifest, so a cold-machine re-run is bit-identical (**DoD-6**).
+  emits a deterministic SHA-256 manifest, so a cold-machine re-run *in the same pinned environment*
+  is bit-identical (**DoD-6**).
 
 When the docs say the framework "does not hallucinate", read it precisely: *within the power of the
 test, at α = 0.05 and under the model's assumptions.* It is a calibrated error budget, not an
@@ -232,7 +248,7 @@ report. Persistence is fully file-based (no database layer).
 | Metric | Value | Conditions |
 |---|---|---|
 | Full audit | **~4.5 s**, **~210 MB** peak RAM | 958 draws, `n_perm=999`, i5-12500H (CPU-only) |
-| Test suite | **276 passing** (+2 skipped) | 278 collected; CI-green on Ubuntu / Python 3.10 |
+| Test suite | **278 collected**, CI-green | 276 pass / 2 skip locally (Win11); one Windows-only test additionally skips on Ubuntu CI |
 | JIT hot loops | **~2.7×** vs NumPy baseline | permutation PoC (`notebooks/poc_permutation_engine.py`) |
 
 > The ~4 GB RAM figure sometimes quoted for DriftScope is the **budget for the full DriftSim

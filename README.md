@@ -119,15 +119,12 @@ that *are* there. EuroJackpot is the ideal proving ground because it carries its
   (50 numbers × 3 regimes, Benjamini–Yekutieli) rejects **0/150**. The honest watchlist returns
   **None**.
 
-**Why we do not hard-gate on ≥2/3.** Some real departures are, *by construction*, visible to
-only **one** family: a pure pairwise correlation leaves every marginal and every windowed
-frequency exactly uniform, so only co-occurrence can see it (the "clean cell" of the
-complementarity proof). Such a genuine signal would surface as **1/3, not 3/3** — a naive
-"≥2/3 = real" rule would be **structurally blind** to an entire class of defects. So the
-watchlist's *primary* gate is the per-number **FDR** (Family B), with convergence required only
-at **≥1** pillar: a true single-family signal that also clears FDR can still surface, while a
-lone flag *without* FDR support (the R2 pair above) does not. The 1/3 label is a routing
-decision ("requires power context"), not a dismissal.
+**Why we do not hard-gate on ≥2/3.** As shown above, a genuine pure-pair signal is visible to
+**only** co-occurrence, so it surfaces as **1/3, not 3/3** — a naive "≥2/3 = real" rule would be
+structurally blind to that whole class of defects. Instead the watchlist's *primary* gate is the
+per-number **FDR** (Family B), with convergence required only at **≥1** pillar: a single-family
+signal that *also* clears FDR can surface, while a lone flag without FDR support (the R2 pair
+above) does not. The 1/3 label routes ("requires power context"); it does not dismiss.
 
 The framework confirms the known signal and proposes nothing where there is no convergent
 evidence. *Quasi-ground-truth caveat: EuroJackpot is a physical process, not an ideal RNG. What is
@@ -286,12 +283,11 @@ integrations:
 2. **MLOps — data & concept drift** — audit the gap between training and production distributions
    with proper FDR control instead of ad-hoc thresholds.
 3. **FinTech / trading** — regime-shift detection, "random walk" auditing, and manipulation
-   signatures (spoofing, wash trading) via the co-occurrence pillar.
-4. **Cybersecurity** — drift in network traffic / logs, C2 beaconing, co-occurrence anomalies, and
-   LZ-based structure in supposedly random traffic.
-5. **IoT / Industry 4.0** — sensor drift ahead of failure for predictive maintenance, with fewer
-   false alarms.
-6. **Regulated gaming** — slot-machine RNG audits and loot-box drop-rate compliance.
+   signatures (spoofing, wash trading) surfaced by the co-occurrence pillar.
+
+The same pattern extends to cybersecurity (log / traffic drift, C2 beaconing), IoT predictive
+maintenance (sensor drift ahead of failure), and regulated gaming (slot-machine RNG / loot-box
+drop-rate audits).
 
 ## Quickstart
 
@@ -307,7 +303,7 @@ pip install -e ".[dev]"
 driftscope run
 
 # options (n_perm defaults to 999; figures on, hook off)
-driftscope run --n-perm 999 --hook          # add the .webm hook animation (needs ffmpeg)
+driftscope run --hook                        # add the .webm hook animation (needs ffmpeg)
 driftscope run --seed-csv path/to/draws.csv  # audit your own stream
 ```
 
@@ -361,7 +357,8 @@ docs/               # published HTML report + executive summary (GitHub Pages)
 
 All items below are **planned / exploratory** — none is shipped:
 
-- a continuous-stream detector (Gaussian-kernel MMD) — a bridge to sensor / financial data;
+- a **streaming** MMD detector over continuous-valued data (distinct from the shipped
+  windowed-frequency MMD) — a bridge to sensor / financial data;
 - an online mode with a forgetting factor (windowed BOCPD) — a bridge to live streams;
 - a streaming adapter (Kafka / Redpanda) — explicitly *planned*; the pipeline is batch today;
 - a PyPI package with a one-call `audit_stream(...)` API;

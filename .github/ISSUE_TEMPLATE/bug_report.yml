@@ -1,0 +1,38 @@
+name: Bug report
+description: Report a defect in DriftScope (detector, pipeline, CLI, or report).
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for filing a report. Please include enough detail to reproduce.
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: A clear description of the bug and what you expected instead.
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: Steps to reproduce
+      description: Command(s), input data shape, and seed if relevant.
+      placeholder: |
+        driftscope run --seed-csv path/to/draws.csv
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Version / commit
+      description: Output of `git rev-parse --short HEAD`, or the release tag.
+    validations:
+      required: false
+  - type: textarea
+    id: env
+    attributes:
+      label: Environment
+      description: OS, Python version, and key library versions (`python scripts/smoke_test.py`).
+    validations:
+      required: false

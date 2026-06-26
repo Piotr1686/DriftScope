@@ -1,0 +1,5 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Live report & documentation
+    url: https://piotr1686.github.io/DriftScope/
+    about: See the full interactive audit report before filing an issue.

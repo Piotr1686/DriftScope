@@ -1,0 +1,27 @@
+name: Feature or idea
+description: Suggest a detector, dataset, or capability.
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: motivation
+    attributes:
+      label: Motivation
+      description: What problem would this solve? Which stream or domain does it target?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposal
+      description: >
+        What would it do? If it touches `methodology/`, note the pre-registration
+        implication (new statistic / null / threshold).
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Existing detectors or workarounds you have already weighed.
+    validations:
+      required: false

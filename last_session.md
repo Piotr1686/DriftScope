@@ -1,60 +1,54 @@
 # last_session.md
 
-**Sesja:** 2026-06-14 · 21:00-21:45
+**Sesja:** 2026-06-26 · ~20:40-21:35
 **Status:** ✓ Zakończona poprawnie
-**Punkt odniesienia (git):** bfa5754 @ master (zsynchronizowany z origin/master)
+**Punkt odniesienia (git):** a345fb4 @ master (zsynchronizowany z origin/master, CI green)
 
 ---
 
 ## ▸ NASTĘPNY KROK (zacznij tutaj)
 
-**Ostatni merytoryczny stretch (mini-study pary 10,25) domknięty — brak narzuconego
-następnego kroku.** Framework (Ścieżka A) kompletny i opublikowany. Jedyny pozostały
-konkretny item techniczny to **zaakceptowany dług hygieniczny Pages-deploy** (Opcja 1,
-świadomie odłożona w tej sesji jako złe ryzyko/zysk):
+**Wgrać social preview ręcznie:** GitHub repo → **Settings → (General) → Social preview →
+Edit → Upload an image** → wybrać `docs/assets/social_preview.png` (1280×640, już w repo).
 
-- Przełączyć GitHub Pages source z „Deploy from branch /docs" na **„GitHub Actions"** +
-  własny workflow `actions/deploy-pages` (+`actions/upload-pages-artifact`), by wyciszyć
-  Node20-deprecation annotation we wbudowanym `pages-build-deployment` (używa wewnętrznie
-  `checkout@v4`/`upload-artifact@v4`). To **kosmetyka** (warning, nie failure) tykająca
-  żywy deployment → realne ryzyko zepsucia opublikowanej strony za zerowy zysk merytoryczny.
-  Zob. MEMORY [2026-06-06] gotcha Pages-deploy.
+Kontekst: to JEDYNY pozostały rekomendowany krok portfolio-readiness, którego nie da się
+zautomatyzować — GitHub nie ma API (REST/GraphQL) do social preview, to funkcja wyłącznie
+web-UI. Mój token `gh` (scope `repo`) zrobił już wszystko inne (About, Release v0.1.0, push).
+Po wgraniu: framework + portfolio w pełni domknięte.
 
-Kontekst: tej sesji wybrano Opcję 2 z trzech kandydatów (mini-study) i ją domknięto;
-Opcja 3 = „framework done" pozostaje w pełni uprawniona. Alternatywnie — pivot
-predykcyjny (zob. agent-memory `project_pivot_prediction.md`), jeśli kierunek się zmieni.
+Alternatywnie (opcjonalne, do decyzji): (a) ostrożny wariant **K4** — podciągnąć skondensowane
+„What I built" wyżej w README (bez re-orderingu lejka); (b) przygotować `deploy-pages.yml`
+do ręcznego pusha (hygiena Node20 — wymaga scope `workflow`, którego token nie ma; niski ROI).
 
 ---
 
 ## Co zrobiono w tej sesji
 
-- ✓ **PUSH zaległego commitu sesyjnego** (`da3b50d..d716f09`) — stan `/end` z poprzedniej sesji wypchnięty na origin.
-- ✓ **Mini-study pary (10,25) w R2 — Opcja 2** (`bfa5754`, pushed). Reporting/docs-only, prereg v7 nietknięty, zero zmian logiki `src/`:
-  - Odtworzono deterministycznie jedyną flagę negative-controlu: R2 (n=389) współwystąpienia → para **(10,25)**, p=0.024@999 / 0.010@199, z≈4.6. R1/R3 clear (`R1 0/3 · R2 1/3 · R3 0/3`).
-  - Analiza „clean cell": O=9 vs E≈2.19, ale marginesy niewinne (#10=28 najrzadsza, z_marg=−1.84; #25=38 średnia, z_marg=−0.15) → czysto łączna anomalia. Para stabilna względem n_perm. Expected-rate P≈14% na ≥1 flagę w 3 reżimach.
-  - Deliverable: (1) nota `docs/research/2026-06-14_r2_cooccurrence_pair_10_25.md` (PL, pełna anatomia + argument dlaczego FDR strukturalnie nie potwierdza → 1/3, nie finding). (2) `report.qmd §4` data-driven chunk `r2-cooccurrence-pair` (nazywa parę + liczy marginesy z `report`/`draws`, p NIE hardcoded). (3) re-render `docs/{index,report}.html` (grep-zweryfikowany przed kopią).
-- ✓ Walidacja: render OK (ostrzeżenia SSL avgMonFltProxy/cdn.plot.ly = znany fallback proxy AVG); commit + push, drzewo czyste, origin zsynchronizowany.
+- ✓ **Adwersarialny audyt README** — 3 agenci (fact-check / sceptyk statystyczny / krytyk klarowności). Werdykt: liczby solidne (cała tabela PRNG zgodna z `report.html`), ale overclaim przez przemilczenie + redundancja.
+- ✓ **Korekty NAPRAWCZE N1–N7** (`a80e1ce`): ujawniony top-1 CP 2015-01-23 (aftershock); „independent"→„complementary"; Benjamini-Yekutieli „arbitrary dependence"; caveat mocy R1 n=133; licznik 278; crypto-bullet jako negative control; „bit-identical" zawężone do pinned env.
+- ✓ **Polish KLAROWNOŚCI K1/K3/K7/K8** (`df9c05d`): skrócony hard-gate, 6→3 domeny, quickstart, roadmap. K2/K4/K5/K6 świadomie pominięte.
+- ✓ **Portfolio-readiness batch:** About przez `gh` (opis+homepage+12 topiców, było puste); `pyproject` metadane (`05570e9`: urls/keywords/classifiers — naprawiona gotcha TOML zagnieżdżenia `dependencies`); **Release v0.1.0** (tag+notes); social card 1280×640 (`c6420bf`); CONTRIBUTING + issue/PR templates (`a345fb4`).
+- ✓ Wszystkie 5 commitów wypchnięte na origin/master; CI zielone (run `28261897434`).
 
 ## Co zostało (backlog sesji)
 
-- ⟳ **Hygiena Pages-deploy (opcjonalna, zaakceptowany dług):** source → „GitHub Actions" + `actions/deploy-pages` (wycisza Node20 annotation). Świadomie odłożona — złe ryzyko/zysk.
-- ⟳ Stretche domknięte: pełna piątka RNG, demo Streamlit, IT supplement, MM gra 2, mini-study R2 — Ścieżka A kompletna.
-- ⟳ Strategiczne (nie blokujące): czy framework „done", czy pivot predykcyjny (`project_pivot_prediction.md`).
+- ⟳ **Social preview upload** (ręczne, user — patrz NASTĘPNY KROK). Jedyny pozostały rekomendowany item.
+- ⟳ K4 ostrożny re-weight README (opcjonalne, redakcyjne).
+- ⟳ Hygiena Pages-deploy Node20 (wymaga scope `workflow`; niski ROI, świadomie odłożone).
+- ⟳ Profile README + pinned repo na koncie GitHub (poza tym repo).
+- ⟳ Strategiczne: framework „done" (Ścieżka A) vs pivot predykcyjny (`project_pivot_prediction.md`).
 
 ## Aktywne pliki
 
-- ZMIENIONE (committed, pushed): `src/driftscope/reporting/report.qmd` (§4 chunk),
-  `docs/{index,report}.html` (re-render), `docs/research/2026-06-14_r2_cooccurrence_pair_10_25.md` (NOWY)
-- ACTIVE prereg = **v7** (bez zmian — reporting/docs-only)
+- ZMIENIONE (committed, pushed): `README.md` (N1–N7 + K1/K3/K7/K8), `pyproject.toml` (urls/keywords/classifiers), `docs/assets/social_preview.png` (NOWY), `CONTRIBUTING.md` (NOWY), `.github/PULL_REQUEST_TEMPLATE.md` + `.github/ISSUE_TEMPLATE/{bug_report,feature_request,config}.yml` (NOWE)
+- ACTIVE prereg = **v7** (bez zmian — reporting/docs/meta-only)
 
 ## Otwarte pytania
 
-- Brak blokujących. Mini-study (Opcja 2) domknięty zgodnie z decyzją usera.
-- Strategiczne: framework „done" (Ścieżka A) vs hygiena Pages-deploy vs pivot predykcyjny.
+- Brak blokujących. Social preview czeka na ręczne wgranie (limit GitHuba, nie uprawnień).
+- Strategiczne: czy robić ostrożny K4, czy framework „done".
 
 ## Do MEMORY.md (przeniesiono)
 
-- Projektowy `MEMORY.md` (Architektura): **[2026-06-14] Mini-study pary (10,25) w R2** —
-  konkretyzacja jedynej flagi negative-controlu, „clean cell", dlaczego 1/3 nie finding,
-  expected-rate 14%, deliverable (nota + §4 chunk + re-render). HEAD=`bfa5754`, pushed.
-- Agent-memory: bez nowego wpisu (czysta realizacja zaplanowanego stretcha, w pełni zapisana w repo).
+- Projektowy `MEMORY.md` (Architektura): **[2026-06-26]** — adwersarialny audyt README, korekty N1–N7, polish K1/K3/K7/K8, batch portfolio-readiness (About/Release/pyproject/social/community-health), oraz finding dostępu `gh` (scope `repo` tak / `workflow` nie; social preview = BRAK API GitHub). HEAD=`a345fb4`, pushed.
+- Agent-memory: bez nowego wpisu (realizacja w pełni zapisana w repo + MEMORY.md projektu).

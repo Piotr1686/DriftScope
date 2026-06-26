@@ -1,3 +1,66 @@
+## ═══ Sesja zarchiwizowana [2026-06-26 21:35] ═══
+
+# last_session.md
+
+**Sesja:** 2026-06-14 · 21:00-21:45
+**Status:** ✓ Zakończona poprawnie
+**Punkt odniesienia (git):** bfa5754 @ master (zsynchronizowany z origin/master)
+
+---
+
+## ▸ NASTĘPNY KROK (zacznij tutaj)
+
+**Ostatni merytoryczny stretch (mini-study pary 10,25) domknięty — brak narzuconego
+następnego kroku.** Framework (Ścieżka A) kompletny i opublikowany. Jedyny pozostały
+konkretny item techniczny to **zaakceptowany dług hygieniczny Pages-deploy** (Opcja 1,
+świadomie odłożona w tej sesji jako złe ryzyko/zysk):
+
+- Przełączyć GitHub Pages source z „Deploy from branch /docs" na **„GitHub Actions"** +
+  własny workflow `actions/deploy-pages` (+`actions/upload-pages-artifact`), by wyciszyć
+  Node20-deprecation annotation we wbudowanym `pages-build-deployment` (używa wewnętrznie
+  `checkout@v4`/`upload-artifact@v4`). To **kosmetyka** (warning, nie failure) tykająca
+  żywy deployment → realne ryzyko zepsucia opublikowanej strony za zerowy zysk merytoryczny.
+  Zob. MEMORY [2026-06-06] gotcha Pages-deploy.
+
+Kontekst: tej sesji wybrano Opcję 2 z trzech kandydatów (mini-study) i ją domknięto;
+Opcja 3 = „framework done" pozostaje w pełni uprawniona. Alternatywnie — pivot
+predykcyjny (zob. agent-memory `project_pivot_prediction.md`), jeśli kierunek się zmieni.
+
+---
+
+## Co zrobiono w tej sesji
+
+- ✓ **PUSH zaległego commitu sesyjnego** (`da3b50d..d716f09`) — stan `/end` z poprzedniej sesji wypchnięty na origin.
+- ✓ **Mini-study pary (10,25) w R2 — Opcja 2** (`bfa5754`, pushed). Reporting/docs-only, prereg v7 nietknięty, zero zmian logiki `src/`:
+  - Odtworzono deterministycznie jedyną flagę negative-controlu: R2 (n=389) współwystąpienia → para **(10,25)**, p=0.024@999 / 0.010@199, z≈4.6. R1/R3 clear (`R1 0/3 · R2 1/3 · R3 0/3`).
+  - Analiza „clean cell": O=9 vs E≈2.19, ale marginesy niewinne (#10=28 najrzadsza, z_marg=−1.84; #25=38 średnia, z_marg=−0.15) → czysto łączna anomalia. Para stabilna względem n_perm. Expected-rate P≈14% na ≥1 flagę w 3 reżimach.
+  - Deliverable: (1) nota `docs/research/2026-06-14_r2_cooccurrence_pair_10_25.md` (PL, pełna anatomia + argument dlaczego FDR strukturalnie nie potwierdza → 1/3, nie finding). (2) `report.qmd §4` data-driven chunk `r2-cooccurrence-pair` (nazywa parę + liczy marginesy z `report`/`draws`, p NIE hardcoded). (3) re-render `docs/{index,report}.html` (grep-zweryfikowany przed kopią).
+- ✓ Walidacja: render OK (ostrzeżenia SSL avgMonFltProxy/cdn.plot.ly = znany fallback proxy AVG); commit + push, drzewo czyste, origin zsynchronizowany.
+
+## Co zostało (backlog sesji)
+
+- ⟳ **Hygiena Pages-deploy (opcjonalna, zaakceptowany dług):** source → „GitHub Actions" + `actions/deploy-pages` (wycisza Node20 annotation). Świadomie odłożona — złe ryzyko/zysk.
+- ⟳ Stretche domknięte: pełna piątka RNG, demo Streamlit, IT supplement, MM gra 2, mini-study R2 — Ścieżka A kompletna.
+- ⟳ Strategiczne (nie blokujące): czy framework „done", czy pivot predykcyjny (`project_pivot_prediction.md`).
+
+## Aktywne pliki
+
+- ZMIENIONE (committed, pushed): `src/driftscope/reporting/report.qmd` (§4 chunk),
+  `docs/{index,report}.html` (re-render), `docs/research/2026-06-14_r2_cooccurrence_pair_10_25.md` (NOWY)
+- ACTIVE prereg = **v7** (bez zmian — reporting/docs-only)
+
+## Otwarte pytania
+
+- Brak blokujących. Mini-study (Opcja 2) domknięty zgodnie z decyzją usera.
+- Strategiczne: framework „done" (Ścieżka A) vs hygiena Pages-deploy vs pivot predykcyjny.
+
+## Do MEMORY.md (przeniesiono)
+
+- Projektowy `MEMORY.md` (Architektura): **[2026-06-14] Mini-study pary (10,25) w R2** —
+  konkretyzacja jedynej flagi negative-controlu, „clean cell", dlaczego 1/3 nie finding,
+  expected-rate 14%, deliverable (nota + §4 chunk + re-render). HEAD=`bfa5754`, pushed.
+- Agent-memory: bez nowego wpisu (czysta realizacja zaplanowanego stretcha, w pełni zapisana w repo).
+
 ## ═══ Sesja zarchiwizowana [2026-06-14 21:45] ═══
 
 # last_session.md
@@ -301,70 +364,3 @@ w MEMORY.md [2026-06-11].
 
 - Root `MEMORY.md` (Architektura): **[2026-06-11] CODE-REVIEW max 3e70fef** — werdykt,
   15 findingów (pełne ścieżki/linie), 4× doc-sync przed pushem, task struktury `f8a8d06`.
-
-## ═══ Sesja zarchiwizowana [2026-06-11 22:00] ═══
-
-# last_session.md
-
-**Sesja:** 2026-06-09 · ~22:20-22:45
-**Status:** ✓ Zakończona poprawnie
-**Punkt odniesienia (git):** 3e70fef @ master (fix werdyktu MM; LOKALNY — niepushowany)
-
----
-
-## ▸ NASTĘPNY KROK (zacznij tutaj)
-
-**Push commita `3e70fef` na `origin/master` i zweryfikować zielone CI** (`gh run list
---branch master --limit 3 --json status,conclusion,headSha` — sandbox blokuje HTTPS, więc
-przez `gh`, nie WebFetch). Ultrareview odpalony w tej sesji **padł na timeout chmury (>30 min)**,
-więc fix `3e70fef` NIE przeszedł cloud review — przed/po pushu rozważyć `/code-review` lokalnie
-na diffie `7ed0ca6..3e70fef` (reporting/multimulti_audit.py + scripts + test) jako tańszą
-weryfikację zamiast ponawiania ultra.
-
-Kontekst: kod zweryfikowany lokalnie (pytest 272 passed, ruff+mypy czyste, smoke CLI =
-MMD 1/3 → CLEAR), ale commit wisi lokalnie i nie ma niezależnego review. To jedyny luźny
-koniec po spłaceniu długu werdyktu MM.
-
----
-
-## Co zrobiono w tej sesji
-
-- ✓ **NASTĘPNY KROK z poprz. sesji DOMKNIĘTY — werdykt runnera MM = Disagreement, nie OR**
-  (`3e70fef`, lokalny; dług z 2 sesji spłacony):
-  - `MultiMultiAuditRow`: nowe properties `disagreement` (reuse `reporting/disagreement.classify`)
-    + `core_fraction`; `flagged = disagreement.n_agree >= 2` (FLAG dopiero ≥2/3 filarów
-    rdzeniowych BOCPD→h1 / MMD / cooccurrence). Samotny MMD (1/3) = clear.
-  - IT = suplement, Family B = osobna bramka FDR — oba w macierzy, POZA werdyktem.
-  - CLI `scripts/multimulti_audit.py`: kolumna `core_fraction` + uczciwe podsumowanie
-    (usunięte mylące "FLAG | Expected: clear"; zamiana `—` na `-` dla cp1250).
-  - `tests/test_generic_pool_invariants.py`: +6 testów semantyki werdyktu (regresja na
-    lone-MMD bug; 0/3, 1/3, 2/3, 3/3, IT-sam, Family-B-sama).
-  - `BenchmarkRow.flagged` (OR) NIE ruszony — tam OR poprawny (sensitivity/specificity PRNG).
-  - `report.qmd` §6 bez zmian (proza już opisywała 1/3→clear; nie drukuje `mm.verdict`).
-- ✓ Weryfikacja: `pytest -q` = **272 passed, 2 skipped** (5:48); ruff+mypy czyste;
-  smoke CLI window=2000 n-perm=199 → MMD p=0.03 (1/3) → **Verdict CLEAR**.
-- ✓ Pamięć: root MEMORY.md milestone **[2026-06-09 sesja 2]** (fix werdyktu).
-- ✗ Ultrareview (`/code-review ultra`) odpalony → **failed: cloud session >30 min** (timeout
-  infrastruktury, NIE błąd kodu). Fix bez niezależnego review → patrz NASTĘPNY KROK.
-
-## Co zostało (backlog sesji)
-
-- ⟳ **Push `3e70fef` + check CI** (NASTĘPNY KROK; rozważyć lokalny `/code-review` zamiast retry ultra).
-- ⟳ Wizualny check exec summary Ctrl+P = 1×A4 (ryzyko ~zero — z poprz. sesji).
-- ⟳ Cross-check kalibracji BOCPD n=5000 pool=80 (opcjonalny — próg length-invariant).
-
-## Aktywne pliki
-
-- `src/driftscope/reporting/multimulti_audit.py` (verdict — ZACOMMITOWANE w `3e70fef`)
-- `scripts/multimulti_audit.py` (CLI — ZACOMMITOWANE)
-- `tests/test_generic_pool_invariants.py` (+6 testów — ZACOMMITOWANE)
-- ACTIVE prereg = **v7** (bez zmian — MM = reporting, poza §0)
-
-## Otwarte pytania
-
-- Retry ultrareview czy lokalny `/code-review`? (ultra padł na timeout — decyzja w NASTĘPNYM KROKU)
-
-## Do MEMORY.md (przeniesiono)
-
-- Root `MEMORY.md` (Architektura): **[2026-06-09 sesja 2] FIX werdyktu MM** = Disagreement
-  ≥2/3, nie naiwny OR (`3e70fef`); szczegóły properties/CLI/testy + co NIE ruszono.

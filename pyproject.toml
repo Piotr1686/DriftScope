@@ -10,6 +10,21 @@ readme = "README.md"
 requires-python = ">=3.10,<3.11"
 license = { text = "MIT" }
 authors = [{ name = "Piotr Lazowski" }]
+keywords = [
+    "statistics", "change-point-detection", "anomaly-detection", "drift-detection",
+    "hypothesis-testing", "reproducible-research", "bayesian", "monte-carlo",
+    "mmd", "permutation-test", "numba", "time-series",
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3.10",
+    "Topic :: Scientific/Engineering :: Mathematics",
+    "Topic :: Scientific/Engineering :: Information Analysis",
+    "Typing :: Typed",
+]
 
 dependencies = [
     # Compute core — wersje pinned/ograniczone po weryfikacji PoC (2026-05-17)
@@ -42,6 +57,13 @@ dependencies = [
     # Cryptographic PRNG (reusability benchmark — ChaCha20 keystream, ingestion/rng_streams.py)
     "cryptography>=41,<46",
 ]
+
+[project.urls]
+Homepage = "https://piotr1686.github.io/DriftScope/"
+Repository = "https://github.com/Piotr1686/DriftScope"
+"Live report" = "https://piotr1686.github.io/DriftScope/"
+"Executive summary" = "https://piotr1686.github.io/DriftScope/executive_summary.html"
+Issues = "https://github.com/Piotr1686/DriftScope/issues"
 
 [project.optional-dependencies]
 dev = [

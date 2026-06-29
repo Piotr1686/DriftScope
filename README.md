@@ -73,7 +73,9 @@ And — the harder half of the question — how would you keep yourself from "di
 that was never there? Stare at enough numbers and the human brain will always find a pattern.
 
 That second failure mode is the expensive one. A detector that cries wolf is worse than no
-detector at all. **DriftScope is built around the discipline of *not* hallucinating a signal.**
+detector at all. **DriftScope is built around the discipline of *not* hallucinating a signal —
+where "does not hallucinate" means precisely: a calibrated false-positive rate of α = 0.05, within
+the power of the test and under the model's assumptions, not an absolute guarantee.**
 It is a methodology, not a crystal ball: it never tries to predict the next number — it audits
 whether the distribution is still behaving, and reports the *absence* of evidence as honestly as
 its presence.
@@ -188,7 +190,11 @@ is pointed at random-number generators with a known ground truth — two well-be
 cryptographic ones, the same generator with two deliberately injected defects of different kinds,
 and real EuroJackpot for reference (`python scripts/prng_benchmark.py`, n = 1500). Here Family B
 runs **full-stream** (50 numbers) for parity with the synthetic sources — PRNG streams have no
-calendar regimes; the regime-split headline (0/150) above is the canonical EuroJackpot reading:
+calendar regimes; the regime-split headline (0/150) above is the canonical EuroJackpot reading.
+
+The p-values below are **Monte-Carlo permutation estimates** at `n_perm = 199`, so the smallest
+reportable value is the **floor** `1/(n_perm+1) = 0.005` (shown as `≤ 0.005`); non-floor values are
+single-run estimates that vary run to run — read the **verdict column**, not the third decimal:
 
 | Source | Class | Family B (reject/size) | MMD p | Co-occ p | IT (LZ) p | Verdict |
 |---|---|---|---|---|---|---|
@@ -196,8 +202,8 @@ calendar regimes; the regime-split headline (0/150) above is the canonical EuroJ
 | Xorshift64 | good | 0/50 | 0.700 | 0.320 | 0.315 | **clear** |
 | ChaCha20 | crypto | 0/50 | 0.140 | 0.490 | 0.635 | **clear** |
 | AES-CTR-DRBG | crypto | 0/50 | 0.740 | 0.225 | 0.710 | **clear** |
-| MT19937 + bias | **defect** (marginal) | **1/50** | **0.005** | 0.465 | 0.970 | **FLAG** (narrow) |
-| MT19937 + period-truncation | **defect** (short cycle) | **27/50** | **0.005** | **0.005** | **0.005** | **FLAG** (broad) |
+| MT19937 + bias | **defect** (marginal) | **1/50** | **≤ 0.005** | 0.465 | 0.970 | **FLAG** (narrow) |
+| MT19937 + period-truncation | **defect** (short cycle) | **27/50** | **≤ 0.005** | **≤ 0.005** | **≤ 0.005** | **FLAG** (broad) |
 | EuroJackpot (main 1–50) | real | 0/50 | 0.885 | 0.940 | 0.700 | **clear** |
 
 The two defects fire **differently, and that contrast is the showcase.** A *marginal bias* (one

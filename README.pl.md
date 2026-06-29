@@ -75,7 +75,9 @@ nigdy nie było? Wpatruj się w wystarczająco wiele liczb, a ludzki mózg zawsz
 
 To właśnie ten drugi tryb porażki jest kosztowny. Detektor, który wszczyna fałszywy alarm, jest
 gorszy niż brak detektora. **DriftScope jest zbudowany wokół dyscypliny *niehalucynowania*
-sygnału.** To metodologia, nie szklana kula: nigdy nie próbuje przewidzieć następnej liczby —
+sygnału — gdzie „nie halucynuje" znaczy precyzyjnie: skalibrowany odsetek fałszywych alarmów
+α = 0.05, w granicach mocy testu i przy założeniach modelu, a nie absolutna gwarancja.**
+To metodologia, nie szklana kula: nigdy nie próbuje przewidzieć następnej liczby —
 audytuje, czy rozkład wciąż zachowuje się poprawnie, i raportuje *brak* dowodu równie uczciwie jak
 jego obecność.
 
@@ -193,7 +195,12 @@ generatory, dwa kryptograficzne, ten sam generator z dwoma celowo wstrzykniętym
 rodzaju oraz prawdziwy EuroJackpot dla odniesienia (`python scripts/prng_benchmark.py`, n = 1500).
 Tutaj Rodzina B biegnie na **pełnym strumieniu** (50 liczb) dla parytetu ze źródłami syntetycznymi —
 strumienie PRNG nie mają reżimów kalendarzowych; nagłówek z podziałem na reżimy (0/150) powyżej jest
-kanonicznym odczytem EuroJackpot:
+kanonicznym odczytem EuroJackpot.
+
+Wartości p poniżej to **estymaty permutacyjne Monte-Carlo** przy `n_perm = 199`, więc najmniejsza
+raportowalna wartość to **floor** `1/(n_perm+1) = 0,005` (pokazany jako `≤ 0,005`); wartości
+non-floor to estymaty z jednego runu i wahają się między uruchomieniami — czytaj **kolumnę
+werdyktu**, nie trzecią cyfrę po przecinku:
 
 | Źródło | Klasa | Rodzina B (odrzucenia/rozmiar) | MMD p | Współwyst. p | IT (LZ) p | Werdykt |
 |---|---|---|---|---|---|---|
@@ -201,8 +208,8 @@ kanonicznym odczytem EuroJackpot:
 | Xorshift64 | dobry | 0/50 | 0,700 | 0,320 | 0,315 | **clear** |
 | ChaCha20 | krypto | 0/50 | 0,140 | 0,490 | 0,635 | **clear** |
 | AES-CTR-DRBG | krypto | 0/50 | 0,740 | 0,225 | 0,710 | **clear** |
-| MT19937 + bias | **defekt** (marginalny) | **1/50** | **0,005** | 0,465 | 0,970 | **FLAG** (wąski) |
-| MT19937 + period-truncation | **defekt** (krótki cykl) | **27/50** | **0,005** | **0,005** | **0,005** | **FLAG** (szeroki) |
+| MT19937 + bias | **defekt** (marginalny) | **1/50** | **≤ 0,005** | 0,465 | 0,970 | **FLAG** (wąski) |
+| MT19937 + period-truncation | **defekt** (krótki cykl) | **27/50** | **≤ 0,005** | **≤ 0,005** | **≤ 0,005** | **FLAG** (szeroki) |
 | EuroJackpot (główna 1–50) | realny | 0/50 | 0,885 | 0,940 | 0,700 | **clear** |
 
 Oba defekty zapalają się **odmiennie i ten kontrast jest właśnie pokazem.** *Bias marginalny* (jedna

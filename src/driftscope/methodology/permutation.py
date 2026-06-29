@@ -1,18 +1,18 @@
-"""Shuffle test core — kanoniczny silnik permutacyjny (W6, DoD-2).
+"""Shuffle test core — the canonical permutation engine (W6, DoD-2).
 
-Wzorzec (PoC Krok 6, 2026-05-17): `@njit(cache=True)` kontroluje CALY wewnetrzny loop
-permutacji; `joblib.Parallel` (gdy trzeba) nad KONFIGURACJAMI (test, regime, kernel, seed),
-NIGDY nad pojedynczymi permutacjami (16× wolniejsze — MEMORY.md).
+Pattern (PoC Step 6, 2026-05-17): `@njit(cache=True)` controls the ENTIRE inner permutation
+loop; `joblib.Parallel` (when needed) over CONFIGURATIONS (test, regime, kernel, seed),
+NEVER over single permutations (16× slower — MEMORY.md).
 
-**Statystyka MUSI zalezec od KOLEJNOSCI** — permutujemy porzadek losowan, wiec statystyka
-niezmiennicza na permutacje wierszy (np. globalne chi² zliczen) jest degeneracyjna (identyczna
-dla kazdej permutacji → p=1). Kanoniczny order-dependent test: **lag-1 serial overlap** —
-srednia liczba wspolnych liczb miedzy kolejnymi losowaniami |S_t ∩ S_{t+1}|. Pod iid losowania
-sa niezalezne; autocorr (boost liczb z poprzedniego losowania) podnosi overlap → prawy ogon.
-Shuffle kolejnosci zachowuje marginesy, lamie strukture szeregowa → czysty null (DoD-2).
+**The statistic MUST depend on ORDER** — we permute the draw order, so a statistic invariant
+to row permutation (e.g. global chi² of counts) is degenerate (identical for every permutation
+→ p=1). The canonical order-dependent test: **lag-1 serial overlap** — the mean number of
+shared numbers between consecutive draws |S_t ∩ S_{t+1}|. Under iid the draws are independent;
+autocorr (boosting numbers from the previous draw) raises the overlap → right tail. Shuffling
+the order preserves the margins, breaks the serial structure → a clean null (DoD-2).
 
-`permutation_pvalue` to wspolny prymityw (1 + #{null ≥ obs})/(B+1) — konserwatywny estymator
-Monte Carlo (E[FPR] ≤ α). Determinizm (DoD-6): detektor czysta funkcja `draws` (seed z hash).
+`permutation_pvalue` is the shared primitive (1 + #{null ≥ obs})/(B+1) — a conservative Monte
+Carlo estimator (E[FPR] ≤ α). Determinism (DoD-6): a pure function of `draws` (seed from hash).
 """
 from __future__ import annotations
 
@@ -29,10 +29,10 @@ DEFAULT_ALPHA = 0.05
 
 
 def permutation_pvalue(observed: float, null_stats: npt.NDArray[np.float64]) -> float:
-    """Jednostronny (prawy ogon) p-value Monte Carlo: (1 + #{null ≥ obs})/(B + 1).
+    """One-sided (right tail) Monte Carlo p-value: (1 + #{null ≥ obs})/(B + 1).
 
-    `+1` w liczniku i mianowniku → estymator dowodliwie konserwatywny (E[FPR] ≤ α pod H0),
-    nigdy nie zwraca 0. Wspolny prymityw dla wszystkich testow permutacyjnych frameworka.
+    The `+1` in numerator and denominator → a provably conservative estimator (E[FPR] ≤ α under
+    H0), never returns 0. The shared primitive for all of the framework's permutation tests.
     """
     b = null_stats.size
     ge = int(np.sum(null_stats >= observed))
@@ -40,15 +40,15 @@ def permutation_pvalue(observed: float, null_stats: npt.NDArray[np.float64]) -> 
 
 
 def _main_matrix(draws: list[DrawRecord]) -> npt.NDArray[np.int64]:
-    """Macierz (n, k) liczb glownych (1-based); k z danych (EJ=5, MM=20)."""
+    """Matrix (n, k) of main numbers (1-based); k from the data (EJ=5, MM=20)."""
     return np.array([d.main_numbers for d in draws], dtype=np.int64)
 
 
 @njit(cache=True)
 def _mean_lag1_overlap(mat: npt.NDArray[np.int64]) -> float:
-    """Srednia liczba wspolnych liczb miedzy kolejnymi losowaniami (order-dependent).
+    """Mean number of shared numbers between consecutive draws (order-dependent).
 
-    Rozmiar losowania k = mat.shape[1] (wyprowadzony z danych: EJ=5, MM=20).
+    The draw size k = mat.shape[1] (derived from the data: EJ=5, MM=20).
     """
     n = mat.shape[0]
     if n < 2:
@@ -69,14 +69,14 @@ def _mean_lag1_overlap(mat: npt.NDArray[np.int64]) -> float:
 def _shuffle_overlap_null(
     mat: npt.NDArray[np.int64], n_perm: int, seed: int
 ) -> npt.NDArray[np.float64]:
-    """Null lag-1 overlap pod permutacja KOLEJNOSCI (njit hot loop — wzorzec PoC)."""
+    """Lag-1 overlap null under an ORDER permutation (njit hot loop — the PoC pattern)."""
     np.random.seed(seed)
     n = mat.shape[0]
-    kd = mat.shape[1]  # rozmiar losowania (EJ=5, MM=20)
+    kd = mat.shape[1]  # draw size (EJ=5, MM=20)
     idx = np.arange(n)
     out = np.empty(n_perm, dtype=np.float64)
     for k in range(n_perm):
-        # Fisher-Yates na idx
+        # Fisher-Yates on idx
         for i in range(n - 1, 0, -1):
             j = np.random.randint(i + 1)
             tmp = idx[i]
@@ -102,14 +102,14 @@ def serial_overlap_test(
     alpha: float = DEFAULT_ALPHA,
     seed: int = 0,
 ) -> TestResult:
-    """Permutacyjny test zaleznosci szeregowej (lag-1 overlap; DoD-2).
+    """Permutation test of serial dependence (lag-1 overlap; DoD-2).
 
-    H0: kolejnosc losowan wymienialna (iid). Statystyka = sredni overlap kolejnych losowan;
-    null = permutacja kolejnosci. reject_h0 ⇔ p < alpha (prawy ogon — nadmiarowy overlap).
+    H0: the draw order is exchangeable (iid). Statistic = mean overlap of consecutive draws;
+    null = order permutation. reject_h0 ⇔ p < alpha (right tail — excess overlap).
     """
     n = len(draws)
     if n < 4:
-        raise ValueError(f"serial_overlap_test wymaga >=4 losowan, otrzymano {n}")
+        raise ValueError(f"serial_overlap_test requires >=4 draws, got {n}")
     mat = _main_matrix(draws)
     obs = _mean_lag1_overlap(mat)
     null = _shuffle_overlap_null(mat, n_perm, seed & 0xFFFFFFFF)
@@ -135,7 +135,7 @@ def serial_overlap_detector(
     alpha: float = DEFAULT_ALPHA,
     base_seed: int = 20260531,
 ) -> Detector:
-    """Fabryka detektora zgodnego z `calibration.Detector`. Pure-function reseed (DoD-6)."""
+    """Factory for a detector matching `calibration.Detector`. Pure-function reseed (DoD-6)."""
     def detector(draws: list[DrawRecord]) -> TestResult:
         mat = _main_matrix(draws)
         digest = hashlib.blake2b(mat.tobytes(), digest_size=8).digest()

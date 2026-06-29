@@ -1,18 +1,18 @@
 """Specification curve analysis (W6, preregistration_v5 §4).
 
-Sprawdza ROBUSTNOSC wyniku MMD wzgledem arbitralnych wyborow analitycznych: zamiast
-jednej konfiguracji raportujemy siatke i wymagamy, by sygnal nie zalezal od pojedynczego
-wyboru. Siatka (preregistration_v5 §4 — skorygowana z {100,200,400} po W4):
+Checks the ROBUSTNESS of the MMD result against arbitrary analytical choices: instead of a
+single configuration we report a grid and require that the signal not depend on a single
+choice. The grid (preregistration_v5 §4 — corrected from {100,200,400} after W4):
 
-    window N ∈ {15, 25, 40}  ×  bandwidth ∈ {0.5×, 1×, 2×} median heuristic  =  9 punktow
+    window N ∈ {15, 25, 40}  ×  bandwidth ∈ {0.5×, 1×, 2×} median heuristic  =  9 points
 
-**Kryterium stabilnosci (§4):** sygnal NIESTABILNY (→ nie raportowany) jesli znika w
-**> 2/9** punktach (p > α). Symetrycznie: na nullu spec curve powinna byc "stabilnie
-nieistotna" (≤ 2/9 falszywych odrzucen) — to zamyka walidacje FPR dla N ∈ {15, 40},
-ktore v5 §4 zostawial niezwalidowane (dotad tylko N=25; zob. test_specification).
+**Stability criterion (§4):** the signal is UNSTABLE (→ not reported) if it disappears in
+**> 2/9** points (p > α). Symmetrically: on the null the spec curve should be "stably
+insignificant" (≤ 2/9 false rejections) — this closes the FPR validation for N ∈ {15, 40},
+which v5 §4 left unvalidated (until now only N=25; see test_specification).
 
-Spec curve uzywa `mmd_uniform_detector(window, bandwidth_mult)` per punkt (ten sam null
-i framing co reszta MMD). Determinizm (DoD-6): kazdy detektor jest czysta funkcja `draws`.
+The spec curve uses `mmd_uniform_detector(window, bandwidth_mult)` per point (the same null
+and framing as the rest of MMD). Determinism (DoD-6): each detector is a pure function of `draws`.
 """
 from __future__ import annotations
 
@@ -22,17 +22,17 @@ from driftscope.core.types import DrawRecord
 from driftscope.driftsim.null_uniform import Regime
 from driftscope.methodology.k4_mmd import DEFAULT_N_PERM, mmd_uniform_detector
 
-# Siatka §4 (preregistration_v5). Window dopasowane do realnego n (non-overlap).
+# Grid §4 (preregistration_v5). Window fitted to real n (non-overlap).
 SPEC_WINDOWS: tuple[int, ...] = (15, 25, 40)
 SPEC_BANDWIDTH_MULTS: tuple[float, ...] = (0.5, 1.0, 2.0)
-# Maks. liczba punktow nieistotnych przy ktorej sygnal nadal "stabilny" (§4: znika w >2/9).
+# Max number of insignificant points at which the signal is still "stable" (§4: disappears in >2/9).
 MAX_UNSTABLE = 2
 _DEFAULT_ALPHA = 0.05
 
 
 @dataclass(frozen=True)
 class SpecPoint:
-    """Jeden punkt spec curve: (window, bandwidth_mult) → p-value / decyzja."""
+    """One spec-curve point: (window, bandwidth_mult) → p-value / decision."""
 
     window: int
     bandwidth_mult: float
@@ -42,7 +42,7 @@ class SpecPoint:
 
 @dataclass(frozen=True)
 class SpecCurveResult:
-    """Wynik spec curve (9 punktow) + ocena stabilnosci (§4)."""
+    """Spec curve result (9 points) + stability assessment (§4)."""
 
     points: list[SpecPoint]
     alpha: float
@@ -61,7 +61,7 @@ class SpecCurveResult:
 
     @property
     def stable(self) -> bool:
-        """Sygnal stabilny: znika (p>α) w co najwyzej MAX_UNSTABLE punktach (§4)."""
+        """The signal is stable: it disappears (p>α) in at most MAX_UNSTABLE points (§4)."""
         return self.n_nonsignificant <= MAX_UNSTABLE
 
 
@@ -74,10 +74,10 @@ def specification_curve(
     ref_regime: Regime = "R2",
     base_seed: int = 20260531,
 ) -> SpecCurveResult:
-    """Liczy spec curve MMD po siatce `windows` × `bandwidth_mults` (§4).
+    """Computes the MMD spec curve over the grid `windows` × `bandwidth_mults` (§4).
 
-    Kazdy punkt = `mmd_uniform_detector(window, bandwidth_mult)` na tym samym `draws`.
-    Zwraca `SpecCurveResult` z 9 (domyslnie) punktami i ocena `stable`.
+    Each point = `mmd_uniform_detector(window, bandwidth_mult)` on the same `draws`.
+    Returns a `SpecCurveResult` with 9 (by default) points and a `stable` assessment.
     """
     points: list[SpecPoint] = []
     for window in windows:

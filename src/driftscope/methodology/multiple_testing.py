@@ -1,23 +1,23 @@
 """Multiple testing correction — family-aware FDR (W6, preregistration §5, DoD-3).
 
-Dwie rodziny hipotez o roznej strukturze zaleznosci → rozne procedury (preregistration_v5 §5):
+Two hypothesis families with different dependence → different procedures (preregistration_v5 §5):
 
-**Family A — global time-series (12 hipotez):** 4 testy (ADF, KPSS, Bayesian CP, Welch)
-× 3 rezimy. Korekcja: **Benjamini-Hochberg** FDR α=0.05 (primary) + **Storey q-values**
-(secondary sanity — estymuje pi0, mniej konserwatywny gdy duzo prawdziwych H1).
+**Family A — global time-series (12 hypotheses):** 4 tests (ADF, KPSS, Bayesian CP, Welch)
+× 3 regimes. Correction: **Benjamini-Hochberg** FDR α=0.05 (primary) + **Storey q-values**
+(secondary sanity — estimates pi0, less conservative when there are many true H1).
 
-**Family B — per-number (150 hipotez, ratyfikowane v7 §0(A)):** rodzina per-number =
-WYLACZNIE exact-binomial: 50 liczb × 3 rezimy. Korekcja: **Benjamini-Yekutieli** FDR
-α=0.05 (primary) — wazna przy DOWOLNEJ strukturze zaleznosci (zliczenia 5/50 ujemnie
-skorelowane), gdzie zalozenie PRDS dla BH jest niepewne; **BH** jako secondary (mniej
-konserwatywny punkt odniesienia). Storey ODRZUCONY dla Family B (niestabilny przy
-dominujacym nullu). Detektory OMNIBUS (chi² §5, gap GoF §5b, co-occurrence §5c — po 1
-p-value/rezim) NIE wchodza do per-number Family B (blad kategorii v5 skorygowany w v7):
-tworza rodziny komplementarne raportowane OSOBNO, zasilajace Disagreement Protocol (§6.5).
+**Family B — per-number (150 hypotheses, ratified v7 §0(A)):** the per-number family =
+EXCLUSIVELY exact-binomial: 50 numbers × 3 regimes. Correction: **Benjamini-Yekutieli** FDR
+α=0.05 (primary) — valid under ARBITRARY dependence (the 5/50 counts are negatively
+correlated), where the PRDS assumption for BH is uncertain; **BH** as secondary (a less
+conservative reference point). Storey REJECTED for Family B (unstable under a dominant
+null). The OMNIBUS detectors (chi² §5, gap GoF §5b, co-occurrence §5c — 1 p-value/regime each)
+do NOT enter the per-number Family B (a v5 category error corrected in v7):
+they form complementary families reported SEPARATELY, feeding the Disagreement Protocol (§6.5).
 
-Silnik jest agnostyczny: przyjmuje p-values + etykiety, zwraca `FDRResult` (q-values +
-maska odrzucen). BH/BY przez `statsmodels.stats.multitest.multipletests`; Storey wlasny
-(~15 LOC). DoD-3 = ten modul.
+The engine is agnostic: it takes p-values + labels and returns an `FDRResult` (q-values +
+rejection mask). BH/BY via `statsmodels.stats.multitest.multipletests`; Storey is our own
+(~15 LOC). DoD-3 = this module.
 """
 from __future__ import annotations
 
@@ -30,25 +30,25 @@ from statsmodels.stats.multitest import multipletests
 
 Method = Literal["bh", "by", "storey"]
 
-# Rozmiary rodzin (preregistration_v7 §5; licznik Family B skorygowany v7 §0(A): 450 → 150).
-FAMILY_A_SIZE = 12    # 4 testy omnibus × 3 rezimy
-FAMILY_B_SIZE = 150   # 50 liczb × 3 rezimy (tylko exact-binomial; chi²/gap/cooc = omnibus osobno)
+# Family sizes (preregistration_v7 §5; Family B count corrected v7 §0(A): 450 → 150).
+FAMILY_A_SIZE = 12    # 4 omnibus tests × 3 regimes
+FAMILY_B_SIZE = 150   # 50 numbers × 3 regimes (exact-binomial only; chi²/gap/cooc separate)
 
 _DEFAULT_ALPHA = 0.05
-_STOREY_LAMBDA = 0.5  # prog estymacji pi0 (Storey 2002)
+_STOREY_LAMBDA = 0.5  # pi0 estimation threshold (Storey 2002)
 
 
 @dataclass(frozen=True)
 class FDRResult:
-    """Wynik korekcji FDR dla jednej rodziny hipotez."""
+    """The FDR correction result for one hypothesis family."""
 
     method: str
     alpha: float
     labels: list[str]
     p_values: npt.NDArray[np.float64]
-    q_values: npt.NDArray[np.float64]          # adjusted p-values (monotoniczne)
-    reject: npt.NDArray[np.bool_]              # maska bool: q <= alpha
-    # secondary: np. {"storey": q-values}
+    q_values: npt.NDArray[np.float64]          # adjusted p-values (monotone)
+    reject: npt.NDArray[np.bool_]              # bool mask: q <= alpha
+    # secondary: e.g. {"storey": q-values}
     secondary: dict[str, npt.NDArray[np.float64]] = field(default_factory=dict)
 
     @property
@@ -60,13 +60,13 @@ class FDRResult:
 
 
 # ---------------------------------------------------------------------------
-# Procedury bazowe (adjusted p-values / q-values)
+# Base procedures (adjusted p-values / q-values)
 # ---------------------------------------------------------------------------
 
 def bh_adjusted(
     pvals: npt.NDArray[np.float64], alpha: float = _DEFAULT_ALPHA
 ) -> npt.NDArray[np.float64]:
-    """Benjamini-Hochberg adjusted p-values (q-values). PRDS-zalezne."""
+    """Benjamini-Hochberg adjusted p-values (q-values). PRDS-dependent."""
     if pvals.size == 0:
         return np.empty(0)
     _, q, _, _ = multipletests(pvals, alpha=alpha, method="fdr_bh")
@@ -76,7 +76,7 @@ def bh_adjusted(
 def by_adjusted(
     pvals: npt.NDArray[np.float64], alpha: float = _DEFAULT_ALPHA
 ) -> npt.NDArray[np.float64]:
-    """Benjamini-Yekutieli adjusted p-values — wazne przy DOWOLNEJ zaleznosci."""
+    """Benjamini-Yekutieli adjusted p-values — valid under ARBITRARY dependence."""
     if pvals.size == 0:
         return np.empty(0)
     _, q, _, _ = multipletests(pvals, alpha=alpha, method="fdr_by")
@@ -86,22 +86,22 @@ def by_adjusted(
 def storey_qvalues(
     pvals: npt.NDArray[np.float64], lam: float = _STOREY_LAMBDA
 ) -> npt.NDArray[np.float64]:
-    """Storey (2002/2003) q-values z estymacja pi0 = #{p>lam}/(m·(1−lam)).
+    """Storey (2002/2003) q-values with pi0 estimation = #{p>lam}/(m·(1−lam)).
 
-    Mniej konserwatywny niz BH gdy frakcja prawdziwych H1 jest duza (pi0 < 1). Dla
-    Family A jako secondary sanity. Zwraca q-values w oryginalnej kolejnosci `pvals`.
+    Less conservative than BH when the fraction of true H1 is large (pi0 < 1). For
+    Family A as a secondary sanity check. Returns q-values in the original order of `pvals`.
     """
     m = pvals.size
     if m == 0:
         return np.empty(0)
     pi0 = min(1.0, float((pvals > lam).sum()) / (m * (1.0 - lam))) if lam < 1.0 else 1.0
-    pi0 = max(pi0, 1.0 / m)  # guard: nie zerowy
+    pi0 = max(pi0, 1.0 / m)  # guard: not zero
 
     order = np.argsort(pvals)
     p_sorted = pvals[order]
     ranks = np.arange(1, m + 1)
     q_sorted = pi0 * m * p_sorted / ranks
-    # wymus monotonicznosc od najwiekszego p (cummin wstecz)
+    # enforce monotonicity from the largest p (backward cummin)
     q_sorted = np.minimum.accumulate(q_sorted[::-1])[::-1]
     q_sorted = np.clip(q_sorted, 0.0, 1.0)
     q = np.empty(m)
@@ -110,7 +110,7 @@ def storey_qvalues(
 
 
 # ---------------------------------------------------------------------------
-# Korekcja per-rodzina (preregistration_v5 §5)
+# Per-family correction (preregistration_v5 §5)
 # ---------------------------------------------------------------------------
 
 def _as_arrays(
@@ -122,7 +122,7 @@ def _as_arrays(
     if len(labels) != p.size:
         raise ValueError(f"len(labels)={len(labels)} != len(pvals)={p.size}")
     if p.size and (p.min() < 0.0 or p.max() > 1.0):
-        raise ValueError("p-values musza byc w [0, 1]")
+        raise ValueError("p-values must be in [0, 1]")
     return p, list(labels)
 
 

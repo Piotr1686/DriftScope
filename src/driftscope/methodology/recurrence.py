@@ -1,34 +1,35 @@
 """Recurrence / gap analysis (W6, preregistration §5b).
 
-Czas (liczba losowan) miedzy kolejnymi wystapieniami danej liczby. Pod nullem uniform-iid
-gap ~ Geometric(q), q = 5/50 = 0.1 dla puli glownej. Ten modul testuje TEMPORALNA strukture
-pojawiania sie liczb — wymiar ortogonalny do marginesu (chi²) i do wspolwystapien (§5c).
+Time (number of draws) between consecutive appearances of a given number. Under the
+uniform-iid null gap ~ Geometric(q), q = 5/50 = 0.1 for the main pool. This module tests the
+TEMPORAL structure of number appearances — a dimension orthogonal to the margin (chi²) and to
+co-occurrences (§5c).
 
-**Co wykrywa, a co NIE (kluczowa wlasciwosc nulla):** null = permutacja KOLEJNOSCI losowan
-(draw-order shuffle). Permutacja zachowuje LICZNOSC kazdej liczby → test WARUNKUJE na
-marginesie. Skutek:
-- WYKRYWA clumping/runs (autocorr): liczba reapearuje szybciej niz Geometric → nadmiar
-  krotkich gapow; shuffle to niszczy → obserwowane w ogonie nulla.
-- WYKRYWA periodycznosc / niestacjonarnosc arrivali (seasonality, trend) — uklad gapow
-  odbiega od wymienialnego.
-- SLEPY na freq_shift (czysto marginalny): wyzsza liczebnosc daje krotsze gapy, ALE shuffle
-  ma te sama liczebnosc → null tez przesuniety → marginal skonditionowany out. To CECHA:
-  marginal lapie chi², recurrence dokłada wymiar temporalny.
+**What it detects, and what it does NOT (the key property of the null):** null = a permutation
+of the draw ORDER (draw-order shuffle). The permutation preserves each number's COUNT → the
+test CONDITIONS on the margin. Consequences:
+- DETECTS clumping/runs (autocorr): a number reappears faster than Geometric → an excess of
+  short gaps; shuffling destroys this → observed in the tail of the null.
+- DETECTS periodicity / non-stationarity of arrivals (seasonality, trend) — the gap pattern
+  departs from exchangeable.
+- BLIND to freq_shift (purely marginal): a higher count gives shorter gaps, BUT the shuffle
+  has the same count → the null shifts too → the marginal is conditioned out. This is a FEATURE:
+  the marginal is caught by chi², recurrence adds the temporal dimension.
 
-**Statystyka (KS vs Geometric, permutacyjnie kalibrowana):** per liczba D_k = KS distance
-empirycznego CDF gapow od Geometric(q). ⚠️ NIE analityczny p-value KS (niewazny dla
-rozkladow dyskretnych — preregistration §5b). Omnibus = **max_k D_k** (jak max-pair w §5c),
-null = draw-order shuffle (max_k D_k per shuffle), lokalizacja: najbardziej anomalna liczba.
+**Statistic (KS vs Geometric, permutation-calibrated):** per number D_k = the KS distance of
+the empirical gap CDF from Geometric(q). ⚠️ NOT the analytic KS p-value (invalid for discrete
+distributions — preregistration §5b). Omnibus = **max_k D_k** (like max-pair in §5c),
+null = draw-order shuffle (max_k D_k per shuffle), location: the most anomalous number.
 p = (1 + #{maxD_perm ≥ maxD_obs})/(n_perm+1).
 
-Dodatkowo (diagnostyka §5b, NIE silnik decyzji):
-- **Nelson-Aalen** cumulative hazard per liczba — liniowosc (nachylenie ≈ q) = stala
-  intensywnosc = zgodnosc z uniform.
-- **EVT max-gap** — maksymalny gap ma asymptotycznie rozklad Gumbela (gapy geometryczne
-  w domenie przyciagania Gumbela); p-value Gumbel jako sanity dla skrajnie dlugich przerw.
+Additionally (§5b diagnostics, NOT the decision engine):
+- **Nelson-Aalen** cumulative hazard per number — linearity (slope ≈ q) = constant
+  intensity = consistency with uniform.
+- **EVT max-gap** — the maximum gap asymptotically has a Gumbel distribution (geometric gaps
+  in the Gumbel domain of attraction); the Gumbel p-value as a sanity check for extremely long gaps.
 
-Determinizm (DoD-6): detektor jest CZYSTA FUNKCJA wejscia — seed shuffle z hash draws.
-Zasila Family B FDR (§5).
+Determinism (DoD-6): a PURE FUNCTION of the input — the shuffle seed from the hash of draws.
+Feeds Family B FDR (§5).
 """
 from __future__ import annotations
 
@@ -41,20 +42,20 @@ from driftscope.core.types import Detector, DrawRecord, TestResult
 
 _MAIN_POOL_SIZE = 50
 _MAIN_DRAW = 5
-_Q_MAIN = _MAIN_DRAW / _MAIN_POOL_SIZE  # 0.1 — P(liczba w jednym losowaniu) pod uniform
+_Q_MAIN = _MAIN_DRAW / _MAIN_POOL_SIZE  # 0.1 — P(number in one draw) under uniform
 
 DEFAULT_N_PERM = 999
 DEFAULT_ALPHA = 0.05
 
 
 # ---------------------------------------------------------------------------
-# Gapy
+# Gaps
 # ---------------------------------------------------------------------------
 
 def _incidence_matrix(draws: list[DrawRecord]) -> npt.NDArray[np.int8]:
-    """Binarna macierz (n_draws, pool): M[t, k]=1 ⇔ liczba (k+1) w losowaniu t.
+    """Binary matrix (n_draws, pool): M[t, k]=1 ⇔ number (k+1) in draw t.
 
-    Szerokosc puli wyprowadzona z rekordow (`draws[0].pool_size`; EJ=50, MM=80).
+    The pool width is derived from the records (`draws[0].pool_size`; EJ=50, MM=80).
     """
     n = len(draws)
     pool = draws[0].pool_size if draws else _MAIN_POOL_SIZE
@@ -66,17 +67,17 @@ def _incidence_matrix(draws: list[DrawRecord]) -> npt.NDArray[np.int8]:
 
 
 def number_gaps(draws: list[DrawRecord], number: int) -> npt.NDArray[np.int64]:
-    """Gapy (w losowaniach) miedzy kolejnymi wystapieniami `number` (1-based).
+    """Gaps (in draws) between consecutive appearances of `number` (1-based).
 
-    Gap = roznica indeksow losowan kolejnych wystapien (>=1). Zwraca [] gdy liczba
-    pojawia sie < 2 razy (brak gapu).
+    Gap = the index difference of consecutive appearances (>=1). Returns [] when the number
+    appears < 2 times (no gap).
     """
     col = _incidence_matrix(draws)[:, number - 1]
     return _gaps_from_column(col)
 
 
 def _gaps_from_column(col: npt.NDArray[np.int8]) -> npt.NDArray[np.int64]:
-    """Gapy z binarnej kolumny wystapien (1D 0/1)."""
+    """Gaps from a binary appearance column (1D 0/1)."""
     pos = np.flatnonzero(col)
     if pos.size < 2:
         return np.empty(0, dtype=np.int64)
@@ -84,10 +85,10 @@ def _gaps_from_column(col: npt.NDArray[np.int8]) -> npt.NDArray[np.int64]:
 
 
 def _ks_vs_geometric(gaps: npt.NDArray[np.int64], q: float) -> float:
-    """KS distance empirycznego CDF gapow od Geometric(q) na {1,2,...}.
+    """KS distance of the empirical gap CDF from Geometric(q) on {1,2,...}.
 
-    Geometric CDF: F(g) = 1 − (1−q)^g dla g >= 1. Wariant dwustronny (gorny i dolny
-    skok empirycznego CDF). Zwraca 0.0 dla < 2 gapow (brak sygnalu).
+    Geometric CDF: F(g) = 1 − (1−q)^g for g >= 1. Two-sided variant (upper and lower
+    jumps of the empirical CDF). Returns 0.0 for < 2 gaps (no signal).
     """
     m = gaps.size
     if m < 2:
@@ -102,7 +103,7 @@ def _ks_vs_geometric(gaps: npt.NDArray[np.int64], q: float) -> float:
 
 
 def _max_ks_over_numbers(m: npt.NDArray[np.int8], q: float) -> tuple[float, int]:
-    """(max_k D_k, argmax_k) po wszystkich liczbach puli (m.shape[1]) dla macierzy `m`."""
+    """(max_k D_k, argmax_k) over all pool numbers (m.shape[1]) for the matrix `m`."""
     best_d = 0.0
     best_k = 0
     for k in range(m.shape[1]):
@@ -114,18 +115,18 @@ def _max_ks_over_numbers(m: npt.NDArray[np.int8], q: float) -> tuple[float, int]
 
 
 # ---------------------------------------------------------------------------
-# Nelson-Aalen cumulative hazard (diagnostyka §5b)
+# Nelson-Aalen cumulative hazard (§5b diagnostics)
 # ---------------------------------------------------------------------------
 
 def nelson_aalen(
     gaps: npt.NDArray[np.int64],
 ) -> tuple[npt.NDArray[np.int64], npt.NDArray[np.float64]]:
-    """Estymator Nelson-Aalen skumulowanego hazardu z gapow (~20 LOC, bez lifelines).
+    """Nelson-Aalen cumulative-hazard estimator from gaps (~20 LOC, no lifelines).
 
-    Traktuje gapy jako czasy zdarzen (recurrence). Hazard krokowy w czasie t = liczba
-    zdarzen w t / liczba "at risk" (gapy >= t). Zwraca (times, cumhaz) — schodkowa funkcja.
-    Pod uniform-iid skumulowany hazard rosnie ~liniowo z nachyleniem q/(1−q)·... ≈ stala
-    intensywnosc; krzywizna sygnalizuje niestacjonarnosc intensywnosci.
+    Treats gaps as event times (recurrence). The step hazard at time t = the number of
+    events at t / the number "at risk" (gaps >= t). Returns (times, cumhaz) — a step function.
+    Under uniform-iid the cumulative hazard rises ~linearly with slope q/(1−q)·... ≈ constant
+    intensity; curvature signals non-stationarity of the intensity.
     """
     if gaps.size == 0:
         return np.empty(0, dtype=np.int64), np.empty(0, dtype=np.float64)
@@ -142,10 +143,10 @@ def nelson_aalen(
 
 
 def nelson_aalen_linearity_deviation(gaps: npt.NDArray[np.int64]) -> float:
-    """Maks. odchylenie skumulowanego hazardu od prostej (0,0)→(t_max, H_max).
+    """Max deviation of the cumulative hazard from the line (0,0)→(t_max, H_max).
 
-    0 = idealnie liniowy (stala intensywnosc, zgodne z uniform); rosnie przy krzywiznie
-    (zmienna intensywnosc). Czysta liczba diagnostyczna, NIE testowana permutacyjnie tutaj.
+    0 = perfectly linear (constant intensity, consistent with uniform); grows with curvature
+    (varying intensity). A pure diagnostic number, NOT permutation-tested here.
     """
     times, cumhaz = nelson_aalen(gaps)
     if times.size < 3:
@@ -159,29 +160,29 @@ def nelson_aalen_linearity_deviation(gaps: npt.NDArray[np.int64]) -> float:
 
 
 # ---------------------------------------------------------------------------
-# EVT max-gap (Gumbel, diagnostyka §5b)
+# EVT max-gap (Gumbel, §5b diagnostics)
 # ---------------------------------------------------------------------------
 
 def evt_max_gap_pvalue(gaps: npt.NDArray[np.int64], q: float) -> tuple[int, float]:
-    """(max_gap, p-value) skrajnie dlugiej przerwy wg asymptotyki Gumbela.
+    """(max_gap, p-value) of an extremely long gap per the Gumbel asymptotics.
 
-    Dla gapow ~ Geometric(q), maksimum z m gapow ma w przyblizeniu rozklad maks.
-    rozkladu geometrycznego: P(max <= x) ≈ (1 − (1−q)^x)^m. p-value = P(max >= obs)
-    = 1 − (1 − (1−q)^(obs−1))^m (uzywa obs−1 dla prawego ogona, konserwatywnie).
-    Sanity dla pojedynczej skrajnej przerwy; NIE zastepuje testu KS.
+    For gaps ~ Geometric(q), the maximum of m gaps approximately follows the maximum of a
+    geometric distribution: P(max <= x) ≈ (1 − (1−q)^x)^m. p-value = P(max >= obs)
+    = 1 − (1 − (1−q)^(obs−1))^m (uses obs−1 for the right tail, conservatively).
+    A sanity check for a single extreme gap; does NOT replace the KS test.
     """
     if gaps.size == 0:
         return 0, 1.0
     m = gaps.size
     obs = int(gaps.max())
-    # P(pojedynczy gap >= obs) = (1−q)^(obs−1); P(max < obs) = (1 − (1−q)^(obs−1))^m
+    # P(single gap >= obs) = (1−q)^(obs−1); P(max < obs) = (1 − (1−q)^(obs−1))^m
     tail_single = (1.0 - q) ** (obs - 1)
     p = 1.0 - (1.0 - tail_single) ** m
     return obs, float(min(max(p, 0.0), 1.0))
 
 
 # ---------------------------------------------------------------------------
-# Test recurrence (gap GoF, permutacyjnie kalibrowany)
+# Recurrence test (gap GoF, permutation-calibrated)
 # ---------------------------------------------------------------------------
 
 def gap_recurrence_test(
@@ -191,19 +192,19 @@ def gap_recurrence_test(
     alpha: float = DEFAULT_ALPHA,
     seed: int = 0,
 ) -> TestResult:
-    """Permutacyjny test struktury temporalnej gapow (preregistration §5b).
+    """Permutation test of the temporal gap structure (preregistration §5b).
 
-    H0: pojawienia kazdej liczby sa wymienialne w czasie (uklad iid). Statystyka omnibus
-    = max_k KS(gapy_k, Geometric(q)); null = permutacja kolejnosci losowan (zachowuje
-    licznosci → warunkuje na marginesie). reject_h0 ⇔ p < alpha. Lokalizuje najbardziej
-    anomalna liczbe (top_number, 1-based).
+    H0: each number's appearances are exchangeable in time (an iid pattern). The omnibus
+    statistic = max_k KS(gaps_k, Geometric(q)); null = a permutation of the draw order (preserves
+    counts → conditions on the margin). reject_h0 ⇔ p < alpha. Locates the most
+    anomalous number (top_number, 1-based).
 
-    `q` = P(liczba w jednym losowaniu) pod uniform; None → wyprowadzone z danych jako
+    `q` = P(number in one draw) under uniform; None → derived from the data as
     k/pool (EJ=5/50=0.1, MM=20/80=0.25).
     """
     n = len(draws)
     if n < 4:
-        raise ValueError(f"gap_recurrence_test wymaga >=4 losowan, otrzymano {n}")
+        raise ValueError(f"gap_recurrence_test requires >=4 draws, got {n}")
     if q is None:
         q = len(draws[0].main_numbers) / draws[0].pool_size
     m0 = _incidence_matrix(draws)
@@ -228,7 +229,7 @@ def gap_recurrence_test(
             "n_draws": n,
             "n_perm": n_perm,
             "q": q,
-            "top_number": k_obs + 1,   # najbardziej anomalna liczba (1-based)
+            "top_number": k_obs + 1,   # most anomalous number (1-based)
             "h0": "per-number arrivals exchangeable in time (uniform-iid)",
             "null": "draw-order permutation (counts preserved → conditions on marginal)",
         },
@@ -241,10 +242,10 @@ def recurrence_detector(
     alpha: float = DEFAULT_ALPHA,
     base_seed: int = 20260531,
 ) -> Detector:
-    """Fabryka detektora zgodnego z `calibration.Detector` (interfejs harnessu W3/W4/W6).
+    """Factory for a detector matching `calibration.Detector` (the W3/W4/W6 harness interface).
 
-    Determinizm (DoD-6): czysta funkcja `draws` — seed permutacji z digestu zawartosci
-    `draws` ⊕ `base_seed` (jak k4_mmd / cooccurrence).
+    Determinism (DoD-6): a pure function of `draws` — the permutation seed from a digest of
+    the contents of `draws` ⊕ `base_seed` (like k4_mmd / cooccurrence).
     """
     def detector(draws: list[DrawRecord]) -> TestResult:
         mat = _incidence_matrix(draws)

@@ -1,19 +1,19 @@
-"""Block bootstrap — alternatywny null zachowujacy zaleznosc krotkozasiegowa (W6).
+"""Block bootstrap — an alternative null preserving short-range dependence (W6).
 
-Permutacyjny null (`permutation.py`, `recurrence.py`) zaklada PELNA wymienialnosc (iid) —
-shuffle niszczy CALA strukture szeregowa. Moving block bootstrap (MBB) jest alternatywnym,
-bardziej KONSERWATYWNYM nullem: resampluje nakladajace sie BLOKI kolejnych losowan, wiec
-zachowuje zaleznosc w obrebie bloku (dlugosci `block_size`), a losowo laczy bloki. Sygnal
-ktory przebija ten null NIE jest wyjasniony zaleznoscia krotkozasiegowa skali `block_size`.
+The permutation null (`permutation.py`, `recurrence.py`) assumes FULL exchangeability (iid) —
+shuffling destroys ALL serial structure. The moving block bootstrap (MBB) is an alternative,
+more CONSERVATIVE null: it resamples overlapping BLOCKS of consecutive draws, so it preserves
+within-block dependence (of length `block_size`) and randomly concatenates blocks. A signal
+that breaks through this null is NOT explained by short-range dependence at the `block_size` scale.
 
-Block size ∈ {5, 10, 20} (pre-registered). Statystyka domyslna = lag-1 serial overlap
-(ta sama co `permutation.serial_overlap_test`) → bezposrednie porownanie obu nulli:
-- shuffle (permutation): bardzo czuly na autocorr (lag-1) — power ~1.0.
-- block bootstrap: ABSORBUJE lag-1 w obrebie bloku → niska power na autocorr (cecha:
-  rozroznia zaleznosc krotkozasiegowa od dluzszego zasiegu). Luka shuffle−block = sygnatura
-  zasiegu zaleznosci. Na nullu iid oba daja FPR ≈ α.
+Block size ∈ {5, 10, 20} (pre-registered). The default statistic = lag-1 serial overlap
+(the same as `permutation.serial_overlap_test`) → a direct comparison of the two nulls:
+- shuffle (permutation): very sensitive to autocorr (lag-1) — power ~1.0.
+- block bootstrap: ABSORBS lag-1 within a block → low power on autocorr (a feature:
+  distinguishes short-range dependence from longer range). The shuffle−block gap = a signature
+  of the dependence range. On the iid null both give FPR ≈ α.
 
-Determinizm (DoD-6): detektor czysta funkcja `draws` (seed z hash). njit hot loop (Os 3).
+Determinism (DoD-6): a pure function of `draws` (seed from hash). njit hot loop (Axis 3).
 """
 from __future__ import annotations
 
@@ -36,15 +36,15 @@ _DEFAULT_BLOCK = 10
 def _block_boot_overlap_null(
     mat: npt.NDArray[np.int64], n_boot: int, block_size: int, seed: int
 ) -> npt.NDArray[np.float64]:
-    """Null lag-1 overlap pod moving block bootstrap (njit hot loop).
+    """Lag-1 overlap null under the moving block bootstrap (njit hot loop).
 
-    Kazda replika: skleja ceil(n/block_size) nakladajacych sie blokow dlugosci `block_size`
-    (losowy start ∈ [0, n−block_size]), bierze pierwsze n indeksow, liczy sredni overlap
-    kolejnych losowan w tej resamplowanej kolejnosci.
+    Each replica: concatenates ceil(n/block_size) overlapping blocks of length `block_size`
+    (random start ∈ [0, n−block_size]), takes the first n indices, computes the mean overlap
+    of consecutive draws in this resampled order.
     """
     np.random.seed(seed)
     n = mat.shape[0]
-    kd = mat.shape[1]  # rozmiar losowania (EJ=5, MM=20)
+    kd = mat.shape[1]  # draw size (EJ=5, MM=20)
     n_blocks = (n + block_size - 1) // block_size
     idx = np.empty(n_blocks * block_size, dtype=np.int64)
     out = np.empty(n_boot, dtype=np.float64)
@@ -76,17 +76,17 @@ def block_bootstrap_test(
     alpha: float = DEFAULT_ALPHA,
     seed: int = 0,
 ) -> TestResult:
-    """Test zaleznosci szeregowej z nullem moving block bootstrap (alternatywny null).
+    """Serial-dependence test with a moving block bootstrap null (an alternative null).
 
-    H0: struktura szeregowa wyjasniona zaleznoscia w obrebie blokow dlugosci `block_size`.
-    Statystyka = lag-1 serial overlap. reject_h0 ⇔ p < alpha (prawy ogon — overlap przebija
-    null blokowy). Bardziej konserwatywny niz shuffle dla zaleznosci skali ≤ block_size.
+    H0: the serial structure is explained by within-block dependence of length `block_size`.
+    Statistic = lag-1 serial overlap. reject_h0 ⇔ p < alpha (right tail — overlap breaks through
+    the block null). More conservative than shuffle for dependence at scale ≤ block_size.
     """
     n = len(draws)
     if n < 4:
-        raise ValueError(f"block_bootstrap_test wymaga >=4 losowan, otrzymano {n}")
+        raise ValueError(f"block_bootstrap_test requires >=4 draws, got {n}")
     if block_size < 1 or block_size > n:
-        raise ValueError(f"block_size={block_size} poza [1, n={n}]")
+        raise ValueError(f"block_size={block_size} out of [1, n={n}]")
     mat = _main_matrix(draws)
     obs = _mean_lag1_overlap(mat)
     null = _block_boot_overlap_null(mat, n_boot, block_size, seed & 0xFFFFFFFF)
@@ -114,7 +114,7 @@ def block_bootstrap_detector(
     alpha: float = DEFAULT_ALPHA,
     base_seed: int = 20260531,
 ) -> Detector:
-    """Fabryka detektora zgodnego z `calibration.Detector`. Pure-function reseed (DoD-6)."""
+    """Factory for a detector matching `calibration.Detector`. Pure-function reseed (DoD-6)."""
     def detector(draws: list[DrawRecord]) -> TestResult:
         mat = _main_matrix(draws)
         digest = hashlib.blake2b(mat.tobytes(), digest_size=8).digest()

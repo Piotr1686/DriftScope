@@ -280,6 +280,15 @@ Sesja portfolio/docs-only — zero methodology, prereg v7 nietknięty. Domknięt
 
 ---
 
+**[2026-06-29] Audyt README↔kod (dowodowy + 5 ról + adwersarialny) + MUST/SHOULD/NICE fixy + START migracji PL→EN całego repo. HEAD=`4ed01bb`, pushed.**
+Najpierw pełny audyt z `CLAUDE_CODE_README_AUDIT_PROMPT.md`: zweryfikowano ~27 claimów ŻYWYMI uruchomieniami (pytest, run_audit, prng_benchmark). **Wszystkie liczby headline EJ broni się 1:1** (4.63s/221MB, daty CP 2015-01-23/2014-11-28/2022-03-29 @ 0.47/0.41/0.40, R1/R2/R3=133/389/436, 0/150 BY, watchlist None). **Główny finding:** `p=0.005` w tabeli PRNG to **permutation floor** (1/200, tabela gen. z n_perm=199, NIE z udokumentowanego default 499→floor 0.002), nieoznaczony. Deliverables w `docs/audit/` (`README_AUDIT.md` + `README_REVISED.md/.pl.md`, commit `c6104d5`).
+- **MUST fixy (commit `5e6205b`):** tabela PRNG floor oznaczony `≤`; caveat „does not hallucinate = α=0.05, w granicach mocy" przyciągnięty do hasła §30-sec (EN+PL).
+- **B — defekt kodu (commit `09b5044`):** `FAMILY_B_SIZE 450→150` w `multiple_testing.py` (stała niosła starą numerację v5; prereg v7 §0(A) skorygował — per-number = tylko exact-binomial 50×3; chi²/gap/cooc = omnibus osobno). README (150) było poprawniejsze niż kod.
+- **SHOULD/NICE (commity `f17242a`+`28b50aa`):** mini-słowniczek, sekcja „What you'll see" z realnym outputem, złagodzone „must agree" (informatywna zgodność, nie twardy próg), DoD-6 „pinned env" + manifest nad input seed CSV, FPR=0.035 z notą MC/CI, „Beyond the Lottery" podniesione, linki do testów, **nowy `test_mmd_blind_to_pair_corr`** (pair=0.02 vs freq=1.00 — domyka symetrię claimu komplementarności H1+MMD ślepe). **Output CLI/raportu przełączony PL→EN** (`pipeline.summary()`, komunikaty watchlisty, echo cli) — zachowane tokeny POSITIVE/NEGATIVE CONTROL + „honest null" (asercje test_cli/test_pipeline trzymają). Testy: **279 collected (277 pass/2 skip)**.
+- **DECYZJA: cały projekt → angielski** (user, 2026-06-29), za wyjątkiem `README.pl.md`. Odwraca konwencję CLAUDE.md „Język komentarzy w kodzie: polski" (do flipu przy domknięciu migracji). Zakres A „shipped+active": 70 .py (src/tests/scripts/demo) + report.qmd + prereg_v7 + re-render HTML. **Moje (asystenta) odpowiedzi do usera ZOSTAJĄ PL** („Język komunikacji" ≠ artefakty). **Postęp i18n: ZROBIONE+pushed** `core/` (4) + `ingestion/` (3) + `methodology/` (8) = 15 plików (commity `1606e64`/`c67eeb4`/`4ed01bb`). Proza+komentarze+komunikaty błędów EN, kod 1:1, ruff+mypy+testy zielone po każdym batchu. **Gotcha:** komunikaty błędów matchowane w testach (np. `non-overlap` w k4_mmd) — zachować token; line-length E501 po translacji (długie PL→EN docstringi) — skracać.
+
+---
+
 ## Rozwiązane problemy
 
 **[2026-06-05] cryptography uzyte ale niezadeklarowane → CI mypy --strict fail na ubuntu (Win11 zielone)**

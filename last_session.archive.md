@@ -1,3 +1,59 @@
+## ═══ Sesja zarchiwizowana [2026-06-29 18:40] ═══
+
+# last_session.md
+
+**Sesja:** 2026-06-27 · ~21:30-21:50
+**Status:** ✓ Zakończona poprawnie
+**Punkt odniesienia (git):** 7a4010d @ master (zsynchronizowany z origin/master)
+
+---
+
+## ▸ NASTĘPNY KROK (zacznij tutaj)
+
+**Strategiczna decyzja: framework „done" (Ścieżka A) vs pivot predykcyjny vs polish.**
+Brak twardego zadania technicznego w kolejce — wszystkie rekomendowane kroki
+portfolio-readiness domknięte. Konkretne opcje do wyboru przy następnym /start:
+(a) profile README + pinned repo na koncie GitHub (poza tym repo); (b) ostrożny
+redakcyjny K4 README (re-weight „What I built" wyżej, bez psucia lejka);
+(c) stretch techniczny (np. analiza pary (10,25) z R2, streaming MMD z roadmapy).
+
+Kontekst: po wgraniu social preview i dwujęzycznym README projekt jest w pełni
+domknięty jako portfolio (Ścieżka A). Następna sesja to wybór kierunku, nie
+kontynuacja taska — dlatego brak pojedynczego „pliku do edycji".
+
+---
+
+## Co zrobiono w tej sesji
+
+- ✓ **Social preview WGRANY** (user, web-UI) — domknięty ostatni rekomendowany krok portfolio-readiness z 2026-06-26. `docs/assets/social_preview.png` aktywny jako Open Graph card.
+- ✓ **Dwujęzyczny README** (`7a4010d`): `README.md` (kanoniczny EN) przepisany + `README.pl.md` (tłumaczenie 1:1) NOWY — układ Neural-Mosaic: przełącznik języka, 6 badge'y, hero (social_preview), ToC, **parytet 20 sekcji**, kotwice PL z polskimi znakami.
+- ✓ **Nowe sekcje wyciągnięte Z KODU:** Configuration (8 kluczy `.env.example`), Usage (flagi CLI z `cli.py`), Requirements (stack z `pyproject`). Liczba testów **278** zweryfikowana `pytest --collect-only`.
+- ✓ **Weryfikacja LZ76/bz2** — opis w README zgodny z `reporting/information_theory.py` (bz2 = cross-check w metadata, NIE w reject_h0). Nic nie poprawiano.
+- ✓ **Push** — oba commity (`5d9ccbb` session-state + `7a4010d` README) → origin/master; repo synced 0/0.
+
+## Co zostało (backlog sesji)
+
+- ⟳ Profile README + pinned repo na koncie GitHub (poza tym repo).
+- ⟳ K4 ostrożny re-weight README (opcjonalne, redakcyjne — świadomie pominięte 2026-06-26).
+- ⟳ Hygiena Pages-deploy Node20 (wymaga scope `workflow`; niski ROI).
+- ⟳ Stretche techniczne: analiza pary (10,25) z R2, pełna piątka RNG (zrobione), streaming MMD (roadmap).
+- ⟳ Strategiczne: framework „done" (Ścieżka A) vs pivot predykcyjny (`project_pivot_prediction.md`).
+
+## Aktywne pliki
+
+- ZMIENIONE (committed, pushed): `README.md` (przepisany EN), `README.pl.md` (NOWY), `MEMORY.md` (wpis [2026-06-27]).
+- ACTIVE prereg = **v7** (bez zmian — docs/meta-only, zero methodology).
+
+## Otwarte pytania
+
+- Brak blokujących. Repo w pełni zsynchronizowane, working tree czyste.
+- Strategiczne (nie blokuje): kierunek następnej sesji — Ścieżka A „done" vs polish vs stretch vs pivot.
+
+## Do MEMORY.md (przeniesiono)
+
+- Projektowy `MEMORY.md` (Architektura): **[2026-06-27]** — dwujęzyczny README EN/PL (układ Neural-Mosaic), social preview wgrany, sekcje Configuration/Usage/Requirements z kodu, weryfikacja LZ76/bz2, parytet 20 sekcji, kotwice PL. HEAD=`7a4010d`, pushed.
+- Agent-memory: bez nowego wpisu (realizacja w pełni zapisana w repo + MEMORY.md projektu).
+
 ## ═══ Sesja zarchiwizowana [2026-06-27 21:50] ═══
 
 # last_session.md
@@ -252,82 +308,3 @@ zaparkowana, bo wymaga rozstrzygnięcia user (spójność vs prostota benchmarku
   Finding #1 (werdykt PRNG OR→Disagreement ≥2) + Finding #2 (honest-disclosure 1/3),
   HEAD=`79c03e9`, pushed, CI green. Gotcha narzędziowy `cd`→podwojone ścieżki.
 - Agent-memory: `bash-cd-persists-doubled-paths.md` (feedback).
-
-## ═══ Sesja zarchiwizowana [2026-06-13 12:27] ═══
-
-# last_session.md
-
-**Sesja:** 2026-06-11 · sesja 2 (wieczór)
-**Status:** ✓ Zakończona poprawnie
-**Punkt odniesienia (git):** 7348fee @ master (NIEpushowane — 13 commitów przed origin/master)
-
----
-
-## ▸ NASTĘPNY KROK (zacznij tutaj)
-
-**`git push origin master` + weryfikacja CI**, potem domknąć pending doc-sync
-z drugiego taska. Konkretnie:
-1. `git push origin master` (wyśle 13 commitów: 9 strukturalnych z tej sesji
-   `74bd82d..7348fee` + 4 wcześniejsze niepushowane `3e70fef`/`448fd1a`/`f8a8d06`/`6313461`).
-   Push HTTPS przez credential manager (bez promptu wg historii).
-2. Sprawdzić CI: `gh run list --branch master --limit 3 --json status,conclusion,headSha`
-   lub `gh run watch --exit-status`. **UWAGA:** czytać X/✓ per krok, NIE polegać na
-   „exit 0" powiadomienia tła. CI scope = `ruff check src tests` + `mypy src` + `pytest`
-   (scripts/ POZA scope → 4 pre-existing ruff w scripts/ NIE wywalą CI).
-3. Po zielonym CI: domknąć **pending doc-sync z code-review** (osobny task, NIE ruszany
-   w tej sesji): liczniki testów 266/268 → **272/274** w `README.md:49,223,316` +
-   `docs/executive_summary.html:213`; docstring `multimulti_audit.py:96` „all-clear"→„clear";
-   `calibrate_mmd_pool.py:3` kwalifikator naive-OR. (Pełna lista MEMURY.md [2026-06-11].)
-
-Kontekst: task struktury repo WYKONANY i ZWALIDOWANY (pytest 272/2skip, ruff src/tests
-+ mypy czyste, wheel zweryfikowany), ale user odłożył push na jutro. Push to jedyna
-niezrobiona pozycja DoD taska (kryterium „CI green na pushu").
-
----
-
-## Co zrobiono w tej sesji
-
-- ✓ **TASK_REPO_STRUCTURE_OPUS48.md WYKONANY** — 9 commitów strukturalnych
-  `74bd82d..7348fee`. Decyzje usera (AskUserQuestion): F2=manifest SHA-256,
-  F8=minimal (exclude *.md z wheel), F7=zostaw scraper_selectors, F9=CITATION.cff/F10=nie.
-  - **F3** py.typed (PEP 561); **F4a** poc→notebooks/ +ref README; **F4b**
-    universal-session→docs/templates/ (snake_case); **F6** test_api_key→check_api_key
-    (audyt: zero sekretu); **F5** R&D/→docs/research/rd_archive/ (30 plików snake_case
-    + README mapujący); **F8-min** exclude `**/*.md` z wheel; **F2** kontraktowa rewizja
-    git-lfs→manifest SHA-256 (PROJECT_BRIEF §0 nota + 6 linii sync, CLAUDE.md DoD-6);
-    **F1** drzewo CLAUDE.md przepisane 1:1 z git ls-files; **F9** CITATION.cff.
-- ✓ **Walidacja DoD taska:** pytest **272 passed / 2 skipped** (zero regresji),
-  `ruff check src tests` + `mypy src` czyste, **wheel zbudowany** (py.typed=True, *.md=0,
-  prereg=brak), `git --follow` zachowuje historię przenosin.
-- ✓ Pamięć: root MEMORY.md wpis **[2026-06-11 sesja 2]** (pełne hashe/decyzje/walidacja/dług).
-
-## Co zostało (backlog sesji)
-
-- ⟳ **NASTĘPNY KROK:** push 13 commitów + CI check + pending doc-sync (zob. wyżej).
-- ⟳ **Pending doc-sync z code-review** (drugi task, sekcja 6 „Poza zakresem" struktury):
-  liczniki 266/268→272/274, docstring all-clear→clear, kwalifikator calibrate_mmd_pool.
-- ⟳ Findingi code-review wymagające DECYZJI: #1 polityka werdyktu `klass='real'` §5
-  (OR→Disagreement?); #2 udokumentować ślepotę ≥2/3 na sygnały 1/3-strukturalne.
-- ⟳ Dług ruff `scripts/{check_api_key,smoke_test}.py` (4×: I001 + unused `data`) —
-  pre-existing, POZA scope CI; do sprzątnięcia przy pracy w tych plikach (zmiana semantyki).
-- ⟳ Wizualny check exec summary Ctrl+P = 1×A4; cross-check kalibracji BOCPD n=5000 pool=80.
-
-## Aktywne pliki
-
-- ZMIENIONE (commited): `pyproject.toml` (py.typed pkg + wheel exclude), `CLAUDE.md`
-  (DoD-6 + drzewo 1:1), `PROJECT_BRIEF.md` (rewizja §0 lfs→manifest), `README.md`
-  (poc path), `CITATION.cff` (NOWY), `src/driftscope/py.typed` (NOWY)
-- PRZENIESIONE: `notebooks/poc_permutation_engine.py`, `docs/templates/universal_session_setup_prompt.md`,
-  `scripts/check_api_key.py`, `docs/research/rd_archive/` (30+README)
-- ACTIVE prereg = **v7** (bez zmian — task strukturalny, methodology/ nietknięte poza wheel-exclude)
-
-## Otwarte pytania
-
-- Kiedy push? (user: jutro). Czy bundlować pending doc-sync w ten sam push czy osobno.
-- Finding #1: wiersz EJ 'real' w benchmarku §5 → Disagreement czy OR z caveat?
-
-## Do MEMORY.md (przeniesiono)
-
-- Root `MEMORY.md` (Architektura): **[2026-06-11 sesja 2] TASK_REPO_STRUCTURE WYKONANY** —
-  9 commitów, decyzje F2/F7/F8/F9, walidacja, F2 rewizja kontraktowa lfs→manifest, dług ruff scripts/.
-

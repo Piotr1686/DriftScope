@@ -1,7 +1,7 @@
-"""Ingestion — wczytywanie danych EuroJackpot: seed CSV + API developers.lotto.pl.
+"""Ingestion — loading EuroJackpot data: seed CSV + developers.lotto.pl API.
 
-Tier 1: load_seed_csv() — wczytuje data/seed/eurojackpot_history.csv → list[DrawRecord]
-Tier 2: fetch_draw_by_date() — API lotto.pl (stub, implementacja W1+)
+Tier 1: load_seed_csv() — loads data/seed/eurojackpot_history.csv → list[DrawRecord]
+Tier 2: fetch_draw_by_date() — lotto.pl API (stub, implementation W1+)
 """
 from __future__ import annotations
 
@@ -14,10 +14,10 @@ from driftscope.core.types import DrawRecord
 
 
 def load_seed_csv(path: Path | None = None) -> list[DrawRecord]:
-    """Wczytuje seed CSV → list[DrawRecord].
+    """Loads the seed CSV → list[DrawRecord].
 
-    Format CSV: draw_date,main_1,main_2,main_3,main_4,main_5,euron_1,euron_2
-    Źródło: data/seed/eurojackpot_history.csv (958 losowan 2012-2026).
+    CSV format: draw_date,main_1,main_2,main_3,main_4,main_5,euron_1,euron_2
+    Source: data/seed/eurojackpot_history.csv (958 draws, 2012-2026).
     """
     if path is None:
         from driftscope.core.config import settings
@@ -56,15 +56,15 @@ def load_seed_csv(path: Path | None = None) -> list[DrawRecord]:
 
 
 def load_generic_seed_csv(path: Path, pool_size: int) -> list[DrawRecord]:
-    """Wczytuje generyczny seed CSV (gra k-z-`pool_size`) → list[DrawRecord].
+    """Loads a generic seed CSV (a k-of-`pool_size` game) → list[DrawRecord].
 
-    Format CSV: pierwsza kolumna = `draw_date`, WSZYSTKIE pozostałe = liczby losowania
-    (np. Multi Multi: `draw_date,n1,...,n20`). Loader jest agnostyczny co do liczby
-    kolumn liczb — działa dla dowolnego k (MM=20, ale reusable na grę 3+).
+    CSV format: the first column = `draw_date`, ALL remaining columns = the draw numbers
+    (e.g. Multi Multi: `draw_date,n1,...,n20`). The loader is agnostic to the number of
+    number columns — it works for any k (MM=20, but reusable for a 3rd game+).
 
-    `pool_size` (rozmiar puli głównej, MM=80) jest niesiony przez każdy `DrawRecord`
-    (zob. `DrawRecord.generic`), więc detektory wyprowadzają pulę/k z danych. Walidację
-    zakresów 1..pool_size egzekwuje `DrawRecord._validate_shape`.
+    `pool_size` (the main pool size, MM=80) is carried by each `DrawRecord`
+    (see `DrawRecord.generic`), so detectors derive the pool/k from the data. Range
+    validation 1..pool_size is enforced by `DrawRecord._validate_shape`.
     """
     df = pl.read_csv(path)
     date_col = df.columns[0]
@@ -85,14 +85,14 @@ def load_generic_seed_csv(path: Path, pool_size: int) -> list[DrawRecord]:
 
 
 # ---------------------------------------------------------------------------
-# Tier 2 — API developers.lotto.pl (stub, W1+)
+# Tier 2 — developers.lotto.pl API (stub, W1+)
 # ---------------------------------------------------------------------------
 
 def fetch_draw_by_date(draw_date: date, api_key: str) -> DrawRecord | None:
-    """Pobiera wynik jednego losowania z API developers.lotto.pl.
+    """Fetches a single draw result from the developers.lotto.pl API.
 
-    Stub — implementacja w W1+. Dokumentacja: scripts/scraper_selectors.md.
+    Stub — implementation in W1+. Documentation: scripts/scraper_selectors.md.
     """
     raise NotImplementedError(
-        "fetch_draw_by_date: stub — zaimplementuj z httpx + tenacity (W1+)"
+        "fetch_draw_by_date: stub — implement with httpx + tenacity (W1+)"
     )

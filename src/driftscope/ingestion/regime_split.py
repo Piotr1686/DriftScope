@@ -1,18 +1,18 @@
-"""Regime split 2014/2022 → regime_{1,2,3}.parquet (pre-rejestrowany prereg_v6 §1).
+"""Regime split 2014/2022 → regime_{1,2,3}.parquet (pre-registered prereg_v6 §1).
 
-Granice reżimów = DATY ZMIANY REGUL EuroJackpot (pre-rejestrowane, NIE data-informed):
+Regime boundaries = EuroJackpot RULE-CHANGE DATES (pre-registered, NOT data-informed):
 
   R1: 2012-03-23 .. 2014-10-03   (5/50 + 2/8)   — draw_date <  2014-10-10
   R2: 2014-10-10 .. 2022-03-18   (5/50 + 2/10)  — 2014-10-10 ≤ draw_date < 2022-03-25
-  R3: 2022-03-25 .. obecnie      (5/50 + 2/12)  — draw_date ≥  2022-03-25
+  R3: 2022-03-25 .. present       (5/50 + 2/12)  — draw_date ≥  2022-03-25
 
-UWAGA granica 2014: pierwsze losowanie wg nowych regul (pula euron 8→10) to **2014-10-10**
-(piątek), NIE 2014-10-08 (środa — PROJECT_BRIEF historycznie błędnie). Granica jest
-PRZEDZIALEM POLOTWARTYM [start, koniec): losowanie DOKLADNIE w dacie granicznej należy do
-reżimu NOWEGO (2014-10-10 → R2, 2022-03-25 → R3). Patrz MEMORY.md regime_boundary_2014.
+NOTE on the 2014 boundary: the first draw under the new rules (euron pool 8→10) is **2014-10-10**
+(Friday), NOT 2014-10-08 (Wednesday — PROJECT_BRIEF historically wrong). The boundary is a
+HALF-OPEN INTERVAL [start, end): a draw EXACTLY on the boundary date belongs to the NEW regime
+(2014-10-10 → R2, 2022-03-25 → R3). See MEMORY.md regime_boundary_2014.
 
-Moduł jest czystą warstwą danych: granice są już w prereg_v6 §1, więc split NIE wprowadza
-nowej decyzji metodologicznej (nie podlega dyscyplinie prereg §0).
+This module is a pure data layer: the boundaries already live in prereg_v6 §1, so the split does
+NOT introduce a new methodological decision (not subject to the prereg §0 discipline).
 """
 from __future__ import annotations
 
@@ -23,11 +23,11 @@ import polars as pl
 
 from driftscope.core.types import DrawRecord, RegimeSpec
 
-# Granice = daty zmiany regul (prereg_v6 §1). Przedział półotwarty [start, koniec).
-BOUNDARY_2014 = date(2014, 10, 10)  # 8→10 euronumerów (piątek, NIE 2014-10-08)
-BOUNDARY_2022 = date(2022, 3, 25)   # 10→12 euronumerów
+# Boundaries = rule-change dates (prereg_v6 §1). Half-open interval [start, end).
+BOUNDARY_2014 = date(2014, 10, 10)  # 8→10 euro numbers (Friday, NOT 2014-10-08)
+BOUNDARY_2022 = date(2022, 3, 25)   # 10→12 euro numbers
 
-# Kolejność = chronologiczna; klucze zgodne z prereg_v6 §1 (R1/R2/R3).
+# Order = chronological; keys consistent with prereg_v6 §1 (R1/R2/R3).
 REGIME_SPECS: tuple[RegimeSpec, ...] = (
     RegimeSpec(name="R1", start_date=date(2012, 3, 23), end_date=date(2014, 10, 3)),
     RegimeSpec(name="R2", start_date=BOUNDARY_2014, end_date=date(2022, 3, 18)),
@@ -35,12 +35,12 @@ REGIME_SPECS: tuple[RegimeSpec, ...] = (
 )
 REGIME_LABELS: tuple[str, ...] = tuple(spec.name for spec in REGIME_SPECS)
 
-# Mapowanie etykieta reżimu → nazwa pliku artefaktu (regime_1/2/3.parquet wg CLAUDE.md).
+# Mapping regime label → artifact file name (regime_1/2/3.parquet per CLAUDE.md).
 _PARQUET_NAMES: dict[str, str] = {"R1": "regime_1", "R2": "regime_2", "R3": "regime_3"}
 
 
 def regime_of(draw_date: date) -> str:
-    """Etykieta reżimu ("R1"/"R2"/"R3") dla daty losowania (granice półotwarte)."""
+    """Regime label ("R1"/"R2"/"R3") for a draw date (half-open boundaries)."""
     if draw_date < BOUNDARY_2014:
         return "R1"
     if draw_date < BOUNDARY_2022:
@@ -49,11 +49,11 @@ def regime_of(draw_date: date) -> str:
 
 
 def split_by_regime(draws: list[DrawRecord]) -> dict[str, list[DrawRecord]]:
-    """Dzieli strumień losowań na 3 reżimy regul (prereg_v6 §1).
+    """Splits a draw stream into the 3 rule regimes (prereg_v6 §1).
 
-    Partycja KOMPLETNA i ROZLACZNA: każde losowanie trafia do dokładnie jednego reżimu,
-    suma = wejście. Kolejność wewnątrz reżimu zachowana (stabilna). Klucze ZAWSZE obecne
-    (R1/R2/R3) — reżim bez losowań → pusta lista (np. przy niepełnym strumieniu).
+    The partition is COMPLETE and DISJOINT: every draw lands in exactly one regime, and the
+    union equals the input. Within-regime order is preserved (stable). Keys are ALWAYS present
+    (R1/R2/R3) — a regime with no draws → an empty list (e.g. for a partial stream).
 
     Returns: dict {"R1": [...], "R2": [...], "R3": [...]}.
     """
@@ -64,7 +64,7 @@ def split_by_regime(draws: list[DrawRecord]) -> dict[str, list[DrawRecord]]:
 
 
 def _draws_to_frame(draws: list[DrawRecord]) -> pl.DataFrame:
-    """list[DrawRecord] → Polars DataFrame (kolumny jak seed CSV; draw_date jako Date)."""
+    """list[DrawRecord] → Polars DataFrame (columns like the seed CSV; draw_date as Date)."""
     return pl.DataFrame(
         {
             "draw_date": [d.draw_date for d in draws],
@@ -89,13 +89,13 @@ def write_regime_parquet(
     regimes: dict[str, list[DrawRecord]],
     artifacts_dir: Path | None = None,
 ) -> dict[str, Path]:
-    """Zapisuje każdy reżim do artifacts/regime_{1,2,3}.parquet (Zstd).
+    """Writes each regime to artifacts/regime_{1,2,3}.parquet (Zstd).
 
-    Deterministyczne: kolejność wierszy = kolejność losowań w reżimie (split jest stabilny);
-    Zstd zgodne z polityką storage (CLAUDE.md). Reżim bez losowań → plik z pustą ramką
-    (zachowany schemat). `artifacts_dir` None → `settings.artifacts_dir`.
+    Deterministic: row order = draw order within the regime (the split is stable);
+    Zstd consistent with the storage policy (CLAUDE.md). A regime with no draws → a file with
+    an empty frame (schema preserved). `artifacts_dir` None → `settings.artifacts_dir`.
 
-    Returns: dict {etykieta reżimu → ścieżka zapisanego pliku}.
+    Returns: dict {regime label → path of the written file}.
     """
     if artifacts_dir is None:
         from driftscope.core.config import settings

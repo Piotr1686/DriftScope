@@ -1,4 +1,4 @@
-"""Pydantic Settings v2 — ładuje konfigurację z .env."""
+"""Pydantic Settings v2 — loads configuration from .env."""
 from pathlib import Path
 
 from pydantic_settings import BaseSettings, SettingsConfigDict

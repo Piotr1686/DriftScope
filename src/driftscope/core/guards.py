@@ -13,16 +13,16 @@ F = TypeVar("F", bound=Callable[..., Any])
 
 
 def assert_memory_below(gb: float) -> None:
-    """Raises MemoryError jeśli bieżący proces przekracza gb GB RSS."""
+    """Raises MemoryError if the current process exceeds gb GB RSS."""
     used_gb = psutil.Process(os.getpid()).memory_info().rss / (1024 ** 3)
     if used_gb > gb:
-        raise MemoryError(f"RAM {used_gb:.2f} GB przekracza limit {gb:.1f} GB")
+        raise MemoryError(f"RAM {used_gb:.2f} GB exceeds limit {gb:.1f} GB")
 
 
 def with_timeout(seconds: int) -> Callable[[F], F]:
-    """Dekorator: przerywa funkcję po `seconds` sekundach.
+    """Decorator: aborts the function after `seconds` seconds.
 
-    Windows: threading.Timer (best-effort — nie przerywa C-extensions w trakcie).
+    Windows: threading.Timer (best-effort — does not interrupt C-extensions mid-call).
     Unix: SIGALRM (hard interrupt).
     """
     def decorator(func: F) -> F:
@@ -43,7 +43,7 @@ def with_timeout(seconds: int) -> Callable[[F], F]:
                 t.join(timeout=seconds)
                 if t.is_alive():
                     raise TimeoutError(
-                        f"{func.__name__}: przekroczono limit {seconds}s"
+                        f"{func.__name__}: exceeded the {seconds}s limit"
                     )
                 if exc[0] is not None:
                     raise exc[0]
@@ -58,7 +58,7 @@ def with_timeout(seconds: int) -> Callable[[F], F]:
             def _unix_wrapper(*args: Any, **kwargs: Any) -> Any:
                 def _handler(signum: int, frame: Any) -> None:
                     raise TimeoutError(
-                        f"{func.__name__}: przekroczono limit {seconds}s"
+                        f"{func.__name__}: exceeded the {seconds}s limit"
                     )
 
                 old = signal.signal(signal.SIGALRM, _handler)  # type: ignore[attr-defined, unused-ignore]

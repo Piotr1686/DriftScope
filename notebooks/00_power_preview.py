@@ -190,7 +190,7 @@ print("- R1 (n=133) jest binding constraint: najmniej danych => najwyższe MDE."
 # Te liczby są optymistyczne na trzech osiach; realna power pipeline'u jest **niższa**:
 #
 # 1. **Multiplicity:** preview używa α=0.05 per-test bez korekty. Real pipeline stosuje
-#    BH (Family A, 12 hyp) i Benjamini-Yekutieli (Family B, 450 hyp) → próg odrzucenia
+#    BH (Family A, 12 hyp) i Benjamini-Yekutieli (Family B, 150 hyp) → próg odrzucenia
 #    ostrzejszy → per-test power niższa.
 # 2. **Global GoF n_obs=n_draws×5** to heurystyka (within-draw bez zwracania; 7500
 #    "obserwacji" nie jest niezależnych). Kierunek biasu niepewny — NIE dokładne.

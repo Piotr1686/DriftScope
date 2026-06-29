@@ -57,7 +57,7 @@ def test_storey_pi0_near_one_for_pure_null() -> None:
 # ---------------------------------------------------------------------------
 
 def test_fdr_control_on_null_family_b() -> None:
-    """Family B (BY) na 450 nullowych p-values: znikoma liczba falszywych odrzucen."""
+    """Family B (BY) na 150 nullowych p-values: znikoma liczba falszywych odrzucen."""
     p = np.random.default_rng(3).uniform(0, 1, size=FAMILY_B_SIZE)
     res = correct_family_b(p)
     assert res.n_reject <= 2, f"BY na nullu odrzucil {res.n_reject} (oczek ~0)"
@@ -65,7 +65,7 @@ def test_fdr_control_on_null_family_b() -> None:
 
 def test_power_on_planted_signals() -> None:
     """Wstrzykniete silne sygnaly (p≈0) sa odrzucane mimo korekcji."""
-    p = np.concatenate([np.full(5, 1e-6), np.random.default_rng(4).uniform(0, 1, 445)])
+    p = np.concatenate([np.full(5, 1e-6), np.random.default_rng(4).uniform(0, 1, 145)])
     res = correct_family_b(p)
     assert res.n_reject >= 5  # 5 silnych przechodzi nawet przez BY
     assert all(res.reject[:5])

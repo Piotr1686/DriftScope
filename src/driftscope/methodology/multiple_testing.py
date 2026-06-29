@@ -6,13 +6,14 @@ Dwie rodziny hipotez o roznej strukturze zaleznosci → rozne procedury (preregi
 × 3 rezimy. Korekcja: **Benjamini-Hochberg** FDR α=0.05 (primary) + **Storey q-values**
 (secondary sanity — estymuje pi0, mniej konserwatywny gdy duzo prawdziwych H1).
 
-**Family B — per-number (450+ hipotez):** 50 liczb × 3 testy (chi-squared, exact binomial,
-gap GoF §5b) × 3 rezimy. Korekcja: **Benjamini-Yekutieli** FDR α=0.05 (primary) — wazna
-przy DOWOLNEJ strukturze zaleznosci (zliczenia 5/50 ujemnie skorelowane, gapy wspolzalezne),
-gdzie zalozenie PRDS dla BH jest niepewne; **BH** jako secondary (mniej konserwatywny punkt
-odniesienia). Storey ODRZUCONY dla Family B (niestabilny przy dominujacym nullu).
-Test wspolwystapien (§5c) zasila Family B jako dodatkowa rodzina per-rezim (licznik
-hipotez domykany przy pelnej integracji raportowej).
+**Family B — per-number (150 hipotez, ratyfikowane v7 §0(A)):** rodzina per-number =
+WYLACZNIE exact-binomial: 50 liczb × 3 rezimy. Korekcja: **Benjamini-Yekutieli** FDR
+α=0.05 (primary) — wazna przy DOWOLNEJ strukturze zaleznosci (zliczenia 5/50 ujemnie
+skorelowane), gdzie zalozenie PRDS dla BH jest niepewne; **BH** jako secondary (mniej
+konserwatywny punkt odniesienia). Storey ODRZUCONY dla Family B (niestabilny przy
+dominujacym nullu). Detektory OMNIBUS (chi² §5, gap GoF §5b, co-occurrence §5c — po 1
+p-value/rezim) NIE wchodza do per-number Family B (blad kategorii v5 skorygowany w v7):
+tworza rodziny komplementarne raportowane OSOBNO, zasilajace Disagreement Protocol (§6.5).
 
 Silnik jest agnostyczny: przyjmuje p-values + etykiety, zwraca `FDRResult` (q-values +
 maska odrzucen). BH/BY przez `statsmodels.stats.multitest.multipletests`; Storey wlasny
@@ -29,9 +30,9 @@ from statsmodels.stats.multitest import multipletests
 
 Method = Literal["bh", "by", "storey"]
 
-# Rozmiary rodzin (preregistration_v5 §5) — referencyjne, walidowane przy pelnym sweepie.
-FAMILY_A_SIZE = 12    # 4 testy × 3 rezimy
-FAMILY_B_SIZE = 450   # 50 liczb × 3 testy × 3 rezimy (+ co-occurrence: dodatkowa rodzina)
+# Rozmiary rodzin (preregistration_v7 §5; licznik Family B skorygowany v7 §0(A): 450 → 150).
+FAMILY_A_SIZE = 12    # 4 testy omnibus × 3 rezimy
+FAMILY_B_SIZE = 150   # 50 liczb × 3 rezimy (tylko exact-binomial; chi²/gap/cooc = omnibus osobno)
 
 _DEFAULT_ALPHA = 0.05
 _STOREY_LAMBDA = 0.5  # prog estymacji pi0 (Storey 2002)

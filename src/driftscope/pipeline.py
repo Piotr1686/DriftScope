@@ -189,10 +189,10 @@ class AuditReport:
         )
         cp_str = ", ".join(f"{d} (p={p:.2f})" for d, p in cps[:3]) or "brak"
         lines = [
-            "DriftScope audit — werdykt na strumieniu:",
+            "DriftScope audit — stream verdict:",
             f"  POSITIVE CONTROL (euron/BOCPD, full-stream): reject={pc.reject_h0}; "
-            f"top CP: {cp_str}",
-            "  NEGATIVE CONTROL (main/3 filary, per rezim):",
+            f"top change-points: {cp_str}",
+            "  NEGATIVE CONTROL (main 1-50 / 3 pillars, per regime):",
         ]
         for label in REGIME_LABELS:
             ra = self.regime_audits.get(label)
@@ -209,11 +209,11 @@ class AuditReport:
         wl = (
             "None (honest null)"
             if self.watchlist is None
-            else f"{len(self.watchlist)} wpis(ow)"
+            else f"{len(self.watchlist)} entry(ies)"
         )
         lines.append(
             f"  Family B (per-number FDR, {self.family_b.method}): "
-            f"{self.family_b.n_reject}/{self.family_b_size} odrzucen"
+            f"{self.family_b.n_reject}/{self.family_b_size} rejected"
         )
         lines.append(f"  WATCHLIST (DoD-5): {wl}")
         lines.append(f"  -> {self.watchlist_message}")

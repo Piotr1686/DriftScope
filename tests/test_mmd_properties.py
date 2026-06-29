@@ -10,6 +10,7 @@ import numpy as np
 import pytest
 
 from driftscope.core.seeds import make_worker_seeds
+from driftscope.driftsim.calibration import estimate_rejection_rate
 from driftscope.driftsim.null_uniform import generate_uniform_draws
 from driftscope.driftsim.planted_signals import generate_planted_draws
 from driftscope.methodology.k4_mmd import (
@@ -121,6 +122,25 @@ def test_detector_detects_freq_shift() -> None:
     det = mmd_uniform_detector(window=25, n_perm=199)
     draws = generate_planted_draws(389, "R2", "freq_shift", 0.10, np.random.default_rng(8))
     assert det(draws).reject_h0 is True
+
+
+def test_mmd_blind_to_pair_corr() -> None:
+    """MMD (frequency-vector, marginalny) jest slepy na pair_corr — power ≈ FPR.
+
+    pair_corr (v5, margin-preserving) trzyma czestosci marginalne ~uniform, wiec MMD²
+    na wektorach czestosci nie widzi sygnalu (caly jest w wymiarze JOINT). Dopelnia
+    test_chi2_blind_to_pair_correlation (test_driftsim_calibration) i
+    test_serial_blind_to_pair_corr (test_permutation_null): OBA filary marginalne (H1,
+    MMD) sa dowodliwie slepe; lapie tylko co-occurrence (test_detects_planted_pair_corr_
+    showcase). To uzasadnia, ze 'must agree' NIE jest twardym progiem (clean cell = 1/3).
+    Deterministyczne (estimate_rejection_rate: base_seed=42 + seed detektora z hash draws).
+    """
+    det = mmd_uniform_detector(window=25, n_perm=99)
+    pair_power = estimate_rejection_rate("pair_corr", 0.10, "R2", det, n_trials=50)
+    freq_power = estimate_rejection_rate("freq_shift", 0.10, "R2", det, n_trials=50)
+    assert pair_power < 0.15, f"MMD nie powinien widziec pair_corr (power={pair_power})"
+    assert freq_power > 0.70, f"MMD powinien widziec freq_shift (power={freq_power})"
+    assert pair_power < freq_power
 
 
 # ---------------------------------------------------------------------------

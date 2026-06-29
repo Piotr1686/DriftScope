@@ -110,14 +110,14 @@ def watchlist_or_message(
     )
     if watchlist is None:
         msg = (
-            f"Honest null: zaden z {len(candidates)} kandydatow nie przeszedl gate "
-            f"(FDR q<={alpha} ORAZ konwergencja >={min_convergence}/3). "
-            "Brak watchlisty — metodologia nie dostarczyla zwalidowanego sygnalu."
+            f"Honest null: none of {len(candidates)} candidates passed the gate "
+            f"(FDR q<={alpha} AND convergence >={min_convergence}/3). "
+            "No watchlist — the methodology produced no validated signal."
         )
         return None, msg
     n_primary = sum(e.is_primary_finding for e in watchlist)
     msg = (
-        f"{len(watchlist)} wzorzec(ow) przeszlo gate DoD-3+DoD-4 "
-        f"({n_primary} primary 3/3). Sortowane po q-value."
+        f"{len(watchlist)} pattern(s) passed the DoD-3+DoD-4 gate "
+        f"({n_primary} primary 3/3). Sorted by q-value."
     )
     return watchlist, msg

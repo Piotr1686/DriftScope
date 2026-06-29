@@ -43,7 +43,7 @@ def run(
 
     csv_path = seed_csv if seed_csv is not None else settings.data_seed_path
     draws = load_seed_csv(csv_path)
-    typer.echo(f"Wczytano {len(draws)} losowan z {csv_path}")
+    typer.echo(f"Loaded {len(draws)} draws from {csv_path}")
 
     report = run_audit(draws, n_perm=n_perm)
     typer.echo("")
@@ -59,7 +59,7 @@ def run(
         target.mkdir(parents=True, exist_ok=True)
         p_cmp = plot_control_comparison(draws, out_path=target / "control_comparison.png")
         p_boc = plot_bocpd_changepoints(draws, "euron", out_path=target / "bocpd_euron.png")
-        typer.echo(f"\nFigury: {p_cmp}, {p_boc}")
+        typer.echo(f"\nFigures: {p_cmp}, {p_boc}")
 
     if hook:
         from driftscope.reporting.plots_static import animate_bocpd_hook

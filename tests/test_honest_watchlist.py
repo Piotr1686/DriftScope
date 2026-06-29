@@ -107,11 +107,11 @@ def test_message_honest_null() -> None:
     wl, msg = watchlist_or_message([_candidate("a", q=0.5)])
     assert wl is None
     assert "Honest null" in msg
-    assert "Brak watchlisty" in msg
+    assert "No watchlist" in msg
 
 
 def test_message_populated() -> None:
     wl, msg = watchlist_or_message([_candidate("a", q=0.001)])
     assert wl is not None
-    assert "przeszlo gate" in msg
+    assert "passed the DoD-3+DoD-4 gate" in msg
     assert "1 primary" in msg

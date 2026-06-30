@@ -1,38 +1,40 @@
-"""End-to-end audit orchestrator (W7) — co framework ORZEKA na realnym EuroJackpot.
+"""End-to-end audit orchestrator (W7) — what the framework ASSERTS on real EuroJackpot.
 
-Spina zwalidowane komponenty DoD-1..6 w jeden przebieg na realnym strumieniu losowan:
+Ties the validated DoD-1..6 components into a single run over a real draw stream:
 
-  POSITIVE CONTROL (euron, filar temporalny/H1): `run_bocpd(draws, "euron")` wykrywa
-    zmiany puli euronumerow 2014/2022 (ground truth DoD-1b). FULL-STREAM — sygnal to
-    przejscie MIEDZY rezimami, ciecie per-rezim by go zniszczylo (preregistration_v7 §1c).
-  NEGATIVE CONTROL (main 1-50, 3 filary Disagreement): trzy NIEZALEZNE rodziny detektorow
-    (H1/temporal, MMD/distributional, co-occurrence/joint) na puli glownej, liczone PER
-    REZIM (R1/R2/R3) — test stacjonarnosci WEWNATRZ rezimu (H0 §1). Oczekiwane 0/3 w kazdym
-    rezimie — pula glowna nie ma pre-rejestrowanego sygnalu (DoD-1 negative control).
-  HONEST WATCHLIST (DoD-5): Family B FDR (per-number exact binomial) + konwergencja →
-    `build_watchlist`. Na czystym neg. control → **None** (honest null, nie pusta lista).
+  POSITIVE CONTROL (euron, temporal/H1 pillar): `run_bocpd(draws, "euron")` detects
+    the euronumber pool changes of 2014/2022 (ground truth DoD-1b). FULL-STREAM — the
+    signal is the transition BETWEEN regimes, a per-regime split would destroy it
+    (preregistration_v7 §1c).
+  NEGATIVE CONTROL (main 1-50, 3 Disagreement pillars): three INDEPENDENT detector
+    families (H1/temporal, MMD/distributional, co-occurrence/joint) on the main pool,
+    computed PER REGIME (R1/R2/R3) — a stationarity test WITHIN a regime (H0 §1).
+    Expected 0/3 in each regime — the main pool has no pre-registered signal
+    (DoD-1 negative control).
+  HONEST WATCHLIST (DoD-5): Family B FDR (per-number exact binomial) + convergence →
+    `build_watchlist`. On a clean neg. control → **None** (honest null, not an empty list).
 
-**Decyzja projektowa (gating "H1 family → 1 werdykt filaru"):** filar `h1` reprezentuje
-BOCPD per-stream (`bocpd_detector`). Uzasadnienie: BOCPD jest skalibrowany per-pole
-(FPR≈0.05, preregistration_v7 §2), ma zwalidowany positive/negative control i jest
-detektorem hooka W8. ADF/KPSS/Welch/ACF operuja na pochodnych szeregach SKALARNYCH
-(euron_mean, ...) i pelnia role DIAGNOSTYCZNA, nie glosujacego filaru — OR-agregacja
-skorelowanych pod-testow H1 zawyzylaby FPR filaru. DoD-4 pozostaje 3/3.
+**Design decision (gating "H1 family → 1 pillar verdict"):** the `h1` pillar represents
+BOCPD per-stream (`bocpd_detector`). Rationale: BOCPD is calibrated per-field
+(FPR≈0.05, preregistration_v7 §2), has a validated positive/negative control, and is the
+W8 hook detector. ADF/KPSS/Welch/ACF operate on derived SCALAR series
+(euron_mean, ...) and play a DIAGNOSTIC role, not a voting pillar — OR-aggregating
+correlated H1 sub-tests would inflate the pillar FPR. DoD-4 stays 3/3.
 
-**Granularnosc per-rezim (preregistration_v7 §0(B)/§1c):** negative control (3 filary) i
-Family B liczone OSOBNO w kazdym rezimie regul (R1/R2/R3) — H0 §1 jest pre-rejestrowana
-per rezim ("stacjonarny uniform i.i.d. WEWNATRZ rezimu"). Pula glowna 1-50 jest strukturalnie
-niezmienna przez wszystkie rezimy, wiec kazdy rezim to NIEZALEZNY negative control. Positive
-control (euron) pozostaje full-stream (wykrywa przejscia miedzy rezimami).
+**Per-regime granularity (preregistration_v7 §0(B)/§1c):** the negative control (3 pillars)
+and Family B are computed SEPARATELY in each regime by rule (R1/R2/R3) — H0 §1 is
+pre-registered per regime ("stationary uniform i.i.d. WITHIN a regime"). The main pool 1-50
+is structurally invariant across all regimes, so each regime is an INDEPENDENT negative
+control. The positive control (euron) stays full-stream (it detects transitions between regimes).
 
-**Family B (per-number, licznik ratyfikowany v7 §0(A)):** rodzina = WYLACZNIE per-number
-exact-binomial p-values (count_k ~ Binomial(n, 5/50) pod uniform), 50 liczb × #niepustych
-rezimow = na realnych danych **150** (zamiast referencyjnych 450 — chi²/gap/cooc to detektory
-OMNIBUS, nie per-liczba, raportowane osobno jako rodziny komplementarne). Pula p-values ze
-wszystkich rezimow tworzy JEDNA rodzine, korygowana raz Benjamini-Yekutieli (v7 §5).
+**Family B (per-number, count ratified v7 §0(A)):** the family = EXCLUSIVELY per-number
+exact-binomial p-values (count_k ~ Binomial(n, 5/50) under uniform), 50 numbers × #non-empty
+regimes = on real data **150** (instead of the reference 450 — chi²/gap/cooc are OMNIBUS
+detectors, not per-number, reported separately as complementary families). The pool of
+p-values from all regimes forms ONE family, corrected once with Benjamini-Yekutieli (v7 §5).
 
-Modul orkiestruje gotowe, niezaleznie zwalidowane komponenty — sam nie wprowadza nowych
-decyzji metodologicznych (NIE podlega dyscyplinie prereg §0).
+This module orchestrates ready, independently validated components — it introduces no new
+methodological decisions itself (NOT subject to the prereg §0 discipline).
 """
 from __future__ import annotations
 
@@ -60,26 +62,27 @@ from driftscope.reporting.disagreement import (
     run_pillars,
 )
 
-_MAIN_POOL_SIZE = 50  # fallback dla pustej listy; w praktyce pool czytany z draws[0].pool_size
+_MAIN_POOL_SIZE = 50  # fallback for an empty list; in practice read from draws[0].pool_size
 _DEFAULT_ALPHA = 0.05
 _DEFAULT_N_PERM = 999
 
 
 # ---------------------------------------------------------------------------
-# Filar H1 — BOCPD jako reprezentant per-stream (decyzja gating)
+# H1 pillar — BOCPD as the per-stream representative (gating decision)
 # ---------------------------------------------------------------------------
 
 def bocpd_detector(
     field: Literal["main", "euron"] = "euron",
     *,
-    alpha_unused: float = _DEFAULT_ALPHA,  # zachowanie sygnatury; prog BOCPD jest per-pole
+    alpha_unused: float = _DEFAULT_ALPHA,  # signature consistency; the BOCPD threshold is per-field
 ) -> Detector:
-    """Fabryka detektora H1 = BOCPD na zadanym polu (czysta funkcja `draws`, DoD-6).
+    """Factory for the H1 detector = BOCPD on the given field (pure function of `draws`, DoD-6).
 
-    `run_bocpd` zwraca `reject_h0` wg per-pole progu skalibrowanego na FPR≈0.05
-    (preregistration_v7 §2). To reprezentant filaru `h1` w Disagreement Protocol —
-    zob. docstring modulu (decyzja gating). `alpha_unused` istnieje dla spojnosci
-    sygnatury z innymi fabrykami; prog BOCPD nie jest parametrem alpha.
+    `run_bocpd` returns `reject_h0` per the per-field threshold calibrated to FPR≈0.05
+    (preregistration_v7 §2). This is the representative of the `h1` pillar in the
+    Disagreement Protocol — see the module docstring (gating decision). `alpha_unused`
+    exists for signature consistency with the other factories; the BOCPD threshold is
+    not an alpha parameter.
     """
     def detector(draws: list[DrawRecord]) -> TestResult:
         return run_bocpd(draws, field=field)
@@ -92,16 +95,17 @@ def default_pillar_detectors(
     alpha: float = _DEFAULT_ALPHA,
     n_perm: int = _DEFAULT_N_PERM,
 ) -> dict[str, Detector]:
-    """Trzy filary Disagreement na puli GLOWNEJ (negative control, stosowane per rezim).
+    """Three Disagreement pillars on the MAIN pool (negative control, applied per regime).
 
-    - `h1`           — BOCPD(field="main") (filar temporalny; reprezentant H1).
-    - `mmd`          — MMD² okna obserwacji vs uniform reference (window=25, §3/v7).
+    - `h1`           — BOCPD(field="main") (temporal pillar; H1 representative).
+    - `mmd`          — MMD² of observation windows vs uniform reference (window=25, §3/v7).
     - `cooccurrence` — max-pair, curveball null (§5c).
 
-    window=25 (nie §3 oryginalne 200): na pelnym strumieniu non-overlap daje robustna
-    kalibracje (preregistration_v4 §3, korekta real-data). UWAGA per-rezim: R1 (n=133)
-    daje tylko ~5 okien MMD — granica wykonalnosci (§3 "Ograniczenie danych"); wynik R1
-    raportowany z ta uwaga, ale detektor nie crashuje. Wszystkie czytaja pule glowna.
+    window=25 (not the original §3 value of 200): on the full non-overlap stream it gives
+    robust calibration (preregistration_v4 §3, real-data correction). NOTE per regime: R1
+    (n=133) yields only ~5 MMD windows — the feasibility boundary (§3 "Data limitation");
+    the R1 result is reported with this caveat, but the detector does not crash. All read
+    the main pool.
     """
     return {
         "h1": bocpd_detector(field="main"),
@@ -111,29 +115,29 @@ def default_pillar_detectors(
 
 
 # ---------------------------------------------------------------------------
-# Family B — per-number exact binomial (pre-rejestrowane §5)
+# Family B — per-number exact binomial (pre-registered §5)
 # ---------------------------------------------------------------------------
 
 def family_b_per_number_pvalues(
     draws: list[DrawRecord],
 ) -> tuple[list[str], npt.NDArray[np.float64]]:
-    """Per-number exact-binomial p-values dla puli glownej (Family B, §5).
+    """Per-number exact-binomial p-values for the main pool (Family B, §5).
 
-    Dla kazdej liczby k ∈ 1..50: count_k = #{losowania zawierajace k}. Pod uniform
-    P(k w losowaniu) = 5/50, wiec count_k ~ Binomial(n, 5/50). Dwustronny exact test
-    per liczba → 50 p-values (wejscie do FDR Family B, Benjamini-Yekutieli).
+    For each number k ∈ 1..50: count_k = #{draws containing k}. Under uniform
+    P(k in a draw) = 5/50, so count_k ~ Binomial(n, 5/50). A two-sided exact test
+    per number → 50 p-values (input to the Family B FDR, Benjamini-Yekutieli).
 
     Returns: (labels ["number_1".."number_50"], p_values (50,)).
     """
     n = len(draws)
-    # Pula/k wyprowadzone z rekordow (EJ=50/5 → P=0.10; MM=80/20 → P=0.25).
+    # Pool/k derived from the records (EJ=50/5 → P=0.10; MM=80/20 → P=0.25).
     pool = draws[0].pool_size if draws else _MAIN_POOL_SIZE
     k_drawn = len(draws[0].main_numbers) if draws else 5
     p_present = k_drawn / pool
     counts = np.zeros(pool, dtype=np.int64)
     for d in draws:
-        # Incydencja: kazda liczba liczona RAZ na losowanie (model Binomial = obecnosc,
-        # nie krotnosc) — odporne na ewentualne duplikaty w obrebie losowania.
+        # Incidence: each number counted ONCE per draw (the Binomial model = presence,
+        # not multiplicity) — robust to any duplicates within a draw.
         for k in set(d.main_numbers):
             counts[k - 1] += 1
     pvals = np.array(
@@ -150,36 +154,36 @@ def family_b_per_number_pvalues(
 
 
 # ---------------------------------------------------------------------------
-# Raport audytu
+# Audit report
 # ---------------------------------------------------------------------------
 
 @dataclass(frozen=True)
 class RegimeAudit:
-    """Negative control pojedynczego rezimu regul (3 filary na puli glownej WEWNATRZ rezimu)."""
+    """Negative control of a single rule regime (3 pillars on the main pool WITHIN the regime)."""
 
     regime: str                               # "R1" / "R2" / "R3" (prereg_v7 §1)
-    n_draws: int                              # liczba losowan w rezimie
-    negative_control: dict[str, TestResult]   # 3 filary Disagreement (h1/mmd/cooccurrence)
-    verdict: DisagreementVerdict              # Disagreement Protocol (DoD-4) dla tego rezimu
+    n_draws: int                              # number of draws in the regime
+    negative_control: dict[str, TestResult]   # 3 Disagreement pillars (h1/mmd/cooccurrence)
+    verdict: DisagreementVerdict              # Disagreement Protocol (DoD-4) for this regime
 
 
 @dataclass(frozen=True)
 class AuditReport:
-    """Werdykt frameworka na strumieniu: pos control (full) + neg control per-rezim + gate."""
+    """Framework verdict on a stream: pos control (full) + neg control per-regime + gate."""
 
     positive_control: TestResult              # BOCPD euron full-stream (ground truth 2014/2022)
-    regime_audits: dict[str, RegimeAudit]     # neg control per rezim (R1/R2/R3; tylko niepuste)
-    family_b: FDRResult                       # per-number FDR pooled nad rezimami (DoD-3)
+    regime_audits: dict[str, RegimeAudit]     # neg control per regime (R1/R2/R3; non-empty only)
+    family_b: FDRResult                       # per-number FDR pooled over regimes (DoD-3)
     watchlist: list[WatchlistEntry] | None    # DoD-5: None = honest null
     watchlist_message: str
 
     @property
     def family_b_size(self) -> int:
-        """Konkretny rozmiar rodziny B (50 × #niepustych rezimow; realnie 150)."""
+        """Concrete Family B size (50 × #non-empty regimes; 150 in practice)."""
         return len(self.family_b.labels)
 
     def summary(self) -> str:
-        """Czytelne podsumowanie do raportu (report.qmd / CLI)."""
+        """A readable summary for the report (report.qmd / CLI)."""
         pc = self.positive_control
         cps = list(
             zip(
@@ -187,7 +191,7 @@ class AuditReport:
                 pc.metadata.get("top_changepoint_probs", []),
             )
         )
-        cp_str = ", ".join(f"{d} (p={p:.2f})" for d, p in cps[:3]) or "brak"
+        cp_str = ", ".join(f"{d} (p={p:.2f})" for d, p in cps[:3]) or "none"
         lines = [
             "DriftScope audit — stream verdict:",
             f"  POSITIVE CONTROL (euron/BOCPD, full-stream): reject={pc.reject_h0}; "
@@ -228,19 +232,19 @@ def run_audit(
     n_perm: int = _DEFAULT_N_PERM,
     min_convergence: int = 1,
 ) -> AuditReport:
-    """Pelny audyt strumienia: positive control (full) + per-rezim neg control + honest gate.
+    """Full stream audit: positive control (full) + per-regime neg control + honest gate.
 
-    1. Positive control: BOCPD(euron) FULL-STREAM — wykrycie zmian puli 2014/2022 (DoD-1b).
-    2. Negative control PER REZIM: dla kazdego niepustego rezimu (R1/R2/R3) 3 filary
-       Disagreement na puli glownej → klasyfikacja (DoD-4). Reszta rezimow pominieta.
-    3. Family B FDR: per-number exact-binomial per rezim, POOLED w jedna rodzine (labels
-       "Rk:number_j") + Benjamini-Yekutieli raz nad cala rodzina (DoD-3, v7 §5).
-    4. Watchlist: kandydaci = liczby odrzucone przez Family B, kazda z werdyktem konwergencji
-       SWOJEGO rezimu; `build_watchlist` → None gdy zaden nie przejdzie gate'u (FDR q≤alpha
-       ORAZ konwergencja ≥min_convergence). Na czystym neg. control → honest null (DoD-5).
+    1. Positive control: BOCPD(euron) FULL-STREAM — detecting the 2014/2022 pool changes (DoD-1b).
+    2. Negative control PER REGIME: for each non-empty regime (R1/R2/R3) 3 Disagreement
+       pillars on the main pool → classification (DoD-4). The other regimes are skipped.
+    3. Family B FDR: per-number exact-binomial per regime, POOLED into one family (labels
+       "Rk:number_j") + Benjamini-Yekutieli once over the whole family (DoD-3, v7 §5).
+    4. Watchlist: candidates = numbers rejected by Family B, each with the convergence verdict
+       of ITS OWN regime; `build_watchlist` → None when none passes the gate (FDR q≤alpha
+       AND convergence ≥min_convergence). On a clean neg. control → honest null (DoD-5).
 
-    `pillar_detectors`: nadpisanie 3 filarow (testy wstrzykuja szybkie warianty);
-    stosowane do KAZDEGO rezimu. None → `default_pillar_detectors(alpha, n_perm)`.
+    `pillar_detectors`: override the 3 pillars (tests inject fast variants);
+    applied to EVERY regime. None → `default_pillar_detectors(alpha, n_perm)`.
     """
     positive = run_bocpd(draws, field="euron")
 
@@ -257,7 +261,7 @@ def run_audit(
 
     for label in REGIME_LABELS:
         regime_draws = regimes.get(label, [])
-        if not regime_draws:  # rezim bez losowan — pominiety (np. niepelny strumien)
+        if not regime_draws:  # regime with no draws — skipped (e.g. an incomplete stream)
             continue
         pillars = run_pillars(regime_draws, detectors)
         regime_audits[label] = RegimeAudit(
@@ -275,9 +279,9 @@ def run_audit(
     )
     family_b = correct_family_b(pvals_all, pooled_labels, alpha=alpha)
 
-    # Kandydaci do watchlisty = liczby odrzucone przez Family B (DoD-3). Kazdy niesie werdykt
-    # konwergencji SWOJEGO rezimu (DoD-4; label = "Rk:number_j"). Oba gate'y egzekwowane w
-    # `watchlist_or_message`; na uniform main Family B nie odrzuca nic → brak kandydatow.
+    # Watchlist candidates = numbers rejected by Family B (DoD-3). Each carries the convergence
+    # verdict of ITS OWN regime (DoD-4; label = "Rk:number_j"). Both gates are enforced in
+    # `watchlist_or_message`; on a uniform main pool Family B rejects nothing → no candidates.
     candidates = [
         WatchlistCandidate(
             label=lbl,

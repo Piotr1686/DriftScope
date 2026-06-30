@@ -146,7 +146,7 @@ def test_euron_marginal_uniform(regime: str) -> None:
 # ---------------------------------------------------------------------------
 
 def test_invalid_regime_raises() -> None:
-    with pytest.raises(ValueError, match="Nieznany rezim"):
+    with pytest.raises(ValueError, match="Unknown regime"):
         generate_uniform_draws(10, "R9", _rng())  # type: ignore[arg-type]
 
 
@@ -270,12 +270,12 @@ def test_pair_corr_increases_cooccurrence_preserving_margins() -> None:
 # --- Walidacja wejscia ---
 
 def test_planted_invalid_signal_raises() -> None:
-    with pytest.raises(ValueError, match="Nieznany sygnal"):
+    with pytest.raises(ValueError, match="Unknown signal"):
         generate_planted_draws(10, "R2", "ghost", 0.1, _rng())  # type: ignore[arg-type]
 
 
 def test_planted_invalid_effect_raises() -> None:
-    with pytest.raises(ValueError, match="spoza siatki"):
+    with pytest.raises(ValueError, match="§6 grid"):
         generate_planted_draws(10, "R2", "freq_shift", 0.99, _rng())
 
 

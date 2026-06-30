@@ -1,24 +1,24 @@
-"""Adaptive watchlist (W7, DoD-5) — HONEST gate nad wynikami pipeline'u.
+"""Adaptive watchlist (W7, DoD-5) — an HONEST gate over the pipeline results.
 
-Komponent celowo minimalny i defensywny (PROJECT_BRIEF §5 Krok 10: self-value < 20%
-scope). Buduje watchliste wzorcow „wartych dalszego monitorowania" WYLACZNIE z sygnalow,
-ktore przeszly pelny rygor:
+A deliberately minimal, defensive component (PROJECT_BRIEF §5 Step 10: self-value < 20%
+scope). It builds a watchlist of patterns "worth further monitoring" EXCLUSIVELY from
+signals that passed full rigor:
 
-  1. **DoD-3 (FDR):** q-value <= alpha po korekcji multiple-testing (`multiple_testing`).
-  2. **DoD-4 (konwergencja):** sygnal widziany przez >= `min_convergence` filarow
-     (DisagreementVerdict z `reporting.disagreement`).
+  1. **DoD-3 (FDR):** q-value <= alpha after multiple-testing correction (`multiple_testing`).
+  2. **DoD-4 (convergence):** the signal seen by >= `min_convergence` pillars
+     (DisagreementVerdict from `reporting.disagreement`).
 
-Jesli ZADEN wzorzec nie spelnia gate'u → `build_watchlist` zwraca **None** (NIE pusta liste):
-honest null — „brak zwalidowanego sygnalu, brak watchlisty". To rdzen DoD-5: adaptive
-warstwa milczy, gdy metodologia nie dostarczyla dowodu (zadna ekstrapolacja na sile).
+If NO pattern passes the gate → `build_watchlist` returns **None** (NOT an empty list):
+honest null — "no validated signal, no watchlist". This is the core of DoD-5: the adaptive
+layer stays silent when the methodology produced no evidence (no extrapolation by force).
 
-**Dlaczego primary gate to FDR, a konwergencja jest PARAMETREM (`min_convergence=1`):**
-czysta komorka pair_corr to **1/3** (tylko co-occurrence; chi²/MMD/H1 dowodliwie slepe —
-preregistration_v6 §6.5). Twardy prog >=2/3 odrzucilby ten REALNY, zwalidowany sygnal.
-Stad domyslnie wystarczy >=1 filar + przejscie FDR; caller moze zaostrzyc do >=2 lub 3.
+**Why the primary gate is FDR, with convergence as a PARAMETER (`min_convergence=1`):**
+the clean pair_corr cell is **1/3** (co-occurrence only; chi²/MMD/H1 provably blind —
+preregistration_v6 §6.5). A hard >=2/3 threshold would reject this REAL, validated signal.
+Hence the default is >=1 pillar + passing FDR; a caller may tighten it to >=2 or 3.
 
-Ten modul NIE jest predykcja liczb (pivot predykcyjny ANULOWANY — Sciezka A, audyt).
-Watchlista = audytowy artefakt „te wzorce przeszly wszystkie bramki rygoru".
+This module is NOT number prediction (the prediction pivot is CANCELLED — Path A, audit).
+The watchlist = an audit artifact "these patterns passed all the rigor gates".
 """
 from __future__ import annotations
 
@@ -32,29 +32,29 @@ _DEFAULT_ALPHA = 0.05
 
 @dataclass(frozen=True)
 class WatchlistCandidate:
-    """Kandydat do watchlisty: sygnal + jego werdykty rygoru (DoD-3 + DoD-4)."""
+    """A watchlist candidate: a signal + its rigor verdicts (DoD-3 + DoD-4)."""
 
-    label: str                      # identyfikator wzorca, np. "R3:number_37:gap"
-    regime: str                     # rezim, w ktorym wykryto
-    verdict: DisagreementVerdict    # DoD-4: ile filarow zgodnych
-    q_value: float                  # DoD-3: FDR-skorygowany q-value
-    detail: str = ""                # opcjonalny opis (typ sygnalu, lokalizacja)
+    label: str                      # pattern identifier, e.g. "R3:number_37:gap"
+    regime: str                     # regime in which it was detected
+    verdict: DisagreementVerdict    # DoD-4: how many pillars agree
+    q_value: float                  # DoD-3: FDR-corrected q-value
+    detail: str = ""                # optional description (signal type, localization)
 
 
 @dataclass(frozen=True)
 class WatchlistEntry:
-    """Wpis watchlisty — wzorzec, ktory PRZESZEDL gate DoD-3 + DoD-4."""
+    """A watchlist entry — a pattern that PASSED the DoD-3 + DoD-4 gate."""
 
     label: str
     regime: str
-    convergence: str                # DisagreementVerdict.fraction, np. "3/3"
-    agreeing: tuple[str, ...]       # ktore filary zapalily
+    convergence: str                # DisagreementVerdict.fraction, e.g. "3/3"
+    agreeing: tuple[str, ...]       # which pillars fired
     q_value: float
     detail: str
 
     @property
     def is_primary_finding(self) -> bool:
-        """True gdy pelna konwergencja (wszystkie filary) — najmocniejszy wpis."""
+        """True when full convergence (all pillars) — the strongest entry."""
         num, _, den = self.convergence.partition("/")
         return num == den
 
@@ -65,16 +65,16 @@ def build_watchlist(
     alpha: float = _DEFAULT_ALPHA,
     min_convergence: int = 1,
 ) -> list[WatchlistEntry] | None:
-    """Zwraca watchliste zwalidowanych wzorcow albo None (honest null).
+    """Return a watchlist of validated patterns, or None (honest null).
 
-    Gate per kandydat: `q_value <= alpha` (DoD-3 FDR) ORAZ `verdict.n_agree >=
-    min_convergence` (DoD-4 konwergencja). Jesli zaden nie przechodzi → **None**
-    (nie pusta lista) — sygnalizuje brak zwalidowanego sygnalu (DoD-5).
+    Per-candidate gate: `q_value <= alpha` (DoD-3 FDR) AND `verdict.n_agree >=
+    min_convergence` (DoD-4 convergence). If none passes → **None** (not an empty
+    list) — signals the absence of a validated signal (DoD-5).
 
-    Wynik sortowany po q_value rosnaco (najmocniejszy dowod pierwszy).
+    The result is sorted by q_value ascending (strongest evidence first).
     """
     if min_convergence < 0:
-        raise ValueError(f"min_convergence musi byc >= 0 (jest {min_convergence})")
+        raise ValueError(f"min_convergence must be >= 0 (got {min_convergence})")
 
     qualifying = [
         c
@@ -104,7 +104,7 @@ def watchlist_or_message(
     alpha: float = _DEFAULT_ALPHA,
     min_convergence: int = 1,
 ) -> tuple[list[WatchlistEntry] | None, str]:
-    """Jak `build_watchlist`, ale dolacza explicit message (DoD-5: None z komunikatem)."""
+    """Like `build_watchlist`, but attaches an explicit message (DoD-5: None with a message)."""
     watchlist = build_watchlist(
         candidates, alpha=alpha, min_convergence=min_convergence
     )

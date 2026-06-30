@@ -1,7 +1,7 @@
-"""Testy block bootstrap — alternatywny null (W6).
+"""Block bootstrap tests — alternative null (W6).
 
-Weryfikuje: konstrukcje nulla MBB, kontrole FPR (konserwatywna) na nullu, detekcje autocorr,
-gradient zachowania struktury z block_size, determinizm, guardy.
+Verifies: MBB null construction, (conservative) FPR control on the null, autocorr detection,
+the structure-preservation gradient with block_size, determinism, guards.
 """
 from __future__ import annotations
 
@@ -25,7 +25,7 @@ def test_block_sizes_pre_registered() -> None:
 
 
 def test_null_array_shape() -> None:
-    """MBB null zwraca n_boot statystyk."""
+    """The MBB null returns n_boot statistics."""
     draws = generate_uniform_draws(120, "R2", np.random.default_rng(0))
     null = _block_boot_overlap_null(_main_matrix(draws), n_boot=50, block_size=10, seed=1)
     assert null.shape == (50,)
@@ -33,7 +33,7 @@ def test_null_array_shape() -> None:
 
 
 def test_fpr_on_null_conservative() -> None:
-    """FPR ≤ α na nullu uniform (alternatywny null jest konserwatywny). Deterministyczne."""
+    """FPR ≤ α on the uniform null (the alternative null is conservative). Deterministic."""
     det = block_bootstrap_detector(block_size=10, n_boot=199)
     n_trials = 40
     rejects = sum(
@@ -44,17 +44,17 @@ def test_fpr_on_null_conservative() -> None:
 
 
 def test_detects_autocorr() -> None:
-    """Sygnal lag-1 przebija null blokowy przy umiarkowanym block_size."""
+    """A lag-1 signal breaks through the block null at a moderate block_size."""
     det = block_bootstrap_detector(block_size=10, n_boot=199)
     draws = generate_planted_draws(436, "R3", "autocorr", 0.20, np.random.default_rng(3))
     assert det(draws).reject_h0 is True
 
 
 def test_larger_block_preserves_more_structure() -> None:
-    """Wiekszy block_size zachowuje wiecej zaleznosci → wyzszy sredni overlap nulla.
+    """A larger block_size preserves more dependence → higher mean null overlap.
 
-    Na danych z autocorr: null b=20 ma overlap >= null b=5 (mniej rozcienczenia na
-    granicach blokow). To mechanizm gradientu konserwatyzmu.
+    On autocorr data: the b=20 null has overlap >= the b=5 null (less dilution at
+    block boundaries). This is the conservatism-gradient mechanism.
     """
     draws = generate_planted_draws(436, "R3", "autocorr", 0.20, np.random.default_rng(5))
     r5 = block_bootstrap_test(draws, block_size=5, n_boot=199, seed=42)

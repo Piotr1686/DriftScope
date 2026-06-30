@@ -1,8 +1,8 @@
-"""Testy specification curve (W6, preregistration_v5 §4).
+"""Specification curve tests (W6, preregistration_v5 §4).
 
-Weryfikuje: strukture siatki 9 punktow, logike stabilnosci (>2/9 → niestabilny),
-stabilna nieobecnosc na nullu (zamyka walidacje FPR N∈{15,40}), stabilna obecnosc
-silnego sygnalu, determinizm.
+Verifies: the 9-point grid structure, the stability logic (>2/9 → unstable),
+stable absence on the null (closes FPR validation for N∈{15,40}), stable presence
+of a strong signal, determinism.
 """
 from __future__ import annotations
 
@@ -29,17 +29,17 @@ def _result(rejects: list[bool], alpha: float = 0.05) -> SpecCurveResult:
 
 
 # ---------------------------------------------------------------------------
-# Logika stabilnosci
+# Stability logic
 # ---------------------------------------------------------------------------
 
 def test_stable_when_few_dropouts() -> None:
-    """≤ MAX_UNSTABLE punktow nieistotnych → stabilny."""
+    """≤ MAX_UNSTABLE non-significant points → stable."""
     assert _result([True] * 9).stable is True
-    assert _result([True] * 7 + [False] * 2).stable is True  # 2/9 dropout = granica
+    assert _result([True] * 7 + [False] * 2).stable is True  # 2/9 dropout = boundary
 
 
 def test_unstable_when_too_many_dropouts() -> None:
-    """> MAX_UNSTABLE punktow nieistotnych → niestabilny (znika w >2/9)."""
+    """> MAX_UNSTABLE non-significant points → unstable (vanishes in >2/9)."""
     assert _result([True] * 6 + [False] * 3).stable is False
     r = _result([False] * 9)
     assert r.n_significant == 0
@@ -55,11 +55,11 @@ def test_counts() -> None:
 
 
 # ---------------------------------------------------------------------------
-# Siatka 9 punktow
+# 9-point grid
 # ---------------------------------------------------------------------------
 
 def test_grid_shape_and_coverage() -> None:
-    """9 punktow = 3 window × 3 bandwidth; pokrycie pelnej siatki §4."""
+    """9 points = 3 windows × 3 bandwidths; full §4 grid coverage."""
     draws = generate_uniform_draws(200, "R2", np.random.default_rng(0))
     res = specification_curve(draws, n_perm=49)
     assert res.n_points == len(SPEC_WINDOWS) * len(SPEC_BANDWIDTH_MULTS) == 9
@@ -74,22 +74,22 @@ def test_custom_grid() -> None:
 
 
 # ---------------------------------------------------------------------------
-# Null (stabilna nieobecnosc) + sygnal (stabilna obecnosc)
+# Null (stable absence) + signal (stable presence)
 # ---------------------------------------------------------------------------
 
 def test_null_is_stable_absence() -> None:
-    """Na nullu spec curve nie odrzuca w >MAX_UNSTABLE punktach — zamyka FPR N∈{15,40} (§4).
+    """On the null the spec curve does not reject in >MAX_UNSTABLE points — closes FPR N∈{15,40}.
 
-    Walidacja FPR dla calej siatki (nie tylko N=25): zaden lub znikoma liczba punktow
-    odrzuca pod uniform-iid. Deterministyczne.
+    FPR validation for the whole grid (not just N=25): none or a negligible number of points
+    reject under uniform-iid. Deterministic.
     """
     draws = generate_uniform_draws(436, "R3", np.random.default_rng(7))
     res = specification_curve(draws, n_perm=99)
-    assert res.n_significant <= MAX_UNSTABLE, f"null odrzucil {res.n_significant}/9 punktow"
+    assert res.n_significant <= MAX_UNSTABLE, f"null rejected {res.n_significant}/9 points"
 
 
 def test_strong_signal_is_stable_presence() -> None:
-    """Silny freq_shift jest robustny — wykryty w >=7/9 punktach (stable)."""
+    """A strong freq_shift is robust — detected in >=7/9 points (stable)."""
     draws = generate_planted_draws(436, "R3", "freq_shift", 0.10, np.random.default_rng(0))
     res = specification_curve(draws, n_perm=99)
     assert res.stable is True
@@ -97,7 +97,7 @@ def test_strong_signal_is_stable_presence() -> None:
 
 
 def test_specification_curve_deterministic() -> None:
-    """Ten sam `draws` → identyczna spec curve (DoD-6: detektory czyste funkcje)."""
+    """The same `draws` → an identical spec curve (DoD-6: detectors are pure functions)."""
     draws = generate_planted_draws(300, "R3", "freq_shift", 0.10, np.random.default_rng(2))
     r1 = specification_curve(draws, n_perm=49)
     r2 = specification_curve(draws, n_perm=49)

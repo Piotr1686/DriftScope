@@ -1,20 +1,20 @@
 """Multi Multi audit — second real-world case study (reusability showcase, reporting layer).
 
-Druga gra liczbowa (Multi Multi 20-z-80) przepuszczona przez DOKLADNIE ten sam battery
-negative-control co audyt EuroJackpot — dowod, ze framework jest reusable poza flagship
-case. Detektory wyprowadzaja pool/k z rekordow (`DrawRecord.generic`, pool_size=80), zero
-nowej methodology (reuse `prng_benchmark.run_battery` + `h1_classical.run_bocpd` — warstwa
-reporting NIE podlega dyscyplinie prereg §0).
+A second number game (Multi Multi 20-of-80) run through EXACTLY the same negative-control
+battery as the EuroJackpot audit — proof that the framework is reusable beyond the flagship
+case. The detectors derive pool/k from the records (`DrawRecord.generic`, pool_size=80), no
+new methodology (reuse of `prng_benchmark.run_battery` + `h1_classical.run_bocpd` — the
+reporting layer is NOT subject to the prereg §0 discipline).
 
-BOCPD jest O(T^2) → audyt liczony na OGRANICZONYM oknie ostatnich `window` losowan (default
-2000; pelne 16827 wykluczone budzetowo). Prog BOCPD(pool=80) = 0.34 (skalibrowany na n=2000,
-FPR~=0.05 pod nullem uniform-iid; `_MAIN_REJECT_THRESHOLD_BY_POOL`), wiec okno 2000 jest
-length-matched do kalibracji. Oczekiwany wynik: **clear** — Multi Multi to dobrze
-przetestowany RNG bez pre-rejestrowanego sygnalu (honest null jak negative control 1-50 w EJ).
-Werdykt = Disagreement Protocol po 3 filarach rdzeniowych (BOCPD/MMD/cooc, FLAG >=2/3),
-wiec samotny reject jednego filaru przy alpha=0.05 NIE przewraca werdyktu.
+BOCPD is O(T^2) → the audit is computed on a LIMITED window of the last `window` draws (default
+2000; the full 16827 excluded by budget). The BOCPD(pool=80) threshold = 0.34 (calibrated on
+n=2000, FPR~=0.05 under a uniform-iid null; `_MAIN_REJECT_THRESHOLD_BY_POOL`), so the 2000
+window is length-matched to the calibration. Expected result: **clear** — Multi Multi is a
+well-tested RNG with no pre-registered signal (an honest null like the 1-50 negative control in EJ).
+The verdict = the Disagreement Protocol over the 3 core pillars (BOCPD/MMD/cooc, FLAG >=2/3),
+so a lone reject of a single pillar at alpha=0.05 does NOT overturn the verdict.
 
-Prezentacja (tabela/CSV) zyje w `scripts/multimulti_audit.py` (CLI).
+Presentation (table/CSV) lives in `scripts/multimulti_audit.py` (CLI).
 """
 from __future__ import annotations
 
@@ -30,23 +30,23 @@ from driftscope.reporting.prng_benchmark import BenchmarkRow, run_battery
 _ROOT = Path(driftscope.__file__).resolve().parents[2]
 _MM_SEED_PATH = _ROOT / "data" / "seed" / "multimulti_history.csv"
 _MM_POOL_SIZE = 80
-_DEFAULT_WINDOW = 2000  # BOCPD O(T^2) + length-matched do kalibracji progu 0.34
+_DEFAULT_WINDOW = 2000  # BOCPD O(T^2) + length-matched to the 0.34 threshold calibration
 
 
 @dataclass(frozen=True)
 class MultiMultiAuditRow:
-    """Jeden wiersz audytu MM: BOCPD (filar temporalny) + battery negative-control.
+    """One row of the MM audit: BOCPD (temporal pillar) + negative-control battery.
 
-    Kompozycja: `battery` niesie Family B (per-number exact binomial) + MMD + co-occurrence
-    + IT (suplement); pola `bocpd_*` dokladaja filar H1 (BOCPD na puli glownej).
+    Composition: `battery` carries Family B (per-number exact binomial) + MMD + co-occurrence
+    + IT (supplement); the `bocpd_*` fields add the H1 pillar (BOCPD on the main pool).
 
-    Werdykt = Disagreement Protocol po 3 filarach RDZENIOWYCH (BOCPD->h1 / MMD /
-    co-occurrence): "FLAG" dopiero przy konwergencji >=2/3, samotny filar (1/3) = clear
-    (oczekiwany false-positive przy alpha=0.05, NIE finding — spojnie z report.qmd §4/§6).
-    IT = suplement (nie filar), Family B = osobna bramka FDR — oba raportowane w macierzy,
-    ale POZA werdyktem. `BenchmarkRow.flagged` (PRNG) stosuje TE SAMA zasade >=2, ale na
-    trojce {Family B, MMD, co-occurrence} — battery PRNG nie ma filaru BOCPD/h1, wiec os
-    marginalna niesie tam Family B (zob. `prng_benchmark.BenchmarkRow.core_votes`).
+    The verdict = the Disagreement Protocol over the 3 CORE pillars (BOCPD->h1 / MMD /
+    co-occurrence): "FLAG" only on convergence >=2/3, a lone pillar (1/3) = clear
+    (an expected false-positive at alpha=0.05, NOT a finding — consistent with report.qmd §4/§6).
+    IT = a supplement (not a pillar), Family B = a separate FDR gate — both reported in the
+    matrix, but OUTSIDE the verdict. `BenchmarkRow.flagged` (PRNG) applies the SAME >=2 rule, but
+    on the triple {Family B, MMD, co-occurrence} — the PRNG battery has no BOCPD/h1 pillar, so the
+    marginal axis is carried there by Family B (see `prng_benchmark.BenchmarkRow.core_votes`).
     """
 
     source: str
@@ -59,10 +59,10 @@ class MultiMultiAuditRow:
 
     @property
     def disagreement(self) -> DisagreementVerdict:
-        """Klasyfikacja Disagreement po 3 filarach rdzeniowych (reuse DoD-4 classify)."""
+        """Disagreement classification over the 3 core pillars (reuse of DoD-4 classify)."""
         return classify(
             {
-                "h1": self.bocpd_reject,  # BOCPD = rodzina temporalna H1 (zob. PILLARS)
+                "h1": self.bocpd_reject,  # BOCPD = the temporal H1 family (see PILLARS)
                 "mmd": self.battery.mmd_reject,
                 "cooccurrence": self.battery.cooc_reject,
             }
@@ -70,12 +70,12 @@ class MultiMultiAuditRow:
 
     @property
     def core_fraction(self) -> str:
-        """Ulamek zgodnych filarow rdzeniowych ('0/3'..'3/3') do raportow."""
+        """Fraction of agreeing core pillars ('0/3'..'3/3') for reports."""
         return self.disagreement.fraction
 
     @property
     def flagged(self) -> bool:
-        """Czy konwergencja filarow rdzeniowych >=2/3 (Disagreement, NIE naiwny OR)."""
+        """Whether core-pillar convergence is >=2/3 (Disagreement, NOT a naive OR)."""
         return self.disagreement.n_agree >= 2
 
     @property
@@ -90,20 +90,20 @@ def run_multimulti_audit(
     alpha: float = 0.05,
     seed_csv: Path | None = None,
 ) -> MultiMultiAuditRow:
-    """Audyt negative-control Multi Multi na oknie ostatnich `window` losowan.
+    """Multi Multi negative-control audit on a window of the last `window` draws.
 
-    Wczytuje realny strumien MM (`load_generic_seed_csv`, pool_size=80), tnie do `window`
-    ostatnich losowan i liczy: BOCPD(field="main") + pelny battery (`run_battery` reuse).
-    Wszystkie detektory wyprowadzaja pool/k z rekordow (kroki 1–5). Oczekiwany: clear
-    (Disagreement; samotny filar 1/3 = clear, NIE finding).
+    Loads the real MM stream (`load_generic_seed_csv`, pool_size=80), slices to the last
+    `window` draws, and computes: BOCPD(field="main") + the full battery (`run_battery` reuse).
+    All detectors derive pool/k from the records (steps 1–5). Expected: clear
+    (Disagreement; a lone pillar 1/3 = clear, NOT a finding).
 
-    `seed_csv`: nadpisanie sciezki (testy/inne zrodla); None → `data/seed/multimulti_history.csv`.
+    `seed_csv`: path override (tests/other sources); None → `data/seed/multimulti_history.csv`.
     """
     path = seed_csv if seed_csv is not None else _MM_SEED_PATH
     draws = load_generic_seed_csv(path, pool_size=_MM_POOL_SIZE)
-    # BOCPD jest sekwencyjny, a "okno = ostatnie N" zaklada porzadek chronologiczny.
-    # Realny MM seed ma 2 historyczne inwersje dat (2010) — sortujemy defensywnie, by
-    # okno i detekcja change-pointow byly niezalezne od porzadku w pliku zrodlowym.
+    # BOCPD is sequential, and "window = last N" assumes chronological order.
+    # The real MM seed has 2 historical date inversions (2010) — we sort defensively, so the
+    # window and change-point detection are independent of the order in the source file.
     draws.sort(key=lambda d: d.draw_date)
     recent = draws[-window:] if 0 < window < len(draws) else draws
 

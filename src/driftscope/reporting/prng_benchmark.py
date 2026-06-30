@@ -1,13 +1,13 @@
-"""PRNG benchmark — battery reuse + ground-truth sources (wow Opcja α, reporting layer).
+"""PRNG benchmark — battery reuse + ground-truth sources (wow Option α, reporting layer).
 
-Warstwa reporting/analysis: zna detektory (`pipeline`/`methodology`) ORAZ generatory
-(`ingestion.rng_streams`). Aplikuje DOKLADNIE ten sam battery negative-control co audyt
-EuroJackpot na strumienie z GROUND-TRUTH labelem i zwraca strukturalne wiersze macierzy
-detekcji. Prezentacja (tabela/CSV) zyje w `scripts/prng_benchmark.py` (CLI) i `report.qmd`.
+A reporting/analysis layer: it knows the detectors (`pipeline`/`methodology`) AND the
+generators (`ingestion.rng_streams`). It applies EXACTLY the same negative-control battery as
+the EuroJackpot audit to streams with a GROUND-TRUTH label and returns structured rows of the
+detection matrix. Presentation (table/CSV) lives in the CLI script + `report.qmd`.
 
-Cel: zamienic honest-null audytu w dowod CZULOSCI — ten sam framework, ktory nie znajduje
-nic w EuroJackpot, zapala sie na PRNG z wstrzyknietym defektem i milczy na krypto-PRNG.
-Zero nowej methodology (reuse `pipeline` — NIE podlega dyscyplinie prereg §0).
+Goal: turn the audit's honest-null into a proof of SENSITIVITY — the same framework that finds
+nothing in EuroJackpot lights up on a PRNG with an injected defect and stays silent on crypto-PRNGs.
+No new methodology (reuse of `pipeline` — NOT subject to the prereg §0 discipline).
 """
 from __future__ import annotations
 
@@ -32,39 +32,39 @@ from driftscope.pipeline import family_b_per_number_pvalues
 from driftscope.reporting.information_theory import information_detector
 
 _ROOT = Path(driftscope.__file__).resolve().parents[2]
-_DEFAULT_FAVOR = (7, 0.15)  # defekt marginalny: numer 7 nadreprezentowany w 15% losowan
-_DEFAULT_PERIOD = 50  # defekt period-truncation: cykl 50 losowan powtarzany (zamrozone czestosci)
+_DEFAULT_FAVOR = (7, 0.15)  # marginal defect: number 7 over-represented in 15% of draws
+_DEFAULT_PERIOD = 50  # period-truncation defect: a 50-draw cycle repeated (frozen frequencies)
 
 
 @dataclass(frozen=True)
 class BenchmarkRow:
-    """Jeden wiersz macierzy detekcji: zrodlo + ground-truth label + wyniki batterny."""
+    """One row of the detection matrix: source + ground-truth label + battery results."""
 
     source: str
     klass: str                # "good" | "crypto" | "DEFECT" | "real"
     n: int
-    family_b_reject: int      # liczba odrzuconych liczb (per-number FDR)
+    family_b_reject: int      # number of rejected numbers (per-number FDR)
     family_b_size: int
     family_b_min_q: float
     mmd_reject: bool
     mmd_p: float
     cooc_reject: bool
     cooc_p: float
-    it_reject: bool           # suplement IT (LZ76 sekwencyjny) — sila: period-truncation
+    it_reject: bool           # IT supplement (LZ76 sequential) — strength: period-truncation
     it_p: float
 
     @property
     def core_votes(self) -> int:
-        """Liczba NIEZALEZNYCH rodzin rdzeniowych odrzucajacych H0 (trzy ortogonalne osie).
+        """Number of INDEPENDENT core families rejecting H0 (three orthogonal axes).
 
-        Family B (per-number binomial FDR = os MARGINALNA), MMD (os ROZKLADOWA),
-        co-occurrence (os PAR / joint). Te trzy sa wzajemnie nie-redundantne w duchu
-        Disagreement Protocol (§6.5). IT (LZ76) = suplement sekwencyjny, NIE glosuje.
+        Family B (per-number binomial FDR = the MARGINAL axis), MMD (the DISTRIBUTIONAL axis),
+        co-occurrence (the PAIR / joint axis). These three are mutually non-redundant in the
+        spirit of the Disagreement Protocol (§6.5). IT (LZ76) = a supplement (non-voting).
 
-        Uwaga: w PRNG battery rodzine marginalna niesie Family B (brak osobnego filaru
-        BOCPD/h1 — to battery negative-control na puli glownej, nie pelny pipeline). W
-        `MultiMultiAuditRow` filar marginalny to BOCPD/h1, a Family B jest osobna bramka
-        FDR poza werdyktem — stad inny sklad trojki przy tej samej zasadzie >=2.
+        Note: in the PRNG battery the marginal family is carried by Family B (no separate
+        BOCPD/h1 pillar — this is a negative-control battery on the main pool, not the full
+        pipeline). In `MultiMultiAuditRow` the marginal pillar is BOCPD/h1, and Family B is a
+        separate FDR gate outside the verdict — hence a different triple under the same >=2 rule.
         """
         return (
             int(self.family_b_reject > 0)
@@ -74,13 +74,13 @@ class BenchmarkRow:
 
     @property
     def flagged(self) -> bool:
-        """FLAG dopiero przy konwergencji >=2 niezaleznych rodzin rdzeniowych.
+        """FLAG only on convergence of >=2 independent core families.
 
-        Spojne z reporting/disagreement.py i `MultiMultiAuditRow`: pojedyncza rodzina to
-        NIE finding (samotny filar = clear, oczekiwany false-positive przy alpha). Wczesniej
-        naiwny OR — graniczny POJEDYNCZY detektor falszywie przerzucal real/crypto na FLAG,
-        podkopujac wlasnie claim specificity, ktory benchmark ma udowodnic. Sensitivity
-        zachowana: bias(k) i period(p) zapalaja Family B + MMD (>=2). IT = suplement (non-voting).
+        Consistent with reporting/disagreement.py and `MultiMultiAuditRow`: a single family is
+        NOT a finding (a lone pillar = clear, an expected false-positive at alpha). The earlier
+        naive OR — a borderline SINGLE detector falsely flipped real/crypto to FLAG, undermining
+        the very specificity claim the benchmark is meant to prove. Sensitivity is preserved:
+        bias(k) and period(p) light up Family B + MMD (>=2). IT = a supplement (non-voting).
         """
         return self.core_votes >= 2
 
@@ -97,16 +97,16 @@ def run_battery(
     alpha: float = 0.05,
     n_perm: int = 499,
 ) -> BenchmarkRow:
-    """Battery negative-control na puli glownej: Family B (binomial FDR) + MMD + co-occurrence.
+    """Negative-control battery on the main pool: Family B (binomial FDR) + MMD + co-occurrence.
 
-    Te same detektory co `pipeline.default_pillar_detectors` / `family_b_per_number_pvalues`
-    — zero duplikacji methodology.
+    The same detectors as `pipeline.default_pillar_detectors` / `family_b_per_number_pvalues`
+    — no methodology duplication.
 
-    Family B liczone na PELNYM strumieniu (50 liczb), NIE per-rezim — decyzja parytetu:
-    syntetyczne PRNG nie maja rezimow kalendarzowych, wiec battery aplikowany IDENTYCZNIE
-    do kazdego zrodla (= claim reusability §5). Headline EJ per-rezim (150) zyje w
-    `pipeline.run_audit`/`report.qmd §4`; oba czytaja real EJ jako clear (pula 1-50
-    niezmienna przez CP 2014/2022). Zob. caveat w `report.qmd §5`.
+    Family B is computed on the FULL stream (50 numbers), NOT per-regime — a parity decision:
+    synthetic PRNGs have no calendar regimes, so the battery is applied IDENTICALLY to each
+    source (= the reusability claim §5). The per-regime EJ headline (150) lives in
+    `pipeline.run_audit`/`report.qmd §4`; both read real EJ as clear (the 1-50 pool is
+    invariant across the 2014/2022 CPs). See the caveat in `report.qmd §5`.
     """
     labels, pvals = family_b_per_number_pvalues(draws)
     fb = correct_family_b(pvals, labels, alpha=alpha)
@@ -138,15 +138,15 @@ def build_sources(
     period: int = _DEFAULT_PERIOD,
     seed_csv: Path | None = None,
 ) -> list[tuple[str, str, list[DrawRecord]]]:
-    """Zrodla (nazwa, ground-truth label, draws) — symetryczna macierz showcase.
+    """Sources (name, ground-truth label, draws) — a symmetric showcase matrix.
 
-    Dwa good (MT19937/Xorshift64) + dwa crypto (ChaCha20/AES-CTR-DRBG) → oczekiwany clear;
-    dwa DEFECT na tym samym MT base → oczekiwany FLAG, kazdy przez INNY mechanizm:
-      - `+bias(k)`  — defekt marginalny (jeden numer nadreprezentowany; Family B/MMD),
-      - `+period(p)`— period-truncation (zamrozone czestosci cyklu; Family B over-dispersion).
+    Two good (MT19937/Xorshift64) + two crypto (ChaCha20/AES-CTR-DRBG) → expected clear;
+    two DEFECT on the same MT base → expected FLAG, each via a DIFFERENT mechanism:
+      - `+bias(k)`  — a marginal defect (one number over-represented; Family B/MMD),
+      - `+period(p)`— period-truncation (frozen cycle frequencies; Family B over-dispersion).
 
-    Dolacza realny EuroJackpot, jesli seed CSV istnieje (domyslnie z config). Real = honest
-    null audytu (oczekiwany clear, jak negative control 1-50).
+    Appends real EuroJackpot if the seed CSV exists (from config by default). Real = the audit's
+    honest null (expected clear, like the 1-50 negative control).
     """
     sources: list[tuple[str, str, list[DrawRecord]]] = [
         ("MT19937", "good", draws_from_stream(MT19937Stream(seed), n_draws)),
@@ -180,7 +180,7 @@ def run_benchmark(
     period: int = _DEFAULT_PERIOD,
     seed_csv: Path | None = None,
 ) -> list[BenchmarkRow]:
-    """Pelny benchmark: battery na kazdym zrodle → lista wierszy macierzy detekcji."""
+    """Full benchmark: battery on each source → list of detection-matrix rows."""
     return [
         run_battery(name, klass, draws, alpha=alpha, n_perm=n_perm)
         for name, klass, draws in build_sources(

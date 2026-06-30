@@ -1,6 +1,6 @@
-"""Matplotlib static plots — figury publikowalne (W7/W8).
+"""Matplotlib static plots — publishable figures (W7/W8).
 
-Publikowalne figury + (W8) FuncAnimation → ffmpeg → hook.webm (VP9, 2-5 MB).
+Publishable figures + (W8) FuncAnimation → ffmpeg → hook.webm (VP9, 2-5 MB).
 Color palette: real=#0EA5E9, control=#94A3B8, change-point=#EF4444.
 """
 from __future__ import annotations
@@ -10,7 +10,7 @@ from typing import Literal
 
 import matplotlib
 
-matplotlib.use("Agg")  # headless (Win11/CI-safe) — przed importem pyplot
+matplotlib.use("Agg")  # headless (Win11/CI-safe) — before importing pyplot
 
 import matplotlib.pyplot as plt  # noqa: E402
 import numpy as np  # noqa: E402
@@ -24,7 +24,7 @@ from driftscope.methodology.h1_classical import (  # noqa: E402
     run_bocpd,
 )
 
-# Paleta (spójna z hookiem W8)
+# Palette (consistent with the W8 hook)
 _COLOR_REAL = "#0EA5E9"
 _COLOR_CONTROL = "#94A3B8"
 _COLOR_CP = "#EF4444"
@@ -36,10 +36,10 @@ def _render_bocpd_panel(
     field: Literal["main", "euron"],
     title: str,
 ) -> bool:
-    """Rysuje jeden panel BOCPD na `ax`. Zwraca reject_h0 (czy wykryto change-point).
+    """Draw one BOCPD panel on `ax`. Returns reject_h0 (whether a change-point was detected).
 
-    Markery CP (czerwone) TYLKO dla pikow przekraczajacych prog reject — dla negative
-    control zaden nie przechodzi → panel wizualnie czysty (uczciwa ilustracja braku sygnalu).
+    CP markers (red) ONLY for peaks above the reject threshold — for the negative
+    control none passes → the panel is visually clean (an honest illustration of no signal).
     """
     cp_probs, _rl_map, warmup, threshold = compute_bocpd_curve(draws, field)
     result = run_bocpd(draws, field)
@@ -55,7 +55,7 @@ def _render_bocpd_panel(
     ax.axhline(threshold, color=_COLOR_CP, ls="--", lw=1.0, alpha=0.7,
                label=f"reject threshold = {threshold:.2f}")
 
-    # Markery TYLKO dla wykrytych CP (prob > prog) — czyste dla negative control.
+    # Markers ONLY for detected CPs (prob > threshold) — clean for the negative control.
     date_to_idx = {str(d.draw_date): i for i, d in enumerate(draws)}
     detected = [
         (date_to_idx[date_str], prob)
@@ -85,12 +85,12 @@ def plot_bocpd_changepoints(
     field: Literal["main", "euron"] = "euron",
     out_path: Path | str | None = None,
 ) -> Path:
-    """Statyczna figura krzywej BOCPD `cp_prob` z zaznaczonymi change-pointami.
+    """Static figure of the BOCPD `cp_prob` curve with change-points marked.
 
-    Markery CP (czerwone, #EF4444) tylko dla pikow przekraczajacych prog reject. Dla
-    pola 'euron' wykryte CP ≈ 2014-11-28 (1-8→1-10) i 2022-03-29 (1-10→1-12).
+    CP markers (red, #EF4444) only for peaks above the reject threshold. For the
+    'euron' field the detected CPs ≈ 2014-11-28 (1-8→1-10) and 2022-03-29 (1-10→1-12).
 
-    out_path: docelowy PNG. None → `artifacts/bocpd_{field}.png` (katalog tworzony w razie braku).
+    out_path: target PNG. None → `artifacts/bocpd_{field}.png` (directory created if missing).
     """
     fig, ax = plt.subplots(figsize=(11, 4.5))
     _render_bocpd_panel(ax, draws, field, title=f"BOCPD — field '{field}'")
@@ -110,14 +110,14 @@ def plot_control_comparison(
     draws: list[DrawRecord],
     out_path: Path | str | None = None,
 ) -> Path:
-    """Figura positive vs negative control — wizualny dowod DoD-1 (side-by-side).
+    """Positive vs negative control figure — a visual proof of DoD-1 (side-by-side).
 
-    Gorny panel: euron (positive control) — BOCPD wykrywa zmiany puli 2014/2022.
-    Dolny panel: main 1-50 (negative control) — krzywa plaska, zaden pik nie przekracza
-    progu (framework NIE halucynuje sygnalu tam, gdzie go nie ma).
+    Top panel: euron (positive control) — BOCPD detects the 2014/2022 pool changes.
+    Bottom panel: main 1-50 (negative control) — a flat curve, no peak crosses the
+    threshold (the framework does NOT hallucinate a signal where there is none).
 
-    Bezposrednio ilustruje headline `pipeline.run_audit`: potwierdzenie znanego sygnalu
-    + czysty negative control.
+    Directly illustrates the `pipeline.run_audit` headline: confirmation of the known
+    signal + a clean negative control.
 
     out_path: None → `artifacts/control_comparison.png`.
     """
@@ -146,19 +146,19 @@ def animate_bocpd_hook(
     n_frames: int = 200,
     codec: str = "libvpx-vp9",
 ) -> Path:
-    """Hook animation (W8): sweep krzywej BOCPD lewo→prawo, markery CP „zapalaja sie".
+    """Hook animation (W8): the BOCPD curve sweeps left→right, CP markers "light up".
 
-    10-sekundowy hook (domyslnie 200 klatek @ 20 fps): linia sweep przeciaga w prawo
-    odslaniajac cp_prob „w czasie rzeczywistym"; gdy mija wykryty change-point (pik
-    ponad progiem) — marker CP zapala sie na czerwono + adnotacja daty. Dla euron
-    dramatyzuje wykrycie zmian puli 2014/2022 (preregistration_v6, fundament: rl_map
-    z compute_bocpd_curve).
+    A 10-second hook (200 frames @ 20 fps by default): the sweep line moves right
+    revealing cp_prob "in real time"; when it passes a detected change-point (a peak
+    above the threshold) — the CP marker lights up red + a date annotation. For euron
+    it dramatizes the detection of the 2014/2022 pool changes (preregistration_v6,
+    foundation: rl_map from compute_bocpd_curve).
 
-    Format: `.webm` (VP9, codec=libvpx-vp9) gdy ffmpeg dostepny; w przeciwnym razie
-    **fallback `.gif`** (PillowWriter) pod ta sama sciezka z rozszerzeniem .gif.
+    Format: `.webm` (VP9, codec=libvpx-vp9) when ffmpeg is available; otherwise a
+    **`.gif` fallback** (PillowWriter) at the same path with a .gif extension.
 
-    out_path: None → `artifacts/hook_{field}.webm`. Zwraca faktycznie zapisana sciezke
-    (moze miec rozszerzenie .gif przy fallbacku).
+    out_path: None → `artifacts/hook_{field}.webm`. Returns the path actually written
+    (may carry a .gif extension on fallback).
     """
     cp_probs, _rl_map, warmup, threshold = compute_bocpd_curve(draws, field)
     meta = run_bocpd(draws, field).metadata
@@ -222,7 +222,7 @@ def animate_bocpd_hook(
             fps=fps, codec=codec, bitrate=2400
         )
     else:
-        out_path = out_path.with_suffix(".gif")  # fallback bez ffmpeg
+        out_path = out_path.with_suffix(".gif")  # fallback without ffmpeg
         writer = PillowWriter(fps=fps)
 
     anim.save(str(out_path), writer=writer)

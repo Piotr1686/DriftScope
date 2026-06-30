@@ -1,33 +1,33 @@
-"""Audyt informacyjno-teoretyczny — zlozonosc Lempel-Ziv 1976 (wow opcja #3, reporting layer).
+"""Information-theoretic audit — Lempel-Ziv 1976 complexity (wow option #3, reporting layer).
 
-Warstwa reporting/analysis (SUPLEMENT, NIE methodology/): detektor nie jest 4. filarem
-Disagreement Protocol — ten pozostaje 3-filarowy (h1/mmd/cooccurrence, DoD-4=3/3, §6.5).
-Jak `prng_benchmark` i `disagreement`, modul jest suplementem non-prereg (NIE podlega
-dyscyplinie preregistration §0) — patrz pamiec `audit-framework-wow-options`.
+A reporting/analysis layer (a SUPPLEMENT, NOT methodology/): this detector is not a 4th
+Disagreement Protocol pillar — that stays three-way (h1/mmd/cooccurrence, DoD-4=3/3, §6.5).
+Like `prng_benchmark` and `disagreement`, the module is a non-prereg supplement (NOT subject
+to the preregistration §0 discipline) — see the `audit-framework-wow-options` memory.
 
-**Idea:** prawdziwie losowa sekwencja jest NIESCISLIWA. Odchylenie od uniform-iid wnosi
-strukture (powtarzalne podciagi) → NIZSZA zlozonosc algorytmiczna. Mierzymy ja kanoniczna
-zlozonoscia produkcji Lempel-Ziv 1976 (Kaspar-Schuster 1987) — czysty algorytm, zero
-zaleznosci od wersji kompresora (DoD-6 trywialny, cytowalny). bz2 ratio dolaczamy jako
-intuicyjny cross-check w `metadata` (NIE wchodzi do `reject_h0`).
+**Idea:** a truly random sequence is INCOMPRESSIBLE. A deviation from uniform-iid introduces
+structure (repeating substrings) → LOWER algorithmic complexity. We measure it with the
+canonical Lempel-Ziv 1976 production complexity (Kaspar-Schuster 1987) — a pure algorithm, no
+dependence on a compressor version (DoD-6 trivial, citable). We attach the bz2 ratio as an
+intuitive cross-check in `metadata` (it does NOT enter `reject_h0`).
 
-**Null — order-shuffle (margin-conditioned):** strumien = sklejone CHRONOLOGICZNIE bloki
-posortowanych 5 liczb glownych. Null permutuje KOLEJNOSC blokow (losowan), zachowujac
-(a) marginal (multiset symboli = czestosci liczb) oraz (b) wewnatrz-losowaniowe
-wspolwystapienia (blok 5 liczb nienaruszony) — a lamiac TYLKO strukture MIEDZY-losowaniowa
-(period / autocorr). Dzieki temu IT jest KOMPLEMENTARNY: slepy na czysty marginal (chi²/MMD
-go lapia) i na joint wewnatrz losowania (co-occurrence go lapie), czuly na strukture
-SEKWENCYJNA, ktorej zadna z trzech rodzin nie celuje wprost.
+**Null — order-shuffle (margin-conditioned):** the stream = the CHRONOLOGICALLY concatenated
+blocks of the sorted 5 main numbers. The null permutes the ORDER of blocks (draws), preserving
+(a) the marginal (the symbol multiset = number frequencies) and (b) within-draw co-occurrences
+(the block of 5 numbers untouched) — breaking ONLY the between-draw structure
+(period / autocorr). This makes IT COMPLEMENTARY: blind to a pure marginal (chi²/MMD catch it)
+and to the within-draw joint (co-occurrence catches it), sensitive to the SEQUENTIAL structure
+that none of the three families targets directly.
 
-**Statystyka:** zlozonosc surowa c(obs). Struktura → c NIZSZA → lewy ogon nulla:
+**Statistic:** the raw complexity c(obs). Structure → lower c → the left tail of the null:
   p = (1 + #{c_perm ≤ c_obs}) / (n_perm + 1),   reject_h0 ⇔ p < alpha.
-`statistic` raportuje zlozonosc ZNORMALIZOWANA c_norm = c · ln(L) / (L · ln(a)) (a=alfabet,
-L=dlugosc; → ~1 dla losowego) — monotoniczna w c, wiec p ten sam.
+`statistic` reports the NORMALIZED complexity c_norm = c · ln(L) / (L · ln(a)) (a=alphabet,
+L=length; → ~1 for random) — monotonic in c, so the p is the same.
 
-Determinizm (DoD-6): detektor jest CZYSTA FUNKCJA wejscia — rng order-shuffle seedowany z
-digestu zawartosci `draws` (macierz liczb glownych) ⊕ base_seed, jak w `cooccurrence`.
+Determinism (DoD-6): the detector is a PURE FUNCTION of the input — the order-shuffle rng is
+seeded from a digest of the `draws` contents ⊕ base_seed, as in `cooccurrence`.
 
-Numba (Os 3): kanoniczny parse LZ76 w `@njit(cache=True)` (czysta funkcja int-tablicy).
+Numba (Axis 3): the canonical LZ76 parse in `@njit(cache=True)` (a pure function of an int array).
 """
 from __future__ import annotations
 
@@ -41,8 +41,8 @@ from numba import njit
 
 from driftscope.core.types import Detector, DrawRecord, TestResult
 
-_MAIN_POOL_SIZE = 50  # alfabet: liczby glowne 1-50
-_MAIN_DRAW = 5        # 5 liczb na losowanie (rozmiar bloku)
+_MAIN_POOL_SIZE = 50  # alphabet: main numbers 1-50
+_MAIN_DRAW = 5        # 5 numbers per draw (block size)
 
 DEFAULT_N_PERM = 999
 DEFAULT_ALPHA = 0.05
@@ -50,15 +50,15 @@ _DEFAULT_BASE_SEED = 20260607
 
 
 # ---------------------------------------------------------------------------
-# Kodowanie strumienia
+# Stream encoding
 # ---------------------------------------------------------------------------
 
 def _main_blocks(draws: list[DrawRecord]) -> npt.NDArray[np.int32]:
-    """Macierz (n_draws, k) POSORTOWANYCH liczb glownych w porzadku chronologicznym.
+    """Matrix (n_draws, k) of the SORTED main numbers in chronological order.
 
-    Wiersz t = blok losowania t. Splaszczenie `.ravel()` daje strumien dlugosci k·n nad
-    alfabetem 1-pool; permutacja wierszy = order-shuffle zachowujacy bloki (null).
-    Szerokosc bloku k wyprowadzona z rekordow (EJ=5, MM=20).
+    Row t = the block of draw t. Flattening with `.ravel()` gives a stream of length k·n over
+    the alphabet 1-pool; permuting rows = an order-shuffle preserving blocks (the null).
+    The block width k is derived from the records (EJ=5, MM=20).
     """
     n = len(draws)
     k = len(draws[0].main_numbers) if draws else _MAIN_DRAW
@@ -69,25 +69,25 @@ def _main_blocks(draws: list[DrawRecord]) -> npt.NDArray[np.int32]:
 
 
 # ---------------------------------------------------------------------------
-# Zlozonosc Lempel-Ziv 1976 (njit hot loop)
+# Lempel-Ziv 1976 complexity (njit hot loop)
 # ---------------------------------------------------------------------------
 
 @njit(cache=True)
 def lz76_complexity(s: npt.NDArray[np.int32]) -> int:
-    """Kanoniczna zlozonosc produkcji Lempel-Ziv 1976 (Kaspar-Schuster 1987).
+    """Canonical Lempel-Ziv 1976 production complexity (Kaspar-Schuster 1987).
 
-    Liczba fraz w rozbiorze samo-produkujacym sekwencje lewostronnie. Granice:
-    1 ≤ c ≤ n. Ciag staly → c=2; ciag o samych roznych symbolach → c=n; struktura
-    (powtorzenia) → c maleje. RNG niezalezne (czysta funkcja `s`).
+    The number of phrases in the self-producing left-to-right parse. Bounds:
+    1 ≤ c ≤ n. A constant sequence → c=2; a sequence of all distinct symbols → c=n; structure
+    (repetitions) → c decreases. RNG-independent (a pure function of `s`).
     """
     n = s.shape[0]
     if n <= 1:
         return n
     c = 1
-    lp = 1     # dlugosc juz sparsowanego prefiksu
-    i = 0      # wskaznik porownania w historii
-    k = 1      # dlugosc biezacego dopasowania
-    k_max = 1  # najdluzsze dopasowanie dla biezacej frazy
+    lp = 1     # length of the already-parsed prefix
+    i = 0      # comparison pointer in the history
+    k = 1      # length of the current match
+    k_max = 1  # longest match for the current phrase
     while True:
         if s[i + k - 1] == s[lp + k - 1]:
             k += 1
@@ -112,9 +112,9 @@ def lz76_complexity(s: npt.NDArray[np.int32]) -> int:
 
 
 def _normalized_complexity(c: int, length: int, alphabet: int = _MAIN_POOL_SIZE) -> float:
-    """Znormalizowana zlozonosc c_norm = c · ln(L) / (L · ln(a)) (→ ~1 dla losowego).
+    """Normalized complexity c_norm = c · ln(L) / (L · ln(a)) (→ ~1 for random).
 
-    `alphabet` = rozmiar puli symboli (EJ=50, MM=80) wyprowadzony z rekordow.
+    `alphabet` = the symbol pool size (EJ=50, MM=80) derived from the records.
     """
     if length <= 1:
         return float(c)
@@ -122,13 +122,13 @@ def _normalized_complexity(c: int, length: int, alphabet: int = _MAIN_POOL_SIZE)
 
 
 def _bz2_ratio(s: npt.NDArray[np.int32]) -> float:
-    """Stosunek kompresji bz2: len(bz2(bajty)) / len(bajty). Wartosci 1-50 mieszcza sie w uint8."""
+    """bz2 compression ratio: len(bz2(bytes)) / len(bytes). Values 1-50 fit in uint8."""
     raw = s.astype(np.uint8).tobytes()
     return len(bz2.compress(raw, compresslevel=9)) / len(raw)
 
 
 # ---------------------------------------------------------------------------
-# Test informacyjno-teoretyczny
+# Information-theoretic test
 # ---------------------------------------------------------------------------
 
 def information_test(
@@ -137,19 +137,19 @@ def information_test(
     alpha: float = DEFAULT_ALPHA,
     seed: int = 0,
 ) -> TestResult:
-    """Permutacyjny test zlozonosci Lempel-Ziv 1976 (suplement IT, order-shuffle null).
+    """Permutation test of Lempel-Ziv 1976 complexity (IT supplement, order-shuffle null).
 
-    H0: liczby glowne ~ uniform-iid (brak struktury SEKWENCYJNEJ ponad marginal + joint
-    wewnatrz losowania). reject_h0 ⇔ p_value(c, lewy ogon) < alpha.
+    H0: the main numbers ~ uniform-iid (no SEQUENTIAL structure beyond the marginal + the
+    within-draw joint). reject_h0 ⇔ p_value(c, left tail) < alpha.
 
-    Null = permutacja kolejnosci blokow losowan (zachowuje marginal i wspolwystapienia,
-    lamie strukture miedzy-losowaniowa). p = (1+#{c_perm ≤ c_obs})/(n_perm+1).
+    Null = permuting the order of draw blocks (preserves the marginal and co-occurrences,
+    breaks the between-draw structure). p = (1+#{c_perm ≤ c_obs})/(n_perm+1).
     """
     n = len(draws)
     if n < 2:
-        raise ValueError(f"information_test wymaga >=2 losowan, otrzymano {n}")
+        raise ValueError(f"information_test requires >=2 draws, got {n}")
 
-    pool = draws[0].pool_size  # alfabet symboli (EJ=50, MM=80)
+    pool = draws[0].pool_size  # symbol alphabet (EJ=50, MM=80)
     blocks = _main_blocks(draws)
     obs_stream = blocks.ravel()
     length = obs_stream.shape[0]
@@ -180,7 +180,7 @@ def information_test(
             "n_perm": n_perm,
             "lz76_raw": int(c_obs),
             "lz76_norm": _normalized_complexity(c_obs, length, pool),
-            "bz2_ratio": bz2_obs,      # cross-check (intuicyjny; NIE wchodzi do reject_h0)
+            "bz2_ratio": bz2_obs,      # cross-check (intuitive; does NOT enter reject_h0)
             "bz2_p": p_bz2,
             "h0": "main pool uniform-iid (no sequential structure)",
             "null": "order-shuffle (draw-block permutation; margins + joint preserved)",
@@ -193,15 +193,15 @@ def lz76_null_distribution(
     n_perm: int = DEFAULT_N_PERM,
     seed: int = 0,
 ) -> tuple[int, npt.NDArray[np.int64]]:
-    """c_obs + rozklad nulla zlozonosci LZ76 (order-shuffle) — do wizualizacji / raportu.
+    """c_obs + the LZ76 complexity null distribution (order-shuffle) — for visualization / report.
 
-    Zwraca (zlozonosc obserwowana, tablica `n_perm` zlozonosci pod permutacja blokow).
-    Ten sam null co `information_test`; wydzielone dla warstwy demo/reporting (histogram
-    obs vs null), bez dublowania logiki shuffle.
+    Returns (the observed complexity, an array of `n_perm` complexities under block permutation).
+    The same null as `information_test`; split out for the demo/reporting layer (obs vs null
+    histogram), without duplicating the shuffle logic.
     """
     n = len(draws)
     if n < 2:
-        raise ValueError(f"lz76_null_distribution wymaga >=2 losowan, otrzymano {n}")
+        raise ValueError(f"lz76_null_distribution requires >=2 draws, got {n}")
     blocks = _main_blocks(draws)
     c_obs = lz76_complexity(blocks.ravel())
     rng = np.random.default_rng(seed)
@@ -216,11 +216,11 @@ def information_detector(
     alpha: float = DEFAULT_ALPHA,
     base_seed: int = _DEFAULT_BASE_SEED,
 ) -> Detector:
-    """Fabryka detektora zgodnego z `core.types.Detector` (interfejs harnessu W3/W4).
+    """Factory for a detector conforming to `core.types.Detector` (the W3/W4 harness interface).
 
-    Determinizm (DoD-6): kazda instancja jest CZYSTA FUNKCJA `draws`. Seed order-shuffle
-    pochodzi z digestu zawartosci `draws` (macierz liczb glownych) ⊕ `base_seed`, wiec
-    wynik zalezy wylacznie od (draws, base_seed) — jak w `cooccurrence_detector`.
+    Determinism (DoD-6): each instance is a PURE FUNCTION of `draws`. The order-shuffle seed
+    comes from a digest of the `draws` contents (the main-number matrix) ⊕ `base_seed`, so the
+    result depends solely on (draws, base_seed) — as in `cooccurrence_detector`.
     """
     def detector(draws: list[DrawRecord]) -> TestResult:
         blocks = _main_blocks(draws)

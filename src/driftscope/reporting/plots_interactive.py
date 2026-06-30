@@ -1,12 +1,12 @@
-"""Plotly interactive charts — interaktywne odpowiedniki figur BOCPD (W7/W9).
+"""Plotly interactive charts — interactive counterparts of the BOCPD figures (W7/W9).
 
-Interaktywne (hover/zoom/pan) wersje figur ze `plots_static.py`, osadzane w Quarto
-report jako natywne wykresy Plotly. Te same dane (`compute_bocpd_curve`) i ta sama
-semantyka markerow (CP TYLKO ponad progiem reject) co figury static — roznica jest
-WYLACZNIE w warstwie prezentacji (interakcja zamiast PNG).
+Interactive (hover/zoom/pan) versions of the figures from `plots_static.py`, embedded in
+the Quarto report as native Plotly charts. The same data (`compute_bocpd_curve`) and the
+same marker semantics (CP ONLY above the reject threshold) as the static figures — the
+difference is SOLELY in the presentation layer (interaction instead of PNG).
 
-Paleta spojna ze `plots_static.py` (real=#0EA5E9, control=#94A3B8, change-point=#EF4444).
-Modul czysto Plotly — bez matplotlib (interactive nie ciagnie backendu Agg).
+Palette consistent with `plots_static.py` (real=#0EA5E9, control=#94A3B8, change-point=#EF4444).
+A pure Plotly module — no matplotlib (interactive does not pull in the Agg backend).
 """
 from __future__ import annotations
 
@@ -19,7 +19,7 @@ from plotly.subplots import make_subplots  # type: ignore[import-untyped]
 from driftscope.core.types import DrawRecord
 from driftscope.methodology.h1_classical import compute_bocpd_curve, run_bocpd
 
-# Paleta (zduplikowana ze plots_static — celowo, by interactive nie importowal matplotlib)
+# Palette (duplicated from plots_static — deliberately, so interactive does not import matplotlib)
 _COLOR_REAL = "#0EA5E9"
 _COLOR_CONTROL = "#94A3B8"
 _COLOR_CP = "#EF4444"
@@ -33,19 +33,19 @@ def _add_bocpd_panel(
     row: int | None = None,
     col: int | None = None,
 ) -> bool:
-    """Dodaje jeden interaktywny panel BOCPD do `fig`. Zwraca reject_h0.
+    """Add one interactive BOCPD panel to `fig`. Returns reject_h0.
 
-    Replikuje semantyke `plots_static._render_bocpd_panel`: krzywa cp_prob, zacieniona
-    strefa warm-up, pozioma linia progu reject, markery CP TYLKO dla pikow przekraczajacych
-    prog (dla negative control zaden nie przechodzi → panel czysty). `row`/`col` kieruja
-    slady do konkretnego subplotu (None → pojedynczy panel).
+    Replicates the `plots_static._render_bocpd_panel` semantics: the cp_prob curve, a shaded
+    warm-up zone, a horizontal reject-threshold line, CP markers ONLY for peaks above the
+    threshold (for the negative control none passes → a clean panel). `row`/`col` route the
+    traces to a specific subplot (None → a single panel).
     """
     cp_probs, _rl_map, warmup, threshold = compute_bocpd_curve(draws, field)
     result = run_bocpd(draws, field)
     meta = result.metadata
 
     x = list(range(len(cp_probs)))
-    # add_trace/add_vrect/add_hline akceptuja row/col tylko gdy nie-None → budujemy kwargs.
+    # add_trace/add_vrect/add_hline accept row/col only when non-None → we build kwargs.
     rc = {k: v for k, v in (("row", row), ("col", col)) if v is not None}
 
     fig.add_trace(
@@ -81,7 +81,7 @@ def _add_bocpd_panel(
         **rc,
     )
 
-    # Markery TYLKO dla wykrytych CP (prob > prog) — czyste dla negative control.
+    # Markers ONLY for detected CPs (prob > threshold) — clean for the negative control.
     date_to_idx = {str(d.draw_date): i for i, d in enumerate(draws)}
     detected_idx: list[int] = []
     detected_prob: list[float] = []
@@ -112,7 +112,7 @@ def _add_bocpd_panel(
 
 
 def _write_html(fig: go.Figure, out_path: Path | str) -> Path:
-    """Zapisuje samodzielny HTML z plotly.js przez CDN (lekki, nie inline'uje ~3.5 MB)."""
+    """Write a standalone HTML with plotly.js via CDN (lightweight, does not inline ~3.5 MB)."""
     out_path = Path(out_path)
     out_path.parent.mkdir(parents=True, exist_ok=True)
     fig.write_html(str(out_path), include_plotlyjs="cdn", full_html=True)
@@ -124,13 +124,13 @@ def interactive_bocpd_figure(
     field: Literal["main", "euron"] = "euron",
     out_path: Path | str | None = None,
 ) -> go.Figure:
-    """Interaktywna krzywa BOCPD `cp_prob` z markerami change-pointow (analog static).
+    """Interactive BOCPD `cp_prob` curve with change-point markers (static counterpart).
 
-    Hover ujawnia indeks losowania + cp_prob; markery CP (czerwone) niosa date losowania.
-    Dla pola 'euron' wykryte CP ≈ 2014-11-28 i 2022-03-29 (ground truth DoD-1b).
+    Hover reveals the draw index + cp_prob; CP markers (red) carry the draw date.
+    For the 'euron' field the detected CPs ≈ 2014-11-28 and 2022-03-29 (ground truth DoD-1b).
 
-    out_path: None → tylko `Figure` (do osadzenia w Quarto); podane → zapis samodzielnego
-    HTML (`plotly.js` z CDN). Zawsze zwraca `Figure`.
+    out_path: None → only the `Figure` (to embed in Quarto); given → write a standalone
+    HTML (`plotly.js` via CDN). Always returns the `Figure`.
     """
     fig = go.Figure()
     _add_bocpd_panel(fig, draws, field)
@@ -151,13 +151,13 @@ def interactive_control_comparison(
     draws: list[DrawRecord],
     out_path: Path | str | None = None,
 ) -> go.Figure:
-    """Interaktywny positive vs negative control (2 panele) — wizualny dowod DoD-1.
+    """Interactive positive vs negative control (2 panels) — a visual proof of DoD-1.
 
-    Gorny panel: euron (positive control) — BOCPD wykrywa zmiany puli 2014/2022.
-    Dolny panel: main 1-50 (negative control) — krzywa plaska, zaden pik nie przekracza
-    progu. Analog `plots_static.plot_control_comparison`, ale z hover/zoom.
+    Top panel: euron (positive control) — BOCPD detects the 2014/2022 pool changes.
+    Bottom panel: main 1-50 (negative control) — a flat curve, no peak crosses the
+    threshold. Counterpart of `plots_static.plot_control_comparison`, but with hover/zoom.
 
-    out_path: None → tylko `Figure`; podane → zapis samodzielnego HTML (CDN).
+    out_path: None → only the `Figure`; given → write a standalone HTML (CDN).
     """
     fig = make_subplots(
         rows=2,

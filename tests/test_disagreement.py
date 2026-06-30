@@ -86,12 +86,12 @@ def test_no_signal_0_of_3() -> None:
 # --- walidacja wejscia ------------------------------------------------------
 
 def test_missing_pillar_raises() -> None:
-    with pytest.raises(ValueError, match="Brak werdyktow"):
+    with pytest.raises(ValueError, match="Missing verdicts"):
         classify({"h1": True, "mmd": False})  # brak cooccurrence
 
 
 def test_unknown_pillar_raises() -> None:
-    with pytest.raises(ValueError, match="Nieznane filary"):
+    with pytest.raises(ValueError, match="Unknown pillars"):
         classify({"h1": True, "mmd": False, "cooccurrence": True, "recurrence": True})
 
 
@@ -126,7 +126,7 @@ def test_run_pillars_runs_each_detector_on_same_stream() -> None:
 
 
 def test_run_pillars_missing_detector_raises() -> None:
-    with pytest.raises(ValueError, match="Brak detektorow"):
+    with pytest.raises(ValueError, match="Missing detectors"):
         run_pillars([_draw()], {"h1": lambda d: _result(True)})
 
 

@@ -7,159 +7,148 @@
 [![Python 3.10](https://img.shields.io/badge/python-3.10-blue.svg)](pyproject.toml)
 ![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20Linux-lightgrey.svg)
 ![Last commit](https://img.shields.io/github/last-commit/Piotr1686/DriftScope.svg)
-![Repo size](https://img.shields.io/github/repo-size/Piotr1686/DriftScope.svg)
 
 <p align="center">
-  <img src="docs/assets/social_preview.png" alt="DriftScope — a calibrated drift-audit framework for discrete random streams" width="640">
-  <br>
-  <em>A statistical instrument that detects when a stream of "random" data quietly stops being random — and stays silent, on purpose, when it hasn't.</em>
+  <img src="docs/assets/hook_euron.gif" alt="DriftScope sweeping across 14 years of EuroJackpot draws — change-point confidence lights up exactly at the two known rule changes" width="720">
+</p>
+
+<h3 align="center">Twice in its history, EuroJackpot quietly changed its rules.<br>Nobody told the data. <em>The data remembered.</em></h3>
+
+<p align="center">
+  DriftScope found <strong>both</strong> changes blind — and stayed silent everywhere nothing happened.<br>
+  <em>That silence is the hard part, and the whole point.</em>
+</p>
+
+<p align="center">
+  <b>958</b> real draws &nbsp;·&nbsp; <b>2 / 2</b> hidden rule-changes found blind &nbsp;·&nbsp; <b>0</b> false alarms on the control &nbsp;·&nbsp; <b>~4.5&nbsp;s</b> to run
 </p>
 
 <p align="center">
   📊 <strong><a href="https://piotr1686.github.io/DriftScope/">Live report</a></strong> ·
   📄 <strong><a href="https://piotr1686.github.io/DriftScope/executive_summary.html">Executive summary</a></strong> ·
-  🧪 <strong>Interactive demo</strong> (<code>streamlit run demo/app.py</code>)
+  🧪 <strong><a href="#try-it-yourself">Try it yourself</a></strong>
 </p>
+
+> ⚠️ **This is not a lottery predictor.** The lottery is just a convenient benchmark *with a
+> known answer key* — nothing here forecasts a draw, and nothing here could. DriftScope never
+> predicts the next number; it audits whether a stream is *still behaving like it should*.
+
+---
+
+## The detective story
+
+A lottery draw is *supposed* to be perfectly uniform — every number equally likely, forever. So is a
+random-number generator, a sensor reading noise, or the data feeding a machine-learning model in
+production. The hard question isn't "what comes next" — it's **"did this stream quietly stop being
+random, and can you prove it *without* fooling yourself into seeing a pattern that was never there?"**
+
+DriftScope is built around that second, harder half. Here it is in three pictures.
+
+### 1 · It finds what's really there
+
+<p align="center">
+  <img src="docs/assets/story_bocpd.png" alt="BOCPD change-point confidence over 958 EuroJackpot draws, spiking at the 2014 and 2022 rule changes" width="820">
+</p>
+
+EuroJackpot expanded its pool of "euro numbers" by rule changes in **2014** and **2022**. We handed
+DriftScope the raw stream of numbers — **no dates, no labels, no hint that anything ever changed** —
+and asked a single question: *when, if ever, did the distribution shift?* It put its two tallest
+spikes almost exactly on the two real changes. The instrument works.
+
+<details>
+<summary>🤓 Why the tallest peak isn't actually a rule change (and why that's fine)</summary>
+
+<br>Run blind, BOCPD's single **highest**-confidence change-point is **2015-01-23**, *not* a rule
+change — it's a physical aftershock of the 2014 expansion: new euro symbols kept *first appearing*
+for months afterwards, so the distribution genuinely kept shifting. The rule-change draws themselves
+surface as the first draw containing a "9" (**2014-11-28**, posterior ≈ 0.41) and the first "11"
+(**2022-03-29**, ≈ 0.40) — both above the euron alarm threshold (0.33) and both in the top-5. So the
+largest peak is a *real* distributional shift, not a spurious one. The detector fires where change
+exists and invents none where it doesn't (see picture 2). EuroJackpot is a physical process, not an
+ideal RNG — what's genuinely *known* is the rule changes (ex ante) and the invariance of the 1–50
+pool. Those are the controls; we never assume perfect uniformity.
+</details>
+
+### 2 · …and it stays silent where nothing changed
+
+<p align="center">
+  <img src="docs/assets/story_control.png" alt="Positive control (euron) fires at the two rule changes; negative control (main 1-50 pool) is a flat line" width="820">
+</p>
+
+The main **1–50** pool was *never* touched in 14 years. Point the exact same detector at it and the
+curve is flat — **nothing crosses the alarm line.** This is the expensive half. A smoke alarm that
+goes off whenever you make toast is worse than no alarm at all, and most "we found a pattern!" claims
+about random data are exactly that toast. DriftScope's core discipline is **not** hallucinating a
+signal: when there's no evidence, it says so — an honest *"no evidence"*, not an empty shrug.
+
+### 3 · The same instrument, calibrated on known defects
+
+<p align="center">
+  <img src="docs/assets/story_prng.png" alt="PRNG benchmark heatmap — good and cryptographic generators come back clear, two planted defects light up red, each with a distinct signature" width="820">
+</p>
+
+To prove the silence above is *calibration* and not *blindness*, we aim the identical battery at
+random-number generators whose answer is known. Good generators and two **cryptographic** ones come
+back **clear**. Two deliberately broken generators light up — and, crucially, they light up
+**differently**: a simple *bias* (one number over-represented) trips two detectors; a *repeating
+cycle* trips all three at once. DriftScope tells you not just *that* a stream is broken but *what kind*
+of broken it is. → [Full PRNG benchmark ↓](#sensitivity-the-prng-benchmark)
+
+---
 
 > **For whom.** If you own a process that is *supposed* to stay uniform — an RNG, an ML
 > training/production feature, a sensor, a process-control stream — DriftScope audits whether it
-> drifted, with calibrated false-positive control and an honest "no evidence" when it didn't.
-> The lottery below is just the benchmark with a known answer key. See [Beyond the Lottery](#beyond-the-lottery).
+> drifted, with calibrated false-positive control and an honest "no evidence" when it didn't. The
+> lottery above is just the benchmark with a known answer key. See [Beyond the Lottery](#beyond-the-lottery).
 
----
+## Try it yourself
 
-## Table of Contents
-
-- [Quick Start](#quick-start)
-- [What you'll see](#what-youll-see)
-- [The 30-second version](#the-30-second-version)
-- [Mini-glossary](#mini-glossary)
-- [Highlights](#highlights)
-- [How It Works](#how-it-works)
-- [The Proof: EuroJackpot](#the-proof-eurojackpot)
-- [Sensitivity: PRNG Benchmark](#sensitivity-prng-benchmark)
-- [Reusability: Multi Multi](#reusability-multi-multi)
-- [Why You Can Trust It](#why-you-can-trust-it)
-- [Beyond the Lottery](#beyond-the-lottery)
-- [Architecture](#architecture)
-- [Configuration](#configuration)
-- [Usage](#usage)
-- [Project Structure](#project-structure)
-- [Requirements](#requirements)
-- [Performance](#performance)
-- [Definition of Done](#definition-of-done)
-- [Roadmap](#roadmap)
-- [License](#license)
-- [About the Author](#about-the-author)
-
----
-
-## Quick Start
-
-Requires **Python 3.10**.
+Requires **Python 3.10**. One command ingests 958 real EuroJackpot draws, runs the three-detector
+audit, and prints the verdict:
 
 ```bash
-# install (editable, with dev tools)
-pip install -e ".[dev]"
-# On Windows 11 / Miniconda, if pip hits an SSL cert error, add:
-#   --trusted-host pypi.org --trusted-host files.pythonhosted.org
-
-# run the full audit on the bundled seed CSV (958 draws) and print the verdict
-driftscope run
+pip install -e ".[dev]"          # editable install with dev tools
+driftscope run                   # full audit on the bundled 958-draw seed CSV
 ```
 
-That single command ingests 958 real EuroJackpot draws, runs the three-detector audit, and prints
-the verdict (positive/negative control + honest watchlist).
+<sub>On Windows 11 / Miniconda, if pip hits an SSL cert error, add
+`--trusted-host pypi.org --trusted-host files.pythonhosted.org`.</sub>
 
-## What you'll see
+Prefer to click rather than install? An **interactive demo** — a detection matrix, an *entropy lens*,
+and a real-vs-uniform *Turing test* you can play — runs locally with:
 
-`driftscope run` prints a verdict block. On the bundled EuroJackpot data (positive control = euro
-numbers with known 2014/2022 rule changes; negative control = the unchanged 1–50 pool):
+```bash
+pip install -e ".[demo]" && streamlit run demo/app.py
+```
+<!-- TODO: once deployed to Streamlit Community Cloud, link the hosted demo here and in the hero. -->
+
+### What the verdict looks like
+
+`driftscope run` prints a verdict block. On the bundled data (positive control = euro numbers with
+known 2014/2022 changes; negative control = the unchanged 1–50 pool):
 
 ```text
-Loaded 958 draws from data/seed/eurojackpot_history.csv
-
 DriftScope audit — stream verdict:
   POSITIVE CONTROL (euron/BOCPD, full-stream): reject=True;
     top change-points: 2015-01-23 (p=0.47), 2014-11-28 (p=0.41), 2022-03-29 (p=0.40)
   NEGATIVE CONTROL (main 1-50 / 3 pillars, per regime):
     R1 (n=133): 0/3 (no signal); [h1=ok mmd=ok cooccurrence=ok]
-    R2 (n=389): 1/3 (single-pillar signal, requires DriftSim power context); [h1=ok mmd=ok cooccurrence=reject]
+    R2 (n=389): 1/3 (single-pillar signal, requires DriftSim power context); [cooccurrence=reject]
     R3 (n=436): 0/3 (no signal); [h1=ok mmd=ok cooccurrence=ok]
   Family B (per-number FDR, benjamini_yekutieli): 0/150 rejected
   WATCHLIST (DoD-5): None (honest null)
 ```
 
 Read it as: *the detector fires where a real change exists (euro pool), invents nothing on the
-control, and abstains (`None`) rather than forcing a verdict.* See [Usage](#usage) for all options.
+control, and abstains (`None`) rather than forcing a verdict.* Full options in [Usage](#usage).
 
-## The 30-second version
+## How it works — three witnesses, one verdict
 
-Imagine a process that is *supposed* to be perfectly uniform — a lottery draw, a random-number
-generator inside a cryptographic library, a sensor that should read pure noise, the gap between
-your model's training data and the data it sees in production. How would you *prove* it drifted?
-And — the harder half — how would you keep yourself from "discovering" a drift that was never there?
-Stare at enough numbers and the human brain will always find a pattern.
-
-That second failure mode is the expensive one. A detector that cries wolf is worse than no detector
-at all. **DriftScope is built around the discipline of *not* hallucinating a signal — where
-"does not hallucinate" means precisely: a calibrated false-positive rate of α = 0.05, within the
-power of the test and under the model's assumptions, not an absolute guarantee.** It is a
-methodology, not a crystal ball: it never tries to predict the next number — it audits whether the
-distribution is still behaving, and reports the *absence* of evidence as honestly as its presence.
-
-> ⚠️ **This is not a lottery predictor.** The lottery is a convenient benchmark with a known
-> answer key — nothing here forecasts a draw, and nothing here could.
-
-## Mini-glossary
-
-*One-line glosses for the jargon used below — skip if you already speak this.*
-
-- **null / null hypothesis** — the "nothing is wrong" baseline (here: a stationary, uniform,
-  i.i.d. stream). We try to *reject* it; failing to reject = "no evidence of drift".
-- **Type I error / false positive / "hallucination"** — flagging drift that isn't there.
-- **permutation test** — estimating how surprising the data is by reshuffling it many times; the
-  smallest reportable p-value is a *floor* = 1/(permutations + 1).
-- **change-point (BOCPD)** — a moment in time where the distribution shifts; BOCPD = *Bayesian
-  Online Change-Point Detection* (Adams–MacKay 2007).
-- **MMD** — *Maximum Mean Discrepancy*: a distance between two distributions; here, observed
-  windowed frequencies vs. fresh uniform.
-- **co-occurrence** — how often two specific numbers appear *together*, beyond chance.
-- **FDR (BH / Benjamini-Yekutieli)** — false-discovery-rate control when testing many hypotheses
-  at once.
-- **regime** — a span of time under one fixed rule set (EuroJackpot has three: R1/R2/R3).
-- **3/3 · 2/3 · 1/3 · 0/3** — how many of the three independent detectors agree on a signal.
-
-## Highlights
-
-- 🎯 **A built-in answer key.** Audited on **958 real EuroJackpot draws (2012–2026)**, a process
-  whose rules are *known* to have changed twice (the euro-number pool, in 2014 and 2022) while the
-  main 1–50 pool *never* changed — a natural **positive *and* negative control** in one dataset.
-- ✅ **It finds the real changes, and invents none on the control.** Detects change-points covering
-  both known transitions (**2014-11-28**, **2022-03-29**); on the unchanged 1–50 pool it returns
-  **0 findings**, an *honest null* — not an empty list, a deliberate "no evidence".
-- 🔬 **Three complementary detectors, weighed by agreement.** A *Disagreement Protocol* over three
-  families with deliberately different blind spots. They don't have to *all* agree: a single
-  champion detector that *also* clears FDR can still surface a real signal — in particular the joint
-  (pair) signal is caught by **only one** family, so agreement is informative, not a hard gate.
-- 🧪 **The instrument is calibrated, and you can prove it.** Point the same battery at PRNGs with a
-  known ground truth: it stays silent on well-behaved and cryptographic generators (a negative
-  control for the benchmark itself) and **flags two planted defects** — and the *pattern* of which
-  detectors fire tells you the *kind* of defect.
-- 📐 **Pre-registered & reproducible.** Every statistical choice is frozen *before* looking at
-  results (`preregistration_v7.md`); a re-run **in the same pinned environment** is bit-identical
-  (deterministic, content-seeded RNG + a SHA-256 manifest over the committed CSV inputs).
-- ⚡ **Fast & light.** The full audit runs in **~4.5 s** and peaks at **~220 MB RAM** on a laptop
-  CPU (i5-12500H). **279 tests** (277 pass / 2 skip), CI-green on Ubuntu / Python 3.10.
-
-## How It Works
-
-Think of three expert witnesses, each looking at the same stream through a different lens. One
-watches *when* the distribution shifts over time. One watches *whether* the frequencies drift away
-from uniform. One watches *which pairs of numbers* show up together more than chance allows. No
-single one is sensitive to every kind of deviation — and that is the point. A claim is graded by how
-many witnesses agree (3/3 · 2/3 · 1/3 · 0/3), and promoted only when it *also* clears the
-false-discovery-rate gate.
+Think of three expert witnesses, each looking at the same stream through a different lens. One watches
+*when* the distribution shifts over time. One watches *whether* the frequencies drift away from
+uniform. One watches *which pairs of numbers* show up together more than chance allows. No single one
+catches every kind of deviation — **that is the design.** A claim is graded by how many witnesses agree
+(3/3 · 2/3 · 1/3 · 0/3) and promoted only when it *also* clears a false-discovery-rate gate.
 
 ```mermaid
 flowchart TD
@@ -180,81 +169,73 @@ flowchart TD
 | **MMD** | distributional | windowed frequencies departing from uniform (shifts, trends) | pair structure |
 | **Co-occurrence** | joint | over-represented number *pairs* under uniform margins (`pair_corr`) | marginal signal |
 
-The complementarity is concrete, not merely asserted, and **confirmed empirically on planted
-signals** — a pure pair-correlation signal that preserves every per-number margin is invisible to
-the marginal detectors (H1, MMD), their power collapsing to the false-positive rate, and is caught
-**only** by co-occurrence. The blind spots are pinned down by direct tests:
+The complementarity is **empirical, not asserted**: a pure pair-correlation signal that preserves
+every per-number margin is invisible to the marginal detectors (H1, MMD) — their power collapses to
+the false-positive rate — and is caught **only** by co-occurrence. Because that whole class of defect
+shows up as **1/3, not 3/3**, agreement is treated as *informative*, not as a hard gate.
+
+<details>
+<summary>🤓 The blind spots are pinned down by direct tests — and BOCPD doesn't vote alone</summary>
+
+<br>Every claimed blind spot has a test that proves it:
 [`test_chi2_blind_to_pair_correlation`](tests/test_driftsim_calibration.py),
 [`test_serial_blind_to_pair_corr`](tests/test_permutation_null.py),
 [`test_mmd_blind_to_pair_corr`](tests/test_mmd_properties.py), with the catch confirmed in
 [`test_detects_planted_pair_corr_showcase`](tests/test_cooccurrence.py). Every class of deviation has
 at least one champion detector, so agreement is meaningful.
 
-> **Design note.** The H1 pillar is represented by BOCPD, calibrated *per field* (euron 0.33 /
-> main 0.70 reject thresholds, FPR ≈ 0.05). The classical stationarity tests (ADF, KPSS, Welch
-> spectrum, ACF) run as *diagnostics* — they do **not** vote, which would inflate the pillar's
-> false-positive rate through correlated sub-tests.
+**Design note.** The H1 pillar is represented by BOCPD, calibrated *per field* (euron 0.33 / main
+0.70 reject thresholds, FPR ≈ 0.05). The classical stationarity tests (ADF, KPSS, Welch spectrum,
+ACF) run as *diagnostics* — they do **not** vote, which would inflate the pillar's false-positive rate
+through correlated sub-tests.
+</details>
 
-## The Proof: EuroJackpot
+## The proof: EuroJackpot
 
-A null result ("we found nothing") is only worth something if the instrument can find the things
-that *are* there. EuroJackpot is the ideal proving ground because it carries its own answer key.
+A null result ("we found nothing") is only worth something if the instrument can find the things that
+*are* there. EuroJackpot is the ideal proving ground because it carries its own answer key — the two
+[pictures above](#the-detective-story) are the headline; the numbers behind them:
 
-- **Positive control (euro numbers).** The pool of euro numbers was expanded by rule changes in
-  2014 and 2022. BOCPD, run blind on the full stream, detects change-points covering **both** known
-  transitions — the first draw containing a "9" on **2014-11-28** (posterior ≈ 0.41) and the first
-  "11" on **2022-03-29** (≈ 0.40), both above the euron threshold (0.33) and in the top-5. *In full
-  honesty:* its single **highest**-posterior change-point is actually **2015-01-23** (≈ 0.47) — not
-  a rule change but a physical aftershock of the 2014 expansion, as new euro symbols kept
-  first-appearing for months afterwards. So the largest peak is itself a genuine distributional
-  shift, not a spurious one; the detector fires where real change exists, and never invents a change
-  in the negative control below.
-- **Negative control (main 1–50 pool).** This pool was never touched. Evaluated *within each rule
-  regime* (R1 = 133, R2 = 389, R3 = 436 draws) by all three pillars, the verdict is
-  **R1 0/3 · R2 1/3 · R3 0/3**. These nulls are statements *within the power of the test*: R1, at
-  n = 133, is the thinnest regime, where small per-regime effects (e.g. a per-number shift of ~1%)
-  are below detection — so "0/3" there is a clean control, not a guarantee of exact uniformity. The
-  lone single-pillar flag in R2 (one number pair) is **not suppressed and not promoted** — it is
-  classified as *"single-pillar, requires power context"*, consistent with the ~14% chance that one
-  of three regimes throws a spurious flag at α = 0.05.
+- **Positive control (euro numbers).** BOCPD, run blind on the full stream, detects change-points
+  covering **both** known transitions (2014-11-28, 2022-03-29), both above threshold and in the top-5.
+- **Negative control (main 1–50 pool).** Evaluated *within each rule regime* (R1 = 133, R2 = 389,
+  R3 = 436 draws) by all three pillars: **R1 0/3 · R2 1/3 · R3 0/3**. The lone R2 flag is **neither
+  suppressed nor promoted** — it's classified *"single-pillar, requires power context"*, consistent
+  with the ~14% chance that one of three regimes throws a spurious flag at α = 0.05.
 - **The rigor gate holds.** A per-number false-discovery-rate correction over **150 hypotheses**
   (50 numbers × 3 regimes, Benjamini–Yekutieli) rejects **0/150**. The honest watchlist returns
-  **None**. *(The omnibus tests — chi², gap, co-occurrence — are reported as separate complementary
-  families, not folded into this per-number count; see `preregistration_v7.md` §5.)*
+  **None**.
 
-**Why we do not hard-gate on ≥2/3.** A genuine pure-pair signal is visible to **only** co-occurrence,
-so it surfaces as **1/3, not 3/3** — a naive "≥2/3 = real" rule would be structurally blind to that
-whole class of defects. Instead the watchlist's *primary* gate is the per-number **FDR** (Family B),
-with convergence required only at **≥1** pillar: a single-family signal that *also* clears FDR can
-surface, while a lone flag without FDR support (the R2 pair above) does not. The 1/3 label routes
-("requires power context"); it does not dismiss.
+<details>
+<summary>🤓 Nulls within the power of the test · why we don't hard-gate on ≥2/3</summary>
 
-*Quasi-ground-truth caveat: EuroJackpot is a physical process, not an ideal RNG. What is genuinely
-known is the* rule changes *(ex ante) and the invariance of the 1–50 pool — and those are the
-controls, not an assumption of perfect uniformity.*
+<br>These nulls are statements *within the power of the test*: R1, at n = 133, is the thinnest
+regime, where small per-regime effects (a per-number shift of ~1%) are below detection — so "0/3"
+there is a clean control, not a guarantee of exact uniformity. The omnibus tests (chi², gap,
+co-occurrence) are reported as separate complementary families, not folded into the per-number count
+(`preregistration_v7.md` §5).
+
+**Why not hard-gate on ≥2/3.** A genuine pure-pair signal is visible to **only** co-occurrence, so it
+surfaces as **1/3, not 3/3** — a naive "≥2/3 = real" rule would be structurally blind to that whole
+class of defects. Instead the watchlist's *primary* gate is the per-number **FDR** (Family B), with
+convergence required only at **≥1** pillar: a single-family signal that *also* clears FDR can surface,
+while a lone flag without FDR support (the R2 pair) does not. The 1/3 label *routes* ("requires power
+context"); it does not dismiss.
+</details>
 
 → Full interactive report (BOCPD curves, per-regime tables, a 10-second animated hook):
 **https://piotr1686.github.io/DriftScope/**
 
-## Sensitivity: PRNG Benchmark
+## Sensitivity: the PRNG benchmark
 
-To show the silence on EuroJackpot is *calibration* and not *blindness*, the **exact same battery**
-is pointed at random-number generators with a known ground truth — two well-behaved generators, two
-cryptographic ones, the same generator with two deliberately injected defects of different kinds,
-and real EuroJackpot for reference.
-
-Run it yourself:
+The [heatmap above](#3--the-same-instrument-calibrated-on-known-defects) is the story; here is the
+table behind it. The **exact same battery** is pointed at generators with a known ground truth — two
+well-behaved, two cryptographic, the same generator with two injected defects, and real EuroJackpot
+for reference.
 
 ```bash
 python scripts/prng_benchmark.py          # defaults: n_draws=1500, n_perm=499
 ```
-
-Here Family B runs **full-stream** (50 numbers) for parity with the synthetic sources — PRNG streams
-have no calendar regimes; the regime-split headline (0/150) above is the canonical EuroJackpot
-reading. The p-values below are **Monte-Carlo permutation estimates** at `n_perm = 499`, so the
-smallest reportable value is the **floor** `1/(n_perm+1) ≈ 0.002` (shown as `≤ 0.002`); the
-non-floor values are single-run estimates that vary run to run — read the **verdict column**, not
-the third decimal:
 
 | Source | Class | Family B (reject/size) | MMD p | Co-occ p | IT (LZ) p | Verdict |
 |---|---|---|---|---|---|---|
@@ -266,99 +247,156 @@ the third decimal:
 | MT19937 + period-truncation | **defect** (short cycle) | **27/50** | **≤ 0.002** | **≤ 0.002** | **≤ 0.002** | **FLAG** (broad) |
 | EuroJackpot (main 1–50) | real | 0/50 | 0.864 | 0.952 | 0.698 | **clear** |
 
-The two defects fire **differently, and that contrast is the showcase.** A *marginal bias* (one
-number over-represented) is caught narrowly — its per-number binomial breaks (Family B) and its
-windowed frequency departs from uniform (MMD) — but **not** co-occurrence, which targets pairs. A
-*period-truncation* (a short cycle that repeats, freezing the whole distribution) is caught **broadly
-across all three pillars at once**. The framework therefore reports not just *whether* a stream is
-defective but *what kind* of defect it is. Both good PRNGs, **both** crypto primitives (stream *and*
-block cipher), and real EuroJackpot all come back **clear**.
+The two defects fire **differently, and that contrast is the showcase.** A *marginal bias* is caught
+narrowly (per-number binomial + windowed frequency) but **not** co-occurrence, which targets pairs. A
+*period-truncation* (a short cycle that freezes the whole distribution) is caught **broadly across all
+three pillars at once.** Both good PRNGs, both crypto primitives, and real EuroJackpot come back
+**clear**.
 
-> **"Clear" means no detected defect within the power of this test** (n = 1500, 50 symbols) — not a
-> certificate of cryptographic quality. For raw bit-level randomness certification, reach for NIST
-> STS or Dieharder; DriftScope is *complementary* to those suites.
+<details>
+<summary>🤓 Reading the p-values · the LZ76 supplement · relation to NIST STS / Dieharder</summary>
+
+<br>Here Family B runs **full-stream** (50 numbers) for parity with the synthetic sources — PRNG
+streams have no calendar regimes; the regime-split headline (0/150) above is the canonical EuroJackpot
+reading. The p-values are **Monte-Carlo permutation estimates** at `n_perm = 499`, so the smallest
+reportable value is the **floor** `1/(n_perm+1) ≈ 0.002` (shown as `≤ 0.002`); non-floor values are
+single-run estimates that vary run to run — read the **verdict column**, not the third decimal.
 
 **A supplementary information-theoretic lens.** Beyond the three core pillars, a **Lempel-Ziv 1976**
 complexity test (`reporting/information_theory.py`; an order-shuffle null over draw blocks, with a
-`bz2` compression-ratio cross-check) adds a *sequential* view. It conditions on both the marginal
-*and* the within-draw joint, so it is deliberately blind to a marginal bias (the `IT (LZ) p` column
-stays high for `+bias`) yet fires sharply on the **period-truncation** defect (a frozen cycle is
-compressible). It reads real EuroJackpot as incompressible / clear (**p ≈ 0.70**). It is a
-**supplement, not a fourth Disagreement-Protocol pillar** — that set stays three-way.
+`bz2` compression cross-check) adds a *sequential* view. It conditions on both the marginal *and* the
+within-draw joint, so it is deliberately blind to a marginal bias (the `IT (LZ) p` column stays high
+for `+bias`) yet fires sharply on the **period-truncation** defect (a frozen cycle is compressible).
+It reads real EuroJackpot as incompressible / clear (p ≈ 0.70). It is a **supplement, not a fourth
+Disagreement-Protocol pillar** — that set stays three-way.
 
-> **How this relates to NIST STS / Dieharder.** DriftScope's distinctive additions are a **dedicated
-> detector for co-occurring pairs**, validation against a **real-world stream with a known ground
-> truth**, **per-regime** scoping, **pre-registration** of every choice, and explicit **decision
-> abstention** (an honest "no evidence" rather than a forced verdict).
+**"Clear" means no detected defect within the power of this test** (n = 1500, 50 symbols) — not a
+certificate of cryptographic quality. For raw bit-level randomness certification, reach for NIST STS
+or Dieharder; DriftScope is *complementary*. Its distinctive additions: a **dedicated detector for
+co-occurring pairs**, validation against a **real-world stream with a known ground truth**,
+**per-regime** scoping, **pre-registration** of every choice, and explicit **decision abstention**.
+</details>
 
-## Reusability: Multi Multi
+## Reusability: a second real game
 
 The PRNG benchmark proves sensitivity on *synthetic* streams; the reusability claim is sealed on a
-**second real game**. *Multi Multi* draws **20 numbers from a pool of 80** (vs EuroJackpot's
-5-of-50). Because every detector reads its pool and draw size from the `DrawRecord` itself, the same
-battery runs with **zero code changes** — only the data source differs
-(`python scripts/multimulti_audit.py`, the most recent 2,000 of 16,827 draws, 1996–2026). After
-re-calibrating the detectors at pool = 80 (MMD false-positive rate ≈ **0.035** over 200 honest-null
-trials — within Monte-Carlo error of α = 0.05; `scripts/calibrate_mmd_pool.py`; BOCPD threshold
-re-derived to **0.34**), the audit reads **clear**: BOCPD, Family B (**0/80**), co-occurrence and
-the LZ supplement all silent. A lone MMD rejection at p ≈ 0.03 is exactly the **single-pillar (1/3)
-false positive the Disagreement Protocol is built to absorb** — expected ≈ 1 test in 20, and *not* a
-finding without convergence. A structurally different real game (4× the pool, 4× the draw size), the
-same calibrated instrument, the same disciplined silence.
+**second real game**. *Multi Multi* draws **20 numbers from a pool of 80** (vs EuroJackpot's 5-of-50).
+Because every detector reads its pool and draw size from the `DrawRecord` itself, the same battery runs
+with **zero code changes** — only the data source differs (`python scripts/multimulti_audit.py`).
 
-## Why You Can Trust It
+After re-calibrating at pool = 80 (MMD false-positive rate ≈ 0.035 over 200 honest-null trials — within
+Monte-Carlo error of α = 0.05; BOCPD threshold re-derived to 0.34), the audit reads **clear**: a lone
+MMD rejection at p ≈ 0.03 is exactly the **single-pillar (1/3) false positive the Disagreement Protocol
+is built to absorb** — expected ≈ 1 test in 20, and *not* a finding without convergence. A structurally
+different real game (4× the pool, 4× the draw size), the same calibrated instrument, the same
+disciplined silence.
 
-The value of this project is its honesty, so the trust claims map directly to files and to
-calibrated guarantees — not adjectives.
+## Why you can trust it — every claim maps to a file
 
-- **"Hallucination" has a precise meaning.** Throughout, *hallucination* = a **Type I error
-  (false positive)**, calibrated by Monte-Carlo permutation against a shuffled null down to
-  α ≈ 0.05. Every detector's false-positive rate is validated ≈ α (**DoD-2**,
-  `methodology/permutation.py`); the BOCPD reject threshold is calibrated *per field*.
-- **A null is an honest "no evidence", not "nothing exists".** The watchlist returns **`None`**
-  only after a pattern fails the gate — the FDR correction (q ≤ α) *and* convergence at ≥ 1 pillar.
-  `None` is deliberate **decision abstention** ("insufficient grounds"), distinct from an empty
-  result, and distinct from extrapolation (**DoD-5**, `adaptive/honest_watchlist.py`).
-- **Multiplicity is controlled.** Family-aware FDR — Benjamini–Hochberg (Family A) /
-  **Benjamini–Yekutieli** (Family B; the latter valid under *arbitrary* dependence, used because the
-  5/50 presence counts are negatively dependent — which makes BH's PRDS assumption unsafe) — over
-  the real hypothesis family (**DoD-3**, `methodology/multiple_testing.py`).
-- **Choices are frozen before the data is seen.** Every statistic, null, threshold and effect-size
-  grid lives in `methodology/preregistration_v7.md`. Each revision carries a `revision_reason`,
-  explicitly split into *clean* vs *data-informed* — the §0 discipline.
-- **Reproducibility is bit-exact in the same pinned environment.** Every detector is a *pure
-  function* of the stream; its RNG is seeded from the data contents (a BLAKE2b digest ⊕ a fixed
-  base seed), independent of call order (`tests/test_reproducibility.py`). `scripts/archive.py`
-  emits a deterministic SHA-256 manifest over the committed CSV inputs (**DoD-6**). Cross-machine
-  bit-identity is *argued* from this determinism, not separately certified across OS / BLAS builds —
-  the guarantee is scoped to the pinned toolchain.
+The value of this project is its honesty, so the trust claims map directly to files and to calibrated
+guarantees — not adjectives.
 
-## Beyond the Lottery
+- **"Hallucination" has a precise meaning** — a **Type I error (false positive)**, calibrated by
+  Monte-Carlo permutation against a shuffled null down to α ≈ 0.05. Every detector's false-positive
+  rate is validated ≈ α (**DoD-2**, `methodology/permutation.py`).
+- **A null is an honest "no evidence", not "nothing exists"** — the watchlist returns **`None`** only
+  after a pattern fails the gate (FDR correction *and* convergence at ≥ 1 pillar). `None` is deliberate
+  **decision abstention** (**DoD-5**, `adaptive/honest_watchlist.py`).
+- **Multiplicity is controlled** — family-aware FDR: Benjamini–Hochberg (Family A) / **Benjamini–
+  Yekutieli** (Family B, valid under *arbitrary* dependence) over the real hypothesis family
+  (**DoD-3**, `methodology/multiple_testing.py`).
+- **Choices are frozen before the data is seen** — every statistic, null, threshold and effect-size
+  grid lives in `methodology/preregistration_v7.md`; each revision carries a `revision_reason`.
+- **Reproducibility is bit-exact in the same pinned environment** — every detector is a *pure function*
+  of the stream, seeded from the data contents (a BLAKE2b digest ⊕ a fixed base seed), independent of
+  call order; `scripts/archive.py` emits a deterministic SHA-256 manifest (**DoD-6**).
 
-The engine is a general detector of distributional change in discrete streams, so the lottery is
-just the first `DrawRecord` source. The following are **application visions**, not shipped
-integrations:
+## Beyond the lottery
+
+The engine is a general detector of distributional change in discrete streams, so the lottery is just
+the first `DrawRecord` source. The following are **application visions**, not shipped integrations:
 
 1. **Pharma / Analytical Development** *(closest to the author's domain)* — process-stability
-   monitoring (granulation, tableting), CPP/CQA drift, PAT data: catch a distributional shift in
-   hardness / disintegration / moisture *before* a parameter breaches spec, with an honest null that
-   suppresses false OOT alarms.
-2. **MLOps — data & concept drift** — audit the gap between training and production distributions
-   with proper FDR control instead of ad-hoc thresholds.
-3. **FinTech / trading** — regime-shift detection, "random walk" auditing, and manipulation
-   signatures (spoofing, wash trading) surfaced by the co-occurrence pillar.
+   monitoring (granulation, tableting), CPP/CQA drift, PAT data: catch a shift in hardness /
+   disintegration / moisture *before* a parameter breaches spec, with an honest null that suppresses
+   false OOT alarms.
+2. **MLOps — data & concept drift** — audit the gap between training and production distributions with
+   proper FDR control instead of ad-hoc thresholds.
+3. **FinTech / trading** — regime-shift detection, "random walk" auditing, and manipulation signatures
+   (spoofing, wash trading) surfaced by the co-occurrence pillar.
 
 The same pattern extends to cybersecurity (log / traffic drift, C2 beaconing), IoT predictive
-maintenance (sensor drift ahead of failure), and regulated gaming (slot-machine RNG / loot-box
-drop-rate audits).
+maintenance (sensor drift ahead of failure), and regulated gaming (slot-machine RNG / loot-box audits).
 
 **Integration in practice.** Build a `list[DrawRecord]` via `DrawRecord.generic(date, numbers,
 pool_size)`, then call `pipeline.run_audit(draws) -> AuditReport`; the verdict lives in
 `report.watchlist is None` (clear), `report.family_b.n_reject`, and per-regime
-`report.regime_audits[R].verdict.fraction`. A one-call `audit_stream(...)` wrapper and a JSON
-verdict are on the [Roadmap](#roadmap).
+`report.regime_audits[R].verdict.fraction`. A one-call `audit_stream(...)` wrapper and a JSON verdict
+are on the [Roadmap](#roadmap).
 
-## Architecture
+## Usage
+
+```bash
+driftscope run                                # full audit on the bundled 958-draw seed CSV
+driftscope run --seed-csv path/to/draws.csv   # audit your own discrete stream
+driftscope run --n-perm 1999                  # tune the permutation count (default 999)
+driftscope run --hook                         # add the 10-second .webm hook (needs ffmpeg on PATH)
+driftscope run --no-figures                   # skip figure generation
+```
+
+| Option | Default | Description |
+|---|---|---|
+| `--seed-csv` | config `DATA_SEED_PATH` | Path to the input seed CSV |
+| `--n-perm` | `999` | Permutations for the MMD / co-occurrence nulls |
+| `--figures` / `--no-figures` | on | Generate the control-comparison + BOCPD PNGs |
+| `--hook` / `--no-hook` | off | Generate the `.webm` hook animation (requires ffmpeg) |
+| `--out-dir` | config `ARTIFACTS_DIR` | Output directory for figures |
+
+```bash
+quarto render src/driftscope/reporting/report.qmd --to html   # reproduce the full HTML report
+python scripts/prng_benchmark.py                              # PRNG sensitivity/specificity matrix
+python scripts/multimulti_audit.py                           # second real game (Multi Multi, 20-of-80)
+python scripts/make_readme_assets.py                         # regenerate the README figures
+```
+
+## Performance
+
+| Metric | Value | Conditions |
+|---|---|---|
+| Full audit | **~4.5 s**, **~220 MB** peak RAM | 958 draws, `n_perm=999`, i5-12500H (CPU-only) |
+| Test suite | **279 collected**, CI-green | 277 pass / 2 skip locally (Win11) |
+| JIT hot loops | **~2.7×** vs NumPy baseline | permutation PoC (`notebooks/poc_permutation_engine.py`) |
+
+> The ~4 GB RAM figure sometimes quoted is the **budget for the full DriftSim calibration sweep**
+> (63 synthetic datasets × all tests × 10⁴ permutations), *not* the headline audit — which, as
+> measured, is a few seconds and a couple hundred MB.
+
+## Reference
+
+<details>
+<summary><strong>Mini-glossary</strong> — one-line glosses for the jargon (skip if you speak this)</summary>
+
+<br>
+
+- **null / null hypothesis** — the "nothing is wrong" baseline (a stationary, uniform, i.i.d. stream).
+  We try to *reject* it; failing to reject = "no evidence of drift".
+- **Type I error / false positive / "hallucination"** — flagging drift that isn't there.
+- **permutation test** — estimating how surprising the data is by reshuffling it many times; the
+  smallest reportable p-value is a *floor* = 1/(permutations + 1).
+- **change-point (BOCPD)** — a moment where the distribution shifts; BOCPD = *Bayesian Online
+  Change-Point Detection* (Adams–MacKay 2007).
+- **MMD** — *Maximum Mean Discrepancy*: a distance between two distributions (observed windowed
+  frequencies vs. fresh uniform).
+- **co-occurrence** — how often two specific numbers appear *together*, beyond chance.
+- **FDR (BH / Benjamini-Yekutieli)** — false-discovery-rate control when testing many hypotheses.
+- **regime** — a span of time under one fixed rule set (EuroJackpot has three: R1/R2/R3).
+- **3/3 · 2/3 · 1/3 · 0/3** — how many of the three independent detectors agree on a signal.
+</details>
+
+<details>
+<summary><strong>Architecture &amp; stack rationale</strong></summary>
+
+<br>
 
 ```mermaid
 flowchart LR
@@ -371,74 +409,35 @@ flowchart LR
     G --> H[CLI · HTML report · executive summary]
 ```
 
-**Stack rationale.** CPU-only by design. **Polars** (not pandas) for type-safe, vectorised data
-handling. **Numba** `@njit(cache=True)` on the permutation / MMD / co-occurrence hot loops — a
-measured **~2.7×** over the NumPy baseline on the permutation PoC
-(`notebooks/poc_permutation_engine.py`; a single benchmark, with the O(N²) kernels benefiting more).
-**Pydantic v2** for validated config, **Typer** for the CLI, **Parquet + Zstd** for artifacts,
-**Quarto + Plotly + matplotlib** for the reproducible report. Persistence is fully file-based (no
-database layer).
+CPU-only by design. **Polars** (not pandas) for type-safe, vectorised data handling. **Numba**
+`@njit(cache=True)` on the permutation / MMD / co-occurrence hot loops — a measured **~2.7×** over the
+NumPy baseline. **Pydantic v2** for validated config, **Typer** for the CLI, **Parquet + Zstd** for
+artifacts, **Quarto + Plotly + matplotlib** for the reproducible report. Persistence is fully
+file-based (no database layer).
+</details>
 
-## Configuration
+<details>
+<summary><strong>Configuration</strong> — Pydantic Settings v2 from an optional <code>.env</code></summary>
 
-Configuration is loaded via **Pydantic Settings v2** from an optional `.env` file. Copy
-`.env.example` to `.env` and adjust as needed — every key has a sane default, so the framework runs
-out of the box without one.
+<br>Copy `.env.example` to `.env` and adjust — every key has a sane default, so the framework runs out
+of the box.
 
 | Key | Default | Purpose |
 |---|---|---|
-| `BASE_SEED` | `42` | Global determinism seed for worker-stream RNG; each detector additionally derives its own RNG from a BLAKE2b digest of the data contents ⊕ a fixed base seed, so results are call-order-independent |
+| `BASE_SEED` | `42` | Global determinism seed; each detector additionally derives its own RNG from a BLAKE2b digest of the data ⊕ base seed, so results are call-order-independent |
 | `DATA_SEED_PATH` | `./data/seed/eurojackpot_history.csv` | Bundled seed CSV used by `driftscope run` |
 | `ARTIFACTS_DIR` | `./artifacts` | Output directory for figures and the SHA-256 manifest |
 | `LOG_LEVEL` | `INFO` | Logging verbosity |
 | `SCRAPER_USER_AGENT` | `DriftScope/0.1 (research; …)` | User-Agent for the optional scraper |
 | `SCRAPER_REQUEST_TIMEOUT_SEC` | `30` | HTTP request timeout for the scraper |
 | `SCRAPER_RATE_LIMIT_DELAY_SEC` | `2` | Polite delay between scraper requests |
-| `LOTTO_API_KEY` | *(empty)* | Optional API key for the official lotto data source (scraper is a fallback) |
+| `LOTTO_API_KEY` | *(empty)* | Optional API key for the official lotto source (scraper is a fallback) |
+</details>
 
-## Usage
+<details>
+<summary><strong>Project structure</strong></summary>
 
-The CLI entrypoint is `driftscope run`.
-
-```bash
-driftscope run                            # full audit on the bundled 958-draw seed CSV
-driftscope run --seed-csv path/to/draws.csv   # audit your own discrete stream
-driftscope run --n-perm 1999              # tune the permutation count (default 999)
-driftscope run --hook                     # add the 10-second .webm hook (needs ffmpeg on PATH)
-driftscope run --no-figures               # skip figure generation
-driftscope run --out-dir ./my_artifacts   # redirect output
-```
-
-| Option | Default | Description |
-|---|---|---|
-| `--seed-csv` | config `DATA_SEED_PATH` | Path to the input seed CSV |
-| `--n-perm` | `999` | Number of permutations for the MMD / co-occurrence nulls |
-| `--figures` / `--no-figures` | on | Generate the control-comparison + BOCPD PNGs |
-| `--hook` / `--no-hook` | off | Generate the `.webm` hook animation (slower; requires ffmpeg) |
-| `--out-dir` | config `ARTIFACTS_DIR` | Output directory for figures |
-
-**Reproduce the full HTML report** (needs the Quarto CLI):
-
-```bash
-quarto render src/driftscope/reporting/report.qmd --to html
-```
-
-**Explore interactively** — a detection matrix, the LZ76 *entropy lens*, and a real-vs-uniform
-Turing test:
-
-```bash
-pip install -e ".[demo]"
-streamlit run demo/app.py
-```
-
-**Reusability scripts** — point the same battery at other ground-truth streams:
-
-```bash
-python scripts/prng_benchmark.py      # PRNG sensitivity/specificity matrix (n_draws=1500, n_perm=499)
-python scripts/multimulti_audit.py    # second real game (Multi Multi, 20-of-80)
-```
-
-## Project Structure
+<br>
 
 ```
 src/driftscope/
@@ -452,14 +451,18 @@ src/driftscope/
 ├── adaptive/       # honest watchlist (returns None unless DoD-3 AND DoD-4 pass)
 ├── pipeline.py     # end-to-end orchestrator: run_audit(draws) -> AuditReport
 └── cli.py          # `driftscope run`
-scripts/            # archive (SHA-256 manifest), prng_benchmark + multimulti_audit (reusability)
+scripts/            # archive (SHA-256 manifest), prng_benchmark + multimulti_audit, make_readme_assets
 demo/               # Streamlit audit explorer (optional, `pip install -e ".[demo]"`)
 tests/              # 279 tests — calibration, invariants, FPR ≤ α, reproducibility, PRNG, info-theory
 data/seed/          # eurojackpot_history.csv (958 draws) + multimulti_history.csv (committed)
-docs/               # published HTML report + executive summary (GitHub Pages) + audit/
+docs/               # published HTML report + executive summary (GitHub Pages) + assets/
 ```
+</details>
 
-## Requirements
+<details>
+<summary><strong>Requirements</strong></summary>
+
+<br>
 
 - **Python 3.10** (`>=3.10,<3.11`) — pinned for the verified Numba toolchain.
 - **Compute core:** `numpy>=2.2`, `numba==0.65.1` (pinned — verified Win11 + numpy 2.x), `joblib`.
@@ -467,24 +470,15 @@ docs/               # published HTML report + executive summary (GitHub Pages) +
 - **Data / config:** `polars` (not pandas), `pyarrow` (Parquet + Zstd), `pydantic` v2, `pydantic-settings`.
 - **CLI / viz:** `typer` + `click`, `matplotlib`, `plotly`.
 - **Scraper / crypto:** `httpx`, `selectolax`, `tenacity`, `cryptography` (ChaCha20 / AES-CTR keystreams).
-- **Dev extras** (`.[dev]`): `pytest`, `hypothesis`, `ruff`, `mypy`.
-- **Demo extra** (`.[demo]`): `streamlit`.
+- **Dev extras** (`.[dev]`): `pytest`, `hypothesis`, `ruff`, `mypy`. **Demo extra** (`.[demo]`): `streamlit`.
 
 The full pinned set lives in [`pyproject.toml`](pyproject.toml). CPU-only — no GPU required.
+</details>
 
-## Performance
+<details>
+<summary><strong>Definition of Done</strong></summary>
 
-| Metric | Value | Conditions |
-|---|---|---|
-| Full audit | **~4.5 s**, **~220 MB** peak RAM | 958 draws, `n_perm=999`, i5-12500H (CPU-only) |
-| Test suite | **279 collected**, CI-green | 277 pass / 2 skip locally (Win11); one Windows-only test additionally skips on Ubuntu CI |
-| JIT hot loops | **~2.7×** vs NumPy baseline | permutation PoC, single benchmark (`notebooks/poc_permutation_engine.py`) |
-
-> The ~4 GB RAM figure sometimes quoted for DriftScope is the **budget for the full DriftSim
-> calibration sweep** (63 synthetic datasets × all tests × 10⁴ permutations), *not* the headline
-> audit — which, as measured above, is a few seconds and a couple hundred MB.
-
-## Definition of Done
+<br>
 
 | DoD | Validated by | Criterion |
 |---|---|---|
@@ -494,17 +488,16 @@ The full pinned set lives in [`pyproject.toml`](pyproject.toml). CPU-only — no
 | DoD-4 | `reporting/disagreement.py` | every signal classified 3/3 · 2/3 · 1/3 · 0/3 |
 | DoD-5 | `adaptive/honest_watchlist.py` | returns `None` when the FDR + convergence gate fails |
 | DoD-6 | `core/seeds.py` + manifest | re-run in the same pinned environment is bit-identical |
+</details>
 
 ## Roadmap
 
 All items below are **planned / exploratory** — none is shipped:
 
-- a **streaming** MMD detector over continuous-valued data (distinct from the shipped
-  windowed-frequency MMD) — a bridge to sensor / financial data;
+- a **streaming** MMD detector over continuous-valued data — a bridge to sensor / financial data;
 - an online mode with a forgetting factor (windowed BOCPD) — a bridge to live streams;
-- a streaming adapter (Kafka / Redpanda) — explicitly *planned*; the pipeline is batch today;
-- a PyPI package with a one-call `audit_stream(...)` API returning a JSON verdict
-  (`{verdict, regime, timestamp}`);
+- a streaming adapter (Kafka / Redpanda) — the pipeline is batch today;
+- a PyPI package with a one-call `audit_stream(...)` API returning a JSON verdict;
 - a small FastAPI service exposing that verdict;
 - an arXiv note with a full power analysis and a comparison to NIST STS.
 
@@ -512,11 +505,11 @@ All items below are **planned / exploratory** — none is shipped:
 
 [MIT](LICENSE).
 
-## About the Author
+## About the author
 
-Built solo by **Piotr Łazowski** — an interdisciplinary R&D / statistical-research engineer working
-at the intersection of **pharmaceutical analytical development** and **AI/ML**. The same instinct
-that flags an out-of-spec drift in a tableting process before it breaches a limit is what DriftScope
+Built solo by **Piotr Łazowski** — an interdisciplinary R&D / statistical-research engineer working at
+the intersection of **pharmaceutical analytical development** and **AI/ML**. The same instinct that
+flags an out-of-spec drift in a tableting process before it breaches a limit is what DriftScope
 formalises for any discrete stream. It is a portfolio project demonstrating end-to-end
 statistical-software engineering: methodology design, calibration, reproducibility, and delivery. ·
 GitHub: [@Piotr1686](https://github.com/Piotr1686)

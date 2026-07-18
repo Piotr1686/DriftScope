@@ -1,8 +1,8 @@
-"""Smoke test demo Streamlit (demo/app.py) — czyste buildery bez runtime Streamlit.
+"""Streamlit demo smoke test (demo/app.py) — pure builders without the Streamlit runtime.
 
-Demo laduje `streamlit` LENIWIE (wewnatrz `render`/`_cached_rows`), wiec import modulu i
-buildery danych/figur dzialaja bez instalacji streamlit. Walidujemy kontrakt builderow
-(macierz, figura entropy-lens, para Turinga), NIE serwer.
+The demo loads `streamlit` LAZILY (inside `render`/`_cached_rows`), so importing the module
+and the data/figure builders work without streamlit installed. We validate the builder
+contract (matrix, entropy-lens figure, Turing pair), NOT the server.
 """
 from __future__ import annotations
 
@@ -12,7 +12,7 @@ from pathlib import Path
 import numpy as np
 import pytest
 
-pytest.importorskip("plotly")  # core dep; modul demo importuje plotly na top-level
+pytest.importorskip("plotly")  # core dep; the demo module imports plotly at top-level
 
 from driftscope.driftsim.null_uniform import generate_uniform_draws  # noqa: E402
 from driftscope.driftsim.planted_signals import generate_planted_draws  # noqa: E402
@@ -29,25 +29,25 @@ def _load_app():  # type: ignore[no-untyped-def]
 
 
 def test_app_imports_without_streamlit() -> None:
-    """Import modulu nie wymaga streamlit (ladowany leniwie w render)."""
+    """Importing the module does not require streamlit (loaded lazily in render)."""
     app = _load_app()
     assert hasattr(app, "render")
     assert hasattr(app, "entropy_lens_figure")
 
 
 def test_entropy_lens_figure_builds() -> None:
-    """entropy_lens_figure zwraca figure Plotly z histogramem nulla + linia obs."""
+    """entropy_lens_figure returns a Plotly figure with the null histogram + obs line."""
     import plotly.graph_objects as go
 
     app = _load_app()
     draws = generate_uniform_draws(120, "R2", np.random.default_rng(0))
     fig = app.entropy_lens_figure(draws, n_perm=49, seed=1)
     assert isinstance(fig, go.Figure)
-    assert len(fig.data) >= 1  # histogram nulla
+    assert len(fig.data) >= 1  # null histogram
 
 
 def test_detection_table_contract() -> None:
-    """detection_table mapuje BenchmarkRow → wiersze z kolumna IT i werdyktem."""
+    """detection_table maps BenchmarkRow → rows with an IT column and a verdict."""
     app = _load_app()
     from driftscope.reporting.prng_benchmark import run_battery
 
@@ -60,7 +60,7 @@ def test_detection_table_contract() -> None:
 
 
 def test_turing_pair_shapes() -> None:
-    """turing_pair zwraca dwie sekwencje posortowanych krotek 5-liczbowych zadanej dlugosci."""
+    """turing_pair returns two sequences of sorted 5-number tuples of the given length."""
     app = _load_app()
     real, fake = app.turing_pair(6, seed=3)
     assert len(real) == 6 and len(fake) == 6

@@ -1,8 +1,8 @@
-"""Testy testu wspolwystapien (W6, preregistration §5c).
+"""Co-occurrence test tests (W6, preregistration §5c).
 
-Weryfikuje: macierz incydencji, niezmienniki curveball (zachowanie obu marginesow),
-kalibracje FPR ≈ α na nullu (max-pair), power + lokalizacja pary na wymuszonym sygnale,
-oraz determinizm czystej funkcji (DoD-6).
+Verifies: the incidence matrix, curveball invariants (preserving both margins),
+FPR ≈ α calibration on the null (max-pair), power + pair localization on a forced signal,
+and pure-function determinism (DoD-6).
 """
 from __future__ import annotations
 
@@ -27,7 +27,7 @@ from driftscope.methodology.cooccurrence import (
 def _forced_pair_draws(
     n: int, pair_frac: float, seed: int, pair: tuple[int, int] = (7, 13)
 ) -> list[DrawRecord]:
-    """n losowan, gdzie z prawdopodobienstwem `pair_frac` para `pair` jest wymuszana."""
+    """n draws where, with probability `pair_frac`, the pair `pair` is forced."""
     rng = np.random.default_rng(seed)
     i, j = pair
     rest_pool = [k for k in range(1, 51) if k not in (i, j)]
@@ -50,26 +50,26 @@ def _forced_pair_draws(
 
 
 # ---------------------------------------------------------------------------
-# Macierz incydencji
+# Incidence matrix
 # ---------------------------------------------------------------------------
 
 def test_incidence_matrix_shape_and_margins() -> None:
-    """Macierz (n, 50) binarna; suma wiersza = 5; suma kolumny = liczebnosc liczby."""
+    """Binary (n, 50) matrix; row sum = 5; column sum = number's count."""
     draws = generate_uniform_draws(120, "R2", np.random.default_rng(0))
     m = _incidence_matrix(draws)
     assert m.shape == (120, 50)
     assert set(np.unique(m)).issubset({0, 1})
     assert (m.sum(axis=1) == 5).all()
-    # suma kolumny k = ile razy liczba (k+1) wystapila
+    # column sum k = how many times number (k+1) occurred
     assert m.sum(axis=0).sum() == 120 * 5
 
 
 # ---------------------------------------------------------------------------
-# Curveball — niezmienniki marginesow
+# Curveball — margin invariants
 # ---------------------------------------------------------------------------
 
 def test_curveball_preserves_both_margins() -> None:
-    """Wymiany curveball zachowuja sumy wierszy (=5) i sumy kolumn (marginesy)."""
+    """Curveball swaps preserve row sums (=5) and column sums (margins)."""
     draws = generate_uniform_draws(300, "R3", np.random.default_rng(1))
     m = _incidence_matrix(draws)
     row0, col0 = m.sum(axis=1).copy(), m.sum(axis=0).copy()
@@ -81,7 +81,7 @@ def test_curveball_preserves_both_margins() -> None:
 
 
 def test_curveball_actually_randomizes() -> None:
-    """Wystarczajaco wiele wymian zmienia macierz (null nie jest tozsamoscia)."""
+    """Enough swaps change the matrix (the null is not the identity)."""
     draws = generate_uniform_draws(300, "R3", np.random.default_rng(2))
     m = _incidence_matrix(draws)
     _seed_numba(7)
@@ -91,14 +91,14 @@ def test_curveball_actually_randomizes() -> None:
 
 
 # ---------------------------------------------------------------------------
-# Kalibracja FPR na nullu (max-pair)
+# FPR calibration on the null (max-pair)
 # ---------------------------------------------------------------------------
 
 def test_cooccurrence_fpr_on_null() -> None:
-    """FPR ≈ α na nullu uniform — max-pair kalibruje sie poprawnie (curveball null).
+    """FPR ≈ α on the uniform null — max-pair calibrates correctly (curveball null).
 
-    W pelni deterministyczne (stale seedy). Prog 0.12 zostawia margines MC dla
-    n_trials=60/n_perm=99; gruba miskalibracja (np. odrzucona suma, FPR ~0.17) by przekroczyla.
+    Fully deterministic (fixed seeds). The 0.12 threshold leaves an MC margin for
+    n_trials=60/n_perm=99; a gross miscalibration (e.g. rejected sum, FPR ~0.17) would exceed it.
     """
     det = cooccurrence_detector(n_perm=99)
     n_trials = 60
@@ -107,15 +107,15 @@ def test_cooccurrence_fpr_on_null() -> None:
         for seq in make_worker_seeds(7, n_trials)
     )
     fpr = rejects / n_trials
-    assert fpr <= 0.12, f"FPR(null, max-pair)={fpr} — mozliwa miskalibracja"
+    assert fpr <= 0.12, f"FPR(null, max-pair)={fpr} — possible miscalibration"
 
 
 # ---------------------------------------------------------------------------
-# Power + lokalizacja na wymuszonym wspolwystapieniu
+# Power + localization on a forced co-occurrence
 # ---------------------------------------------------------------------------
 
 def test_detects_and_localizes_forced_pair() -> None:
-    """Silne wymuszone parowanie (frac=0.15) → odrzucenie H0 + poprawna lokalizacja pary."""
+    """Strong forced pairing (frac=0.15) → reject H0 + correct pair localization."""
     draws = _forced_pair_draws(300, pair_frac=0.15, seed=11, pair=(7, 13))
     res = cooccurrence_test(draws, n_perm=199, seed=999)
     assert res.reject_h0 is True
@@ -124,10 +124,11 @@ def test_detects_and_localizes_forced_pair() -> None:
 
 
 def test_detects_planted_pair_corr_showcase() -> None:
-    """Showcase W6: planted pair_corr p=0.10 (margin-preserving) → odrzucenie + lokalizacja.
+    """W6 showcase: planted pair_corr p=0.10 (margin-preserving) → reject + localization.
 
-    End-to-end z `generate_planted_draws` (nie ad-hoc helperem): sygnal joint, na ktory
-    chi²/MMD sa slepe (zob. test_driftsim_calibration), jest tu wykryty i para zlokalizowana.
+    End-to-end with `generate_planted_draws` (not an ad-hoc helper): the joint signal
+    that chi²/MMD are blind to (see test_driftsim_calibration) is detected here and the
+    pair localized.
     """
     draws = generate_planted_draws(436, "R3", "pair_corr", 0.10, np.random.default_rng(5))
     res = cooccurrence_test(draws, n_perm=199, seed=5)
@@ -136,10 +137,10 @@ def test_detects_planted_pair_corr_showcase() -> None:
 
 
 def test_planted_pair_corr_smallest_effect_below_floor() -> None:
-    """Finding W6: najmniejszy effect p=0.01 jest ponizej progu detekcji (~FPR).
+    """W6 finding: the smallest effect p=0.01 is below the detection floor (~FPR).
 
-    Dokumentuje granice czulosci jako wykonywalny kontrakt — power rosnie z effectem
-    (p=0.05 → >0.7, walidowane w kalibracji), ale p=0.01 pozostaje przy floorze.
+    Documents the sensitivity limit as an executable contract — power grows with the
+    effect (p=0.05 → >0.7, validated in calibration), but p=0.01 stays at the floor.
     """
     rejects = sum(
         cooccurrence_test(
@@ -149,15 +150,15 @@ def test_planted_pair_corr_smallest_effect_below_floor() -> None:
         ).reject_h0
         for s in range(20)
     )
-    assert rejects <= 4, f"oczekiwano below-floor (~FPR), otrzymano power={rejects/20}"
+    assert rejects <= 4, f"expected below-floor (~FPR), got power={rejects/20}"
 
 
 # ---------------------------------------------------------------------------
-# Determinizm (DoD-6) + guardy
+# Determinism (DoD-6) + guards
 # ---------------------------------------------------------------------------
 
 def test_detector_is_pure_function() -> None:
-    """Dwie swieze instancje detektora na tym samym `draws` → identyczny p-value (DoD-6)."""
+    """Two fresh detector instances on the same `draws` → identical p-value (DoD-6)."""
     draws = _forced_pair_draws(200, pair_frac=0.10, seed=3)
     r1 = cooccurrence_detector(n_perm=99)(draws)
     r2 = cooccurrence_detector(n_perm=99)(draws)

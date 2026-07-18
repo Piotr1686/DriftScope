@@ -1,7 +1,7 @@
-"""Testy niezmienników H1 Classical.
+"""H1 Classical invariant tests.
 
-DoD-1a: ADF/KPSS wykrywają (nie-)stacjonarność na syntetycznych danych.
-DoD-1b: BOCPD top-5 CP pokrywają 2014-10-10 i 2022-03-25 (±30 dni) blind.
+DoD-1a: ADF/KPSS detect (non-)stationarity on synthetic data.
+DoD-1b: BOCPD top-5 CP cover 2014-10-10 and 2022-03-25 (±30 days) blind.
 """
 from __future__ import annotations
 
@@ -30,7 +30,7 @@ _SEED_CSV = Path(__file__).parent.parent / "data" / "seed" / "eurojackpot_histor
 
 
 # ---------------------------------------------------------------------------
-# Helpers do tworzenia syntetycznych DrawRecord
+# Helpers for building synthetic DrawRecord
 # ---------------------------------------------------------------------------
 
 def _make_draws(
@@ -39,7 +39,7 @@ def _make_draws(
     seed: int = 0,
     start_date: date = date(2020, 1, 7),
 ) -> list[DrawRecord]:
-    """Generuje n DrawRecord z losowymi euronumerami z euron_pool."""
+    """Generates n DrawRecord with random euro numbers from euron_pool."""
     rng = np.random.default_rng(seed)
     draws = []
     for i in range(n):
@@ -61,26 +61,26 @@ def _make_draws(
 # ---------------------------------------------------------------------------
 
 def test_adf_rejects_unit_root_on_white_noise() -> None:
-    """ADF powinien odrzucić H0 (unit root) dla szumu białego — wykrywa stacjonarność."""
+    """ADF should reject H0 (unit root) for white noise — detects stationarity."""
     series = RNG.standard_normal(500)
     result = run_adf(series, label="white_noise")
     assert result.test_name == "adf"
     assert result.p_value < 0.05, (
-        f"ADF p={result.p_value:.4f} — biały szum powinien być stacjonarny"
+        f"ADF p={result.p_value:.4f} — white noise should be stationary"
     )
     assert result.reject_h0
 
 
 def test_adf_no_reject_on_random_walk() -> None:
-    """ADF nie powinien odrzucić H0 dla błądzenia losowego (unit root)."""
+    """ADF should not reject H0 for a random walk (unit root)."""
     steps = RNG.standard_normal(500)
     rw = np.cumsum(steps)
     result = run_adf(rw, label="random_walk")
     assert result.test_name == "adf"
-    # Dla n=500 ADF zazwyczaj nie odrzuca dla prawdziwego random walk
-    # Tolerancja: p > 0.05 w >90% przypadków; używamy assert "zdecydowanie p > 0.01"
+    # For n=500 ADF usually does not reject for a true random walk
+    # Tolerance: p > 0.05 in >90% of cases; we assert "clearly p > 0.01"
     assert result.p_value > 0.01, (
-        f"ADF zbyt agresywnie odrzuca random walk (p={result.p_value:.4f})"
+        f"ADF rejects the random walk too aggressively (p={result.p_value:.4f})"
     )
 
 
@@ -89,30 +89,30 @@ def test_adf_no_reject_on_random_walk() -> None:
 # ---------------------------------------------------------------------------
 
 def test_kpss_no_reject_on_white_noise() -> None:
-    """KPSS nie powinien odrzucić H0 (stacjonarność) dla szumu białego."""
+    """KPSS should not reject H0 (stationarity) for white noise."""
     series = RNG.standard_normal(500)
     result = run_kpss(series, label="white_noise")
     assert result.test_name == "kpss"
-    assert result.p_value > 0.05, f"KPSS p={result.p_value:.4f} — biały szum jest stacjonarny"
+    assert result.p_value > 0.05, f"KPSS p={result.p_value:.4f} — white noise is stationary"
     assert not result.reject_h0
 
 
 def test_kpss_rejects_on_step_series() -> None:
-    """KPSS powinien odrzucić H0 dla serii z wyraźnym skokiem (niestacjonarność strukturalna)."""
+    """KPSS should reject H0 for a series with a clear jump (structural non-stationarity)."""
     series = np.concatenate([np.ones(250), np.ones(250) * 10.0])
     result = run_kpss(series, label="step_series")
     assert result.test_name == "kpss"
-    assert result.reject_h0, f"KPSS p={result.p_value:.4f} — skok stały powinien dać odrzucenie"
+    assert result.reject_h0, f"KPSS p={result.p_value:.4f} — a constant jump should yield rejection"
 
 
 # ---------------------------------------------------------------------------
-# BOCPD — syntetyczne dane z planted change-point
+# BOCPD — synthetic data with a planted change-point
 # ---------------------------------------------------------------------------
 
 def test_bocpd_detects_planted_changepoint() -> None:
-    """BOCPD powinien znaleźć change-point blisko środka serii z posadzonym skokiem puli."""
-    # Disjoint pools: 1-5 → 8-12 → każdy draw post-change ma 2 zupełnie nowe symbole
-    # Gwarantuje wysoki LR (≫1) przy pierwszym draw z nowej puli → cp_prob ≫ 0.3
+    """BOCPD should find a change-point near the middle of a series with a planted pool jump."""
+    # Disjoint pools: 1-5 → 8-12 → every post-change draw has 2 entirely new symbols
+    # Guarantees a high LR (≫1) at the first draw from the new pool → cp_prob ≫ 0.3
     pre = _make_draws(list(range(1, 6)), 200, seed=10, start_date=date(2010, 1, 1))
     post_start = pre[-1].draw_date + timedelta(weeks=1)
     post = _make_draws(list(range(8, 13)), 200, seed=11, start_date=post_start)
@@ -122,37 +122,38 @@ def test_bocpd_detects_planted_changepoint() -> None:
 
     assert result.test_name == "bocpd_dirichlet_multinomial"
     assert result.reject_h0, (
-        f"max_cp_prob={result.statistic:.3f} — zmiana puli 1-5→1-10 powinna dać reject_h0"
+        f"max_cp_prob={result.statistic:.3f} — pool change 1-5→1-10 should yield reject_h0"
     )
 
-    # Oczekujemy CP blisko granicy pre/post (indeks 200)
+    # We expect a CP near the pre/post boundary (index 200)
     cp_target = draws[200].draw_date
     top_dates = [date.fromisoformat(d) for d in result.metadata["top_changepoint_dates"]]
     assert any(abs((d - cp_target).days) <= 45 for d in top_dates), (
-        f"Posadzony CP przy {cp_target}, top CP = {top_dates}"
+        f"Planted CP at {cp_target}, top CP = {top_dates}"
     )
 
 
 def test_bocpd_no_changepoint_on_uniform() -> None:
-    """BOCPD nie powinien wykryć silnego CP gdy pula jest stała przez całą serię."""
+    """BOCPD should not detect a strong CP when the pool is constant across the series."""
     draws = _make_draws(list(range(1, 11)), 300, seed=42)
     result = run_bocpd(draws, field="euron", hazard=0.005)
-    # Uniform series — max cp_prob powinno być bliskie H (= 0.005), zdecydowanie < progu
+    # Uniform series — max cp_prob should be close to H (= 0.005), clearly < threshold
     assert not result.reject_h0, (
-        f"Jednorodna seria nie powinna dać reject_h0 (max_prob={result.statistic:.3f})"
+        f"A homogeneous series should not yield reject_h0 (max_prob={result.statistic:.3f})"
     )
 
 
 @pytest.mark.parametrize(
     ("field", "fpr_upper"),
-    [("euron", 0.12), ("main", 0.13)],  # 0.05 + ~3 sigma MC error dla 100 trials
+    [("euron", 0.12), ("main", 0.13)],  # 0.05 + ~3 sigma MC error for 100 trials
 )
 def test_bocpd_fpr_under_null(field: str, fpr_upper: float) -> None:
-    """DoD-2 (rodzina BOCPD): FPR pod nullem uniform-iid ~= alpha=0.05.
+    """DoD-2 (BOCPD family): FPR under the uniform-iid null ~= alpha=0.05.
 
-    Skalibrowany prog reject_h0 (_BOCPD_REJECT_THRESHOLD) to 95. percentyl rozkladu
-    max(cp_prob[warmup:]) pod nullem → FPR ~= 0.05. Walidacja niezalezna od dlugosci
-    serii (prog kalibrowany na n=436, tutaj n=200 — warm-up=N//K usuwa transient burn-in).
+    The calibrated reject_h0 threshold (_BOCPD_REJECT_THRESHOLD) is the 95th percentile of
+    the max(cp_prob[warmup:]) distribution under the null → FPR ~= 0.05. Validation is
+    independent of series length (threshold calibrated on n=436, here n=200 — warm-up=N//K
+    removes the transient burn-in).
     """
     n_trials = 100
     seeds = make_worker_seeds(42, n_trials)
@@ -165,13 +166,13 @@ def test_bocpd_fpr_under_null(field: str, fpr_upper: float) -> None:
 
     fpr = rejects / n_trials
     assert fpr <= fpr_upper, (
-        f"FPR={fpr:.3f} pod nullem ({field}) przekracza {fpr_upper} "
-        f"(prog={_BOCPD_REJECT_THRESHOLD[field]})"
+        f"FPR={fpr:.3f} under the null ({field}) exceeds {fpr_upper} "
+        f"(threshold={_BOCPD_REJECT_THRESHOLD[field]})"
     )
 
 
 # ---------------------------------------------------------------------------
-# Welch PSD i Ljung-Box — smoke tests (poprawność wywołania)
+# Welch PSD and Ljung-Box — smoke tests (call correctness)
 # ---------------------------------------------------------------------------
 
 def test_welch_returns_valid_result() -> None:
@@ -194,12 +195,12 @@ def test_acf_returns_valid_result() -> None:
 
 
 # ---------------------------------------------------------------------------
-# DoD-1a: ADF/KPSS na rzeczywistych danych seed CSV
+# DoD-1a: ADF/KPSS on real seed CSV data
 # ---------------------------------------------------------------------------
 
-@pytest.mark.skipif(not _SEED_CSV.exists(), reason="Seed CSV niedostępny")
+@pytest.mark.skipif(not _SEED_CSV.exists(), reason="Seed CSV unavailable")
 def test_dod_1a_kpss_rejects_on_full_euron_series() -> None:
-    """DoD-1a: KPSS odrzuca stacjonarność dla całego szeregu euron_mean (3 reżimy)."""
+    """DoD-1a: KPSS rejects stationarity for the full euron_mean series (3 regimes)."""
     from driftscope.ingestion.lotto_scraper import load_seed_csv
 
     draws = load_seed_csv(_SEED_CSV)
@@ -207,17 +208,17 @@ def test_dod_1a_kpss_rejects_on_full_euron_series() -> None:
     result = run_kpss(series, label="euron_mean_full")
 
     assert result.reject_h0, (
-        f"KPSS p={result.p_value:.4f} — pełny szereg euron_mean (3 reżimy) powinien dać reject"
+        f"KPSS p={result.p_value:.4f} — the full euron_mean series (3 regimes) should reject"
     )
 
 
 # ---------------------------------------------------------------------------
-# DoD-1b: BOCPD na rzeczywistych danych — known change-points ±30 dni
+# DoD-1b: BOCPD on real data — known change-points ±30 days
 # ---------------------------------------------------------------------------
 
-@pytest.mark.skipif(not _SEED_CSV.exists(), reason="Seed CSV niedostępny")
+@pytest.mark.skipif(not _SEED_CSV.exists(), reason="Seed CSV unavailable")
 def test_dod_1b_bocpd_covers_known_changepoints() -> None:
-    """DoD-1b: top-5 CP z BOCPD pokrywa 2014-10-10 i 2022-03-25 (±30 dni) blind."""
+    """DoD-1b: BOCPD top-5 CP cover 2014-10-10 and 2022-03-25 (±30 days) blind."""
     from driftscope.ingestion.lotto_scraper import load_seed_csv
 
     draws = load_seed_csv(_SEED_CSV)
@@ -225,9 +226,9 @@ def test_dod_1b_bocpd_covers_known_changepoints() -> None:
 
     top_dates = [date.fromisoformat(d) for d in result.metadata["top_changepoint_dates"]]
 
-    # Reguła 2014-10-10, ale pierwsze losowanie z euron > 8 = 2014-11-28 (~49 dni później).
-    # BOCPD wykrywa zmiany w DANYCH, nie w zasadach → tolerancja ±60 dni dla 2014.
-    # 2022: reguła 2022-03-25 i pierwsze losowanie 2022-03-29 (4 dni różnicy) → ±30 dni.
+    # Rule 2014-10-10, but the first draw with euron > 8 = 2014-11-28 (~49 days later).
+    # BOCPD detects changes in the DATA, not in the rules → tolerance ±60 days for 2014.
+    # 2022: rule 2022-03-25 and first draw 2022-03-29 (4 days apart) → ±30 days.
     target_2014 = date(2014, 10, 10)
     target_2022 = date(2022, 3, 25)
 
@@ -235,20 +236,20 @@ def test_dod_1b_bocpd_covers_known_changepoints() -> None:
     found_2022 = any(abs((d - target_2022).days) <= 30 for d in top_dates)
 
     assert found_2014, (
-        f"DoD-1b: brak CP blisko 2014-10-08 ±60 dni. Top CP = {top_dates}"
+        f"DoD-1b: no CP near 2014-10-08 ±60 days. Top CP = {top_dates}"
     )
     assert found_2022, (
-        f"DoD-1b: brak CP blisko 2022-03-25 ±30 dni. Top CP = {top_dates}"
+        f"DoD-1b: no CP near 2022-03-25 ±30 days. Top CP = {top_dates}"
     )
 
 
-@pytest.mark.skipif(not _SEED_CSV.exists(), reason="Seed CSV niedostępny")
+@pytest.mark.skipif(not _SEED_CSV.exists(), reason="Seed CSV unavailable")
 def test_dod_1b_bocpd_negative_control_main() -> None:
-    """DoD-1b negative control: pole 'main' (1-50) NIE odrzuca H0 na realnych danych.
+    """DoD-1b negative control: the 'main' field (1-50) does NOT reject H0 on real data.
 
-    Brak znanej zmiany regul puli glownej → BOCPD nie powinien zapalic. Wykluczenie
-    warm-up (preregistration_v6 §0) usuwa transient burn-in, ktory wczesniej dawal
-    spurious reject (max=0.770 w idx=7 = 2012-05-11). Po korekcie max=0.208 << prog 0.70.
+    No known change in the main pool rules → BOCPD should not fire. Warm-up exclusion
+    (preregistration_v6 §0) removes the transient burn-in that previously produced a
+    spurious reject (max=0.770 at idx=7 = 2012-05-11). After the fix max=0.208 << threshold 0.70.
     """
     from driftscope.ingestion.lotto_scraper import load_seed_csv
 
@@ -256,7 +257,7 @@ def test_dod_1b_bocpd_negative_control_main() -> None:
     result = run_bocpd(draws, field="main", hazard=0.005, top_k=5)
 
     assert not result.reject_h0, (
-        f"Negative control main NIE powinien odrzucac H0 "
-        f"(max={result.statistic:.3f} > prog={result.metadata['reject_threshold']}). "
+        f"Negative control main should NOT reject H0 "
+        f"(max={result.statistic:.3f} > threshold={result.metadata['reject_threshold']}). "
         f"Top CP = {result.metadata['top_changepoint_dates']}"
     )

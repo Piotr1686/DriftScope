@@ -1,13 +1,13 @@
-"""Testy reprodukowalnosci (DoD-6).
+"""Reproducibility tests (DoD-6).
 
-DoD-6: "cold-machine re-run = bit-identical SHA-256 CSV". Trzy filary:
-  1. **Seed management** — `make_worker_seeds` deterministyczny (ten sam base_seed →
-     identyczne strumienie RNG).
-  2. **Pure-function reseed** — detektory sa CZYSTYMI FUNKCJAMI `draws`: powtorne
-     wywolanie daje bit-identyczny wynik, a kolejnosc wywolan (globalny stan RNG
-     numba/numpy) NIE wplywa na wynik (seed z zawartosci draws, nie ze stanu).
-  3. **Manifest SHA-256** — `scripts/archive.py` liczy deterministyczny hash committed
-     seed CSV (Tier-1 kotwica) niezaleznie od liczby wywolan.
+DoD-6: "cold-machine re-run = bit-identical SHA-256 CSV". Three pillars:
+  1. **Seed management** — `make_worker_seeds` deterministic (same base_seed →
+     identical RNG streams).
+  2. **Pure-function reseed** — detectors are PURE FUNCTIONS of `draws`: a repeat
+     call yields a bit-identical result, and call order (numba/numpy global RNG
+     state) does NOT affect the result (seed from draws content, not from state).
+  3. **SHA-256 manifest** — `scripts/archive.py` computes a deterministic hash of the
+     committed seed CSV (Tier-1 anchor) regardless of the number of calls.
 """
 from __future__ import annotations
 
@@ -28,7 +28,7 @@ _SEED_CSV = _ROOT / "data" / "seed" / "eurojackpot_history.csv"
 
 
 def _load_archive():
-    """Importuje scripts/archive.py (poza pakietem) przez importlib."""
+    """Imports scripts/archive.py (outside the package) via importlib."""
     path = _ROOT / "scripts" / "archive.py"
     spec = importlib.util.spec_from_file_location("archive", path)
     assert spec is not None and spec.loader is not None
@@ -45,7 +45,7 @@ def _draws(n: int = 60, seed: int = 7):
 # --- 1. Seed management -----------------------------------------------------
 
 def test_make_worker_seeds_deterministic() -> None:
-    """Ten sam base_seed → identyczne SeedSequence (stan RNG bit-identyczny)."""
+    """Same base_seed → identical SeedSequence (bit-identical RNG state)."""
     s1 = make_worker_seeds(42, 5)
     s2 = make_worker_seeds(42, 5)
     assert len(s1) == len(s2) == 5
@@ -54,13 +54,13 @@ def test_make_worker_seeds_deterministic() -> None:
 
 
 def test_make_worker_seeds_streams_independent() -> None:
-    """Rozne workery → rozne strumienie (brak korelacji = nie identyczne stany)."""
+    """Different workers → different streams (no correlation = non-identical states)."""
     seeds = make_worker_seeds(42, 4)
     states = [tuple(s.generate_state(4).tolist()) for s in seeds]
-    assert len(set(states)) == 4  # wszystkie rozne
+    assert len(set(states)) == 4  # all different
 
 
-# --- 2. Pure-function reseed (DoD-6 rdzen) ----------------------------------
+# --- 2. Pure-function reseed (DoD-6 core) -----------------------------------
 
 @pytest.mark.parametrize(
     "factory",
@@ -72,7 +72,7 @@ def test_make_worker_seeds_streams_independent() -> None:
     ids=["serial_overlap", "recurrence", "cooccurrence"],
 )
 def test_detector_repeat_is_bit_identical(factory) -> None:
-    """Powtorne wywolanie tego samego detektora na tych samych draws → identyczny wynik."""
+    """Repeat call of the same detector on the same draws → identical result."""
     draws = _draws()
     det = factory()
     r1 = det(draws)
@@ -83,14 +83,14 @@ def test_detector_repeat_is_bit_identical(factory) -> None:
 
 
 def test_detector_call_order_independence() -> None:
-    """Pure-function reseed: wynik detektora A nie zalezy od tego, czy miedzy jego
-    wywolaniami zadzialal detektor B (ktory ustawia globalny stan np.random)."""
+    """Pure-function reseed: detector A's result does not depend on whether
+    detector B ran between its calls (B sets the np.random global state)."""
     draws = _draws()
     det_a = serial_overlap_detector(n_perm=49)
-    det_b = cooccurrence_detector(n_perm=49)  # mutuje globalny stan numba/numpy
+    det_b = cooccurrence_detector(n_perm=49)  # mutates numba/numpy global state
 
     r_a1 = det_a(draws)
-    _ = det_b(draws)            # "skazenie" globalnego RNG miedzy wywolaniami A
+    _ = det_b(draws)            # "contaminate" the global RNG between A's calls
     r_a2 = det_a(draws)
 
     assert r_a1.statistic == r_a2.statistic
@@ -98,21 +98,21 @@ def test_detector_call_order_independence() -> None:
 
 
 def test_detector_seed_depends_on_content() -> None:
-    """Rozna zawartosc draws → (z duzym prawdopodobienstwem) rozny seed → rozny null.
+    """Different draws content → (with high probability) different seed → different null.
 
-    Sanity: detektor NIE zwraca sta+lej niezaleznie od danych."""
+    Sanity: the detector does NOT return a constant independent of the data."""
     det = serial_overlap_detector(n_perm=99)
     r_seed7 = det(_draws(seed=7))
     r_seed8 = det(_draws(seed=8))
-    # Statystyki obserwowane musza sie roznic dla roznych danych (nie zdegenerowane).
+    # Observed statistics must differ for different data (not degenerate).
     assert r_seed7.statistic != r_seed8.statistic
 
 
 # --- 3. Manifest SHA-256 ----------------------------------------------------
 
-@pytest.mark.skipif(not _SEED_CSV.exists(), reason="Seed CSV niedostępny")
+@pytest.mark.skipif(not _SEED_CSV.exists(), reason="Seed CSV unavailable")
 def test_seed_csv_hash_deterministic() -> None:
-    """SHA-256 committed seed CSV jest stabilny miedzy wywolaniami (DoD-6 kotwica)."""
+    """SHA-256 of committed seed CSV is stable across calls (DoD-6 anchor)."""
     archive = _load_archive()
     h1 = archive.sha256_file(_SEED_CSV)
     h2 = archive.sha256_file(_SEED_CSV)
@@ -121,18 +121,18 @@ def test_seed_csv_hash_deterministic() -> None:
 
 
 def test_build_manifest_deterministic_and_sorted() -> None:
-    """build_manifest dwa razy → identyczny, posortowany po kluczu."""
+    """build_manifest twice → identical, sorted by key."""
     archive = _load_archive()
     files = archive.collect_files(_ROOT)
     m1 = archive.build_manifest(files, _ROOT)
     m2 = archive.build_manifest(files, _ROOT)
     assert m1 == m2
-    assert list(m1) == sorted(m1)  # klucze posortowane
+    assert list(m1) == sorted(m1)  # keys sorted
     assert all(len(h) == 64 for h in m1.values())
 
 
 def test_write_manifest_byte_identical(tmp_path) -> None:
-    """write_manifest do tego samego wejscia → bit-identyczny JSON (sort_keys)."""
+    """write_manifest for the same input → bit-identical JSON (sort_keys)."""
     archive = _load_archive()
     out1 = tmp_path / "m1.json"
     out2 = tmp_path / "m2.json"

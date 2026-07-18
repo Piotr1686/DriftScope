@@ -1,4 +1,4 @@
-"""Smoke testy reporting/plots_interactive.py — figury Plotly buduja sie i zapisuja HTML."""
+"""Smoke tests for reporting/plots_interactive.py — Plotly figures build and save HTML."""
 from __future__ import annotations
 
 from datetime import date, timedelta
@@ -20,7 +20,7 @@ def _make_draws(
     seed: int = 0,
     start_date: date = date(2020, 1, 7),
 ) -> list[DrawRecord]:
-    """n DrawRecord z losowymi euronumerami z euron_pool (wzorzec z test_plots_static)."""
+    """n DrawRecord with random euro numbers from euron_pool (pattern from test_plots_static)."""
     rng = np.random.default_rng(seed)
     draws = []
     for i in range(n):
@@ -38,7 +38,7 @@ def _make_draws(
 
 
 def _planted_changepoint_draws() -> list[DrawRecord]:
-    """Strumien z wszczepionym change-pointem puli euron (1-8 → 8-12) po 200 losowaniach."""
+    """Stream with a planted euron pool change-point (1-8 → 8-12) after 200 draws."""
     pre = _make_draws(list(range(1, 9)), 200, seed=10, start_date=date(2014, 1, 3))
     post_start = pre[-1].draw_date + timedelta(weeks=1)
     post = _make_draws(list(range(8, 13)), 200, seed=11, start_date=post_start)
@@ -46,17 +46,17 @@ def _planted_changepoint_draws() -> list[DrawRecord]:
 
 
 def test_interactive_bocpd_figure_returns_figure() -> None:
-    """Zwraca go.Figure z >=1 sladem (krzywa cp_prob)."""
+    """Returns a go.Figure with >=1 trace (the cp_prob curve)."""
     draws = _planted_changepoint_draws()
 
     fig = interactive_bocpd_figure(draws, field="euron")
 
     assert isinstance(fig, go.Figure)
-    assert len(fig.data) >= 1  # co najmniej krzywa cp_prob
+    assert len(fig.data) >= 1  # at least the cp_prob curve
 
 
 def test_interactive_bocpd_figure_saves_html(tmp_path: Path) -> None:
-    """out_path zapisuje niepusty samodzielny HTML z plotly div."""
+    """out_path writes a non-empty standalone HTML with a plotly div."""
     draws = _planted_changepoint_draws()
     out = tmp_path / "bocpd_euron.html"
 
@@ -69,7 +69,7 @@ def test_interactive_bocpd_figure_saves_html(tmp_path: Path) -> None:
 
 
 def test_interactive_bocpd_figure_main_field(tmp_path: Path) -> None:
-    """Pole 'main' (N=50, K=5) buduje sie tak samo jak euron."""
+    """The 'main' field (N=50, K=5) builds the same way as euron."""
     draws = _make_draws(list(range(1, 13)), 150, seed=3)
     out = tmp_path / "bocpd_main.html"
 
@@ -81,25 +81,25 @@ def test_interactive_bocpd_figure_main_field(tmp_path: Path) -> None:
 
 
 def test_interactive_control_comparison_two_panels(tmp_path: Path) -> None:
-    """Figura pos/neg control ma 2 panele (subplot) i zapisuje HTML."""
+    """The pos/neg control figure has 2 panels (subplot) and saves HTML."""
     draws = _planted_changepoint_draws()
     out = tmp_path / "control_comparison.html"
 
     fig = interactive_control_comparison(draws, out_path=out)
 
     assert isinstance(fig, go.Figure)
-    # 2 osie y (subplot 2 wiersze) → "yaxis" + "yaxis2"
+    # 2 y-axes (subplot 2 rows) → "yaxis" + "yaxis2"
     assert fig.layout.yaxis is not None and fig.layout.yaxis2 is not None
     assert out.exists()
     assert out.stat().st_size > 0
 
 
 def test_interactive_bocpd_figure_no_out_path_does_not_write(tmp_path: Path, monkeypatch) -> None:
-    """Bez out_path nie powstaje zaden plik — funkcja zwraca tylko Figure."""
+    """Without out_path no file is created — the function only returns a Figure."""
     monkeypatch.chdir(tmp_path)
     draws = _make_draws(list(range(1, 13)), 120, seed=7)
 
     fig = interactive_bocpd_figure(draws, field="euron")
 
     assert isinstance(fig, go.Figure)
-    assert list(tmp_path.iterdir()) == []  # nic nie zapisane
+    assert list(tmp_path.iterdir()) == []  # nothing saved

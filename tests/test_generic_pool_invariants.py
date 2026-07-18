@@ -1,14 +1,14 @@
-"""Generyczna pula (Multi Multi 20-z-80, gra 2) — loader CSV + wyprowadzanie pool/k.
+"""Generic pool (Multi Multi 20-of-80, game 2) — CSV loader + pool/k derivation.
 
-Reusability frameworka poza EuroJackpot opiera sie na dwoch niezmiennikach:
-  1. `load_generic_seed_csv` wczytuje dowolny CSV `draw_date + n1..nK` → DrawRecord.generic
-     niosacy `pool_size` (agnostyczny co do liczby kolumn liczb).
-  2. Detektory wyprowadzaja pule/k z rekordow (`draws[0].pool_size` / `main_numbers`),
-     a nie z twardych stalych — wiec na pool=80 raportuja 80 liczb, nie 50.
+The framework's reusability beyond EuroJackpot rests on two invariants:
+  1. `load_generic_seed_csv` loads any CSV `draw_date + n1..nK` → DrawRecord.generic
+     carrying `pool_size` (agnostic to the number of number columns).
+  2. Detectors derive the pool/k from the records (`draws[0].pool_size` / `main_numbers`),
+     not from hard constants — so on pool=80 they report 80 numbers, not 50.
 
-Ciezka kalibracja FPR (200 trials) zyje w `scripts/calibrate_mmd_pool.py` (artifact, NIE
-unit test). Tu tylko szybkie niezmienniki strukturalne + semantyka werdyktu runnera MM
-(Disagreement >=2/3 po filarach rdzeniowych, nie naiwny OR).
+The heavy FPR calibration (200 trials) lives in `scripts/calibrate_mmd_pool.py` (artifact,
+NOT a unit test). Here only fast structural invariants + the MM runner verdict semantics
+(Disagreement >=2/3 over the core pillars, not a naive OR).
 """
 from __future__ import annotations
 
@@ -26,36 +26,36 @@ from driftscope.reporting.prng_benchmark import BenchmarkRow
 _MM_CSV = Path(__file__).parent.parent / "data" / "seed" / "multimulti_history.csv"
 _MM_POOL = 80
 _MM_K = 20
-_MM_N = 16827  # liczba losowan w seed CSV (1996-2026)
+_MM_N = 16827  # number of draws in the seed CSV (1996-2026)
 
 
 # ---------------------------------------------------------------------------
-# load_generic_seed_csv — realny MM seed
+# load_generic_seed_csv — real MM seed
 # ---------------------------------------------------------------------------
 
 def test_load_mm_shape() -> None:
-    """Realny MM CSV → 16827 rekordow generycznych, pool=80, k=20."""
+    """Real MM CSV → 16827 generic records, pool=80, k=20."""
     draws = load_generic_seed_csv(_MM_CSV, pool_size=_MM_POOL)
     assert len(draws) == _MM_N
     assert all(d.pool_size == _MM_POOL for d in draws)
     assert all(len(d.main_numbers) == _MM_K for d in draws)
-    assert draws[0].numbers is not None  # ksztalt generyczny, nie EJ
+    assert draws[0].numbers is not None  # generic shape, not EJ
 
 
 def test_load_mm_numbers_in_range() -> None:
-    """Wszystkie liczby w 1..80 (walidacja DrawRecord._validate_shape nie odrzucila)."""
+    """All numbers in 1..80 (DrawRecord._validate_shape did not reject)."""
     draws = load_generic_seed_csv(_MM_CSV, pool_size=_MM_POOL)
-    for d in draws[:200]:  # probka — pelny zbior waliduje sam loader przy konstrukcji
+    for d in draws[:200]:  # sample — the full set is validated by the loader at construction
         assert all(1 <= v <= _MM_POOL for v in d.main_numbers)
 
 
 def test_load_mm_recent_window_chronological() -> None:
-    """Ogon strumienia (okno runnera = ostatnie 2000) jest chronologiczny.
+    """The stream tail (runner window = last 2000) is chronological.
 
-    Realny MM seed ma 2 historyczne inwersje dat (2010) — globalnie NIE jest w pelni
-    posortowany — ale okno runnera (`draws[-2000:]`) jest czyste, a `run_multimulti_audit`
-    i tak sortuje defensywnie (BOCPD sekwencyjny). Tu zabezpieczamy realny niezmiennik:
-    nie wprowadzac w przyszlosci nieuporzadkowania do najnowszych losowan.
+    The real MM seed has 2 historical date inversions (2010) — globally it is NOT fully
+    sorted — but the runner window (`draws[-2000:]`) is clean, and `run_multimulti_audit`
+    sorts defensively anyway (sequential BOCPD). Here we guard the real invariant: do not
+    introduce disorder into the most recent draws in the future.
     """
     draws = load_generic_seed_csv(_MM_CSV, pool_size=_MM_POOL)
     tail = [d.draw_date for d in draws[-2000:]]
@@ -63,7 +63,7 @@ def test_load_mm_recent_window_chronological() -> None:
 
 
 def test_load_mm_deterministic() -> None:
-    """Dwa odczyty daja identyczne rekordy (DoD-6)."""
+    """Two reads yield identical records (DoD-6)."""
     a = load_generic_seed_csv(_MM_CSV, pool_size=_MM_POOL)
     b = load_generic_seed_csv(_MM_CSV, pool_size=_MM_POOL)
     assert [d.main_numbers for d in a] == [d.main_numbers for d in b]
@@ -71,11 +71,11 @@ def test_load_mm_deterministic() -> None:
 
 
 # ---------------------------------------------------------------------------
-# Loader agnostyczny co do liczby kolumn (gra 3+)
+# Loader agnostic to the number of columns (game 3+)
 # ---------------------------------------------------------------------------
 
 def test_load_generic_arbitrary_pool(tmp_path: Path) -> None:
-    """Loader dziala dla dowolnego k/pool (np. mini-gra 3-z-10), nie tylko MM 20/80."""
+    """Loader works for any k/pool (e.g. a mini 3-of-10 game), not only MM 20/80."""
     csv = tmp_path / "mini.csv"
     csv.write_text(
         "draw_date,a,b,c\n2020-01-01,1,5,10\n2020-01-02,2,3,9\n",
@@ -89,11 +89,11 @@ def test_load_generic_arbitrary_pool(tmp_path: Path) -> None:
 
 
 # ---------------------------------------------------------------------------
-# Detektory wyprowadzaja pule z rekordow (nie twarde 50)
+# Detectors derive the pool from the records (not a hard 50)
 # ---------------------------------------------------------------------------
 
 def test_family_b_derives_pool_from_records() -> None:
-    """family_b_per_number_pvalues raportuje pool=80 liczb dla rekordow generycznych."""
+    """family_b_per_number_pvalues reports pool=80 numbers for generic records."""
     rng = np.random.default_rng(0)
     draws = [
         DrawRecord.generic(
@@ -111,7 +111,7 @@ def test_family_b_derives_pool_from_records() -> None:
 
 
 # ---------------------------------------------------------------------------
-# Werdykt runnera MM = Disagreement po 3 filarach rdzeniowych (NIE naiwny OR)
+# MM runner verdict = Disagreement over the 3 core pillars (NOT a naive OR)
 # ---------------------------------------------------------------------------
 
 def _mm_row(
@@ -122,7 +122,7 @@ def _mm_row(
     it: bool = False,
     family_b_reject: int = 0,
 ) -> MultiMultiAuditRow:
-    """Syntetyczny wiersz audytu MM z zadanymi flagami detektorow (zero obliczen)."""
+    """Synthetic MM audit row with the given detector flags (zero computation)."""
     battery = BenchmarkRow(
         source="Multi Multi (20/80)",
         klass="real",
@@ -149,7 +149,7 @@ def _mm_row(
 
 
 def test_mm_verdict_lone_mmd_is_clear() -> None:
-    """Regresja na pierwotny bug: samotny MMD (1/3) = clear, NIE FLAG (OR klamal)."""
+    """Regression on the original bug: a lone MMD (1/3) = clear, NOT FLAG (OR lied)."""
     row = _mm_row(mmd=True)
     assert row.core_fraction == "1/3"
     assert row.verdict == "clear"
@@ -157,14 +157,14 @@ def test_mm_verdict_lone_mmd_is_clear() -> None:
 
 
 def test_mm_verdict_zero_pillars_clear() -> None:
-    """0/3 = clear (honest null bez zadnego rejecta)."""
+    """0/3 = clear (honest null with no rejects)."""
     row = _mm_row()
     assert row.core_fraction == "0/3"
     assert row.verdict == "clear"
 
 
 def test_mm_verdict_two_pillars_flag() -> None:
-    """Konwergencja 2/3 (BOCPD+MMD) = FLAG."""
+    """Convergence 2/3 (BOCPD+MMD) = FLAG."""
     row = _mm_row(bocpd=True, mmd=True)
     assert row.core_fraction == "2/3"
     assert row.verdict == "FLAG"
@@ -172,7 +172,7 @@ def test_mm_verdict_two_pillars_flag() -> None:
 
 
 def test_mm_verdict_three_pillars_flag() -> None:
-    """Pelna konwergencja 3/3 = FLAG (fully convergent signal)."""
+    """Full convergence 3/3 = FLAG (fully convergent signal)."""
     row = _mm_row(bocpd=True, mmd=True, cooc=True)
     assert row.core_fraction == "3/3"
     assert row.verdict == "FLAG"
@@ -180,14 +180,14 @@ def test_mm_verdict_three_pillars_flag() -> None:
 
 
 def test_mm_verdict_it_supplement_outside_verdict() -> None:
-    """IT (suplement, nie filar) sam NIE przewraca werdyktu — core 0/3 = clear."""
+    """IT (supplement, not a pillar) does NOT flip the verdict on its own — core 0/3 = clear."""
     row = _mm_row(it=True)
     assert row.core_fraction == "0/3"
     assert row.verdict == "clear"
 
 
 def test_mm_verdict_family_b_outside_verdict() -> None:
-    """Family B (osobna bramka FDR) sama NIE przewraca werdyktu — core 0/3 = clear."""
+    """Family B (a separate FDR gate) does NOT flip the verdict on its own — core 0/3 = clear."""
     row = _mm_row(family_b_reject=3)
     assert row.core_fraction == "0/3"
     assert row.verdict == "clear"

@@ -1,7 +1,7 @@
-"""Testy Disagreement Protocol (W7, DoD-4).
+"""Disagreement Protocol tests (W7, DoD-4).
 
-Walidacja klasyfikacji sygnalu wg zgodnosci 3 filarow (H1 / MMD / co-occurrence)
-do komorek 3/3, 2/3, 1/3, 0/3 (preregistration_v6 §6.5).
+Validates signal classification by agreement of the 3 pillars (H1 / MMD /
+co-occurrence) into cells 3/3, 2/3, 1/3, 0/3 (preregistration_v6 §6.5).
 """
 from __future__ import annotations
 
@@ -38,10 +38,10 @@ def _draw() -> DrawRecord:
     )
 
 
-# --- 4 komorki protokolu ----------------------------------------------------
+# --- 4 protocol cells --------------------------------------------------------
 
 def test_full_convergence_3_of_3() -> None:
-    """Wszystkie filary odrzucaja H0 → 3/3, primary finding."""
+    """All pillars reject H0 → 3/3, primary finding."""
     v = classify(_verdict_dict(True, True, True))
     assert v.n_agree == 3
     assert v.fraction == "3/3"
@@ -51,7 +51,7 @@ def test_full_convergence_3_of_3() -> None:
 
 
 def test_convergent_2_of_3() -> None:
-    """Dwa z trzech filarow → 2/3, NIE primary finding."""
+    """Two of three pillars → 2/3, NOT a primary finding."""
     v = classify(_verdict_dict(True, False, True))
     assert v.n_agree == 2
     assert v.fraction == "2/3"
@@ -61,10 +61,10 @@ def test_convergent_2_of_3() -> None:
 
 
 def test_clean_cell_pair_corr_1_of_3() -> None:
-    """Czysta komorka §6.5: pair_corr widzi WYLACZNIE co-occurrence → 1/3.
+    """Clean cell §6.5: pair_corr is seen ONLY by co-occurrence → 1/3.
 
-    chi²/MMD/H1 dowodliwie slepe na sygnal joint margin-preserving (marginesy
-    uniform); tylko filar co-occurrence odrzuca H0.
+    chi²/MMD/H1 provably blind to the margin-preserving joint signal (uniform
+    margins); only the co-occurrence pillar rejects H0.
     """
     v = classify(_verdict_dict(False, False, True))
     assert v.n_agree == 1
@@ -74,7 +74,7 @@ def test_clean_cell_pair_corr_1_of_3() -> None:
 
 
 def test_no_signal_0_of_3() -> None:
-    """Zaden filar nie odrzuca → 0/3, brak sygnalu."""
+    """No pillar rejects → 0/3, no signal."""
     v = classify(_verdict_dict(False, False, False))
     assert v.n_agree == 0
     assert v.fraction == "0/3"
@@ -83,11 +83,11 @@ def test_no_signal_0_of_3() -> None:
     assert not v.is_primary_finding
 
 
-# --- walidacja wejscia ------------------------------------------------------
+# --- input validation -------------------------------------------------------
 
 def test_missing_pillar_raises() -> None:
     with pytest.raises(ValueError, match="Missing verdicts"):
-        classify({"h1": True, "mmd": False})  # brak cooccurrence
+        classify({"h1": True, "mmd": False})  # cooccurrence missing
 
 
 def test_unknown_pillar_raises() -> None:
@@ -95,10 +95,10 @@ def test_unknown_pillar_raises() -> None:
         classify({"h1": True, "mmd": False, "cooccurrence": True, "recurrence": True})
 
 
-# --- z TestResult -----------------------------------------------------------
+# --- from TestResult --------------------------------------------------------
 
 def test_classify_from_results() -> None:
-    """classify_from_results wyciaga reject_h0 z TestResult kazdego filaru."""
+    """classify_from_results extracts reject_h0 from each pillar's TestResult."""
     results = {
         "h1": _result(True, "bocpd"),
         "mmd": _result(False, "mmd"),
@@ -109,10 +109,10 @@ def test_classify_from_results() -> None:
     assert v.agreeing == ("h1", "cooccurrence")
 
 
-# --- integracja run_pillars (reuse Detector interface) ----------------------
+# --- run_pillars integration (reuse Detector interface) ---------------------
 
 def test_run_pillars_runs_each_detector_on_same_stream() -> None:
-    """run_pillars uruchamia detektor per filar na tym samym strumieniu."""
+    """run_pillars runs a detector per pillar on the same stream."""
     draws = [_draw()]
     detectors = {
         "h1": lambda d: _result(len(d) > 0, "h1"),
@@ -122,7 +122,7 @@ def test_run_pillars_runs_each_detector_on_same_stream() -> None:
     results = run_pillars(draws, detectors)
     assert set(results) == set(PILLARS)
     v = classify_from_results(results)
-    assert v.n_agree == 2  # h1 (niepuste) + cooccurrence
+    assert v.n_agree == 2  # h1 (non-empty) + cooccurrence
 
 
 def test_run_pillars_missing_detector_raises() -> None:
@@ -130,7 +130,7 @@ def test_run_pillars_missing_detector_raises() -> None:
         run_pillars([_draw()], {"h1": lambda d: _result(True)})
 
 
-# --- niezmienniki -----------------------------------------------------------
+# --- invariants -------------------------------------------------------------
 
 def test_verdict_is_frozen() -> None:
     v = classify(_verdict_dict(True, True, True))

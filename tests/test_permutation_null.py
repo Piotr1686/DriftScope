@@ -1,7 +1,8 @@
-"""Testy silnika permutacyjnego (W6, DoD-2).
+"""Permutation engine tests (W6, DoD-2).
 
-Weryfikuje: prymityw p-value, statystyke lag-1 overlap (order-dependent), kalibracje FPR ≤ α
-na shuffled/null (DoD-2), moc na autocorr, slepote na sygnaly nie-szeregowe, determinizm.
+Verifies: the p-value primitive, the lag-1 overlap statistic (order-dependent), FPR ≤ α
+calibration on shuffled/null (DoD-2), power on autocorr, blindness to non-serial signals,
+determinism.
 """
 from __future__ import annotations
 
@@ -20,32 +21,32 @@ from driftscope.methodology.permutation import (
 )
 
 # ---------------------------------------------------------------------------
-# Prymityw p-value
+# p-value primitive
 # ---------------------------------------------------------------------------
 
 def test_permutation_pvalue_bounds() -> None:
     null = np.arange(100, dtype=float)
-    # obs wyzej niz wszystkie null → minimalny p = 1/(B+1)
+    # obs above all null → minimal p = 1/(B+1)
     assert permutation_pvalue(1000.0, null) == pytest.approx(1 / 101)
-    # obs nizej niz wszystkie null → p = 1.0
+    # obs below all null → p = 1.0
     assert permutation_pvalue(-1.0, null) == pytest.approx(1.0)
-    # nigdy 0, zawsze konserwatywny
+    # never 0, always conservative
     assert permutation_pvalue(99.0, null) > 0.0
 
 
 # ---------------------------------------------------------------------------
-# Statystyka lag-1 overlap
+# lag-1 overlap statistic
 # ---------------------------------------------------------------------------
 
 def test_lag1_overlap_exact() -> None:
-    """Sredni overlap kolejnych losowan liczony dokladnie."""
-    # 3 losowania: (1-5),(4-8),(10-14). Overlap(1,2)={4,5}=2; overlap(2,3)={}=0 → srednia 1.0
+    """Mean overlap of consecutive draws computed exactly."""
+    # 3 draws: (1-5),(4-8),(10-14). Overlap(1,2)={4,5}=2; overlap(2,3)={}=0 → mean 1.0
     mat = np.array([[1, 2, 3, 4, 5], [4, 5, 6, 7, 8], [10, 11, 12, 13, 14]], dtype=np.int64)
     assert _mean_lag1_overlap(mat) == pytest.approx(1.0)
 
 
 def test_lag1_overlap_identical_rows() -> None:
-    """Identyczne kolejne losowania → overlap = 5 (pelne pokrycie)."""
+    """Identical consecutive draws → overlap = 5 (full coverage)."""
     mat = np.array([[1, 2, 3, 4, 5], [1, 2, 3, 4, 5]], dtype=np.int64)
     assert _mean_lag1_overlap(mat) == pytest.approx(5.0)
 
@@ -56,11 +57,11 @@ def test_main_matrix_shape() -> None:
 
 
 # ---------------------------------------------------------------------------
-# DoD-2: FPR <= alpha na shuffled/null + moc
+# DoD-2: FPR <= alpha on shuffled/null + power
 # ---------------------------------------------------------------------------
 
 def test_serial_fpr_on_null() -> None:
-    """DoD-2: FPR ≤ α=0.05 (± MC error) na nullu uniform. Deterministyczne (stale seedy)."""
+    """DoD-2: FPR ≤ α=0.05 (± MC error) on the uniform null. Deterministic (fixed seeds)."""
     det = serial_overlap_detector(n_perm=199)
     n_trials = 60
     rejects = sum(
@@ -68,18 +69,18 @@ def test_serial_fpr_on_null() -> None:
         for seq in make_worker_seeds(7, n_trials)
     )
     fpr = rejects / n_trials
-    assert fpr <= 0.10, f"FPR={fpr} > prog DoD-2 (margines MC nad α=0.05)"
+    assert fpr <= 0.10, f"FPR={fpr} > DoD-2 threshold (MC margin over α=0.05)"
 
 
 def test_serial_detects_autocorr() -> None:
-    """Lag-1 overlap jest czuly na autocorr (boost liczb z poprzedniego losowania)."""
+    """Lag-1 overlap is sensitive to autocorr (boost of numbers from the previous draw)."""
     det = serial_overlap_detector(n_perm=199)
     draws = generate_planted_draws(436, "R3", "autocorr", 0.10, np.random.default_rng(3))
     assert det(draws).reject_h0 is True
 
 
 def test_serial_blind_to_pair_corr() -> None:
-    """Slepy na pair_corr (struktura wewnatrz-losowania, nie szeregowa) — ~floor."""
+    """Blind to pair_corr (within-draw structure, not serial) — ~floor."""
     det = serial_overlap_detector(n_perm=99)
     rejects = sum(
         det(
@@ -91,7 +92,7 @@ def test_serial_blind_to_pair_corr() -> None:
 
 
 # ---------------------------------------------------------------------------
-# Determinizm (DoD-6) + guardy
+# Determinism (DoD-6) + guards
 # ---------------------------------------------------------------------------
 
 def test_detector_is_pure_function() -> None:

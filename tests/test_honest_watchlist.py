@@ -1,7 +1,7 @@
-"""Testy honest_watchlist (W7, DoD-5).
+"""honest_watchlist tests (W7, DoD-5).
 
-DoD-5: warstwa adaptive zwraca None (honest null), gdy zaden wzorzec nie przeszedl
-gate'u DoD-3 (FDR q<=alpha) + DoD-4 (konwergencja filarow).
+DoD-5: the adaptive layer returns None (honest null) when no pattern passed the
+DoD-3 gate (FDR q<=alpha) + DoD-4 (pillar convergence).
 """
 from __future__ import annotations
 
@@ -25,25 +25,25 @@ def _candidate(label: str, q: float, h1=True, mmd=True, cooc=True, regime="R3"):
     )
 
 
-# --- honest null (DoD-5 rdzen) ----------------------------------------------
+# --- honest null (DoD-5 core) -----------------------------------------------
 
 def test_empty_candidates_returns_none() -> None:
     assert build_watchlist([]) is None
 
 
 def test_all_fail_fdr_returns_none() -> None:
-    """Wszystkie q > alpha (DoD-3 fail) → None, mimo pelnej konwergencji."""
+    """All q > alpha (DoD-3 fail) → None, despite full convergence."""
     cands = [_candidate("a", q=0.20), _candidate("b", q=0.50)]
     assert build_watchlist(cands, alpha=0.05) is None
 
 
 def test_all_fail_convergence_returns_none() -> None:
-    """q<=alpha, ale 0/3 (zaden filar) i min_convergence=1 → None."""
+    """q<=alpha, but 0/3 (no pillar) and min_convergence=1 → None."""
     cands = [_candidate("a", q=0.001, h1=False, mmd=False, cooc=False)]
     assert build_watchlist(cands, min_convergence=1) is None
 
 
-# --- pozytywne przejscie gate'u ---------------------------------------------
+# --- positive gate pass -----------------------------------------------------
 
 def test_primary_finding_3_of_3_passes() -> None:
     cands = [_candidate("R3:freq_shift", q=0.001)]
@@ -56,9 +56,9 @@ def test_primary_finding_3_of_3_passes() -> None:
 
 
 def test_clean_cell_pair_corr_1_of_3_included_by_default() -> None:
-    """Czysta komorka pair_corr (1/3, tylko co-occurrence) + FDR-significant
-    MUSI wejsc przy domyslnym min_convergence=1 — to realny zwalidowany sygnal
-    (inne filary dowodliwie slepe, §6.5)."""
+    """Clean pair_corr cell (1/3, co-occurrence only) + FDR-significant MUST be
+    included at the default min_convergence=1 — it is a real validated signal
+    (other pillars provably blind, §6.5)."""
     cands = [_candidate("R3:pair_corr", q=0.01, h1=False, mmd=False, cooc=True)]
     wl = build_watchlist(cands)  # default min_convergence=1
     assert wl is not None
@@ -69,7 +69,7 @@ def test_clean_cell_pair_corr_1_of_3_included_by_default() -> None:
 
 
 def test_strict_convergence_excludes_single_pillar() -> None:
-    """min_convergence=2 odrzuca czysta komorke 1/3 (zaostrzony gate)."""
+    """min_convergence=2 rejects the clean 1/3 cell (tightened gate)."""
     cands = [_candidate("R3:pair_corr", q=0.01, h1=False, mmd=False, cooc=True)]
     assert build_watchlist(cands, min_convergence=2) is None
 
@@ -96,7 +96,7 @@ def test_mixed_only_qualifying_returned() -> None:
     assert [e.label for e in wl] == ["pass"]
 
 
-# --- walidacja + message ----------------------------------------------------
+# --- validation + message ---------------------------------------------------
 
 def test_negative_min_convergence_raises() -> None:
     with pytest.raises(ValueError, match="min_convergence"):

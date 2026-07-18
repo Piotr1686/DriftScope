@@ -1,9 +1,9 @@
-"""Pre-flight environment sanity check dla DriftScope.
+"""Pre-flight environment sanity check for DriftScope.
 
-Weryfikuje: Numba 0.65.x na Win11 + numpy 2.x, kluczowe importy pakietow,
-CPU parallelism via joblib. Odpowiada za Os 0 z Hardware Transcendence Stack.
+Verifies: Numba 0.65.x on Win11 + numpy 2.x, key package imports,
+CPU parallelism via joblib. Covers Axis 0 of the Hardware Transcendence Stack.
 
-Uruchomienie: pytest tests/test_environment.py -v
+Run: pytest tests/test_environment.py -v
 """
 import importlib
 import sys
@@ -12,20 +12,20 @@ import numpy as np
 import pytest
 
 # ---------------------------------------------------------------------------
-# Python + NumPy wersje
+# Python + NumPy versions
 # ---------------------------------------------------------------------------
 
 def test_python_version() -> None:
-    """Python musi byc 3.10.x."""
+    """Python must be 3.10.x."""
     assert sys.version_info[:2] == (3, 10), (
-        f"Wymagany Python 3.10.x, znaleziono {sys.version}"
+        f"Python 3.10.x required, found {sys.version}"
     )
 
 
 def test_numpy_major_version() -> None:
-    """NumPy musi byc 2.x (wymagane przez numba 0.65.x)."""
+    """NumPy must be 2.x (required by numba 0.65.x)."""
     major = int(np.__version__.split(".")[0])
-    assert major >= 2, f"Wymagany NumPy 2.x, znaleziono {np.__version__}"
+    assert major >= 2, f"NumPy 2.x required, found {np.__version__}"
 
 
 # ---------------------------------------------------------------------------
@@ -33,22 +33,22 @@ def test_numpy_major_version() -> None:
 # ---------------------------------------------------------------------------
 
 def test_numba_import() -> None:
-    """Numba musi byc importowalna."""
+    """Numba must be importable."""
     importlib.import_module("numba")
 
 
 def test_numba_version() -> None:
-    """Numba musi byc 0.65.x (zweryfikowana na Win11 + numpy 2.x, 2026-05-17)."""
+    """Numba must be 0.65.x (verified on Win11 + numpy 2.x, 2026-05-17)."""
     import numba
     parts = numba.__version__.split(".")
     major, minor = int(parts[0]), int(parts[1])
     assert (major, minor) == (0, 65), (
-        f"Wymagana Numba 0.65.x, znaleziono {numba.__version__}"
+        f"Numba 0.65.x required, found {numba.__version__}"
     )
 
 
 def test_numba_njit_basic() -> None:
-    """@njit musi kompilowac i wykonac prosty loop na numpy array."""
+    """@njit must compile and run a simple loop over a numpy array."""
     from numba import njit
 
     @njit(cache=False)
@@ -63,7 +63,7 @@ def test_numba_njit_basic() -> None:
 
 
 def test_numba_njit_cache_true() -> None:
-    """cache=True musi dzialac — wymagane przez permutation engine."""
+    """cache=True must work — required by the permutation engine."""
     from numba import njit
 
     @njit(cache=True)
@@ -74,7 +74,7 @@ def test_numba_njit_cache_true() -> None:
 
 
 def test_numba_frequency_vector() -> None:
-    """Numba musi obsluzyc wzorzec frequency vector (core primitive DriftScope)."""
+    """Numba must handle the frequency vector pattern (DriftScope core primitive)."""
     from numba import njit
 
     @njit(cache=False)
@@ -89,15 +89,15 @@ def test_numba_frequency_vector() -> None:
     freq = _freq_vec(draws, 50)
 
     assert freq.shape == (50,)
-    assert abs(freq.sum() - 1.0) < 1e-9, "Wektor czestosci nie sumuje sie do 1.0"
+    assert abs(freq.sum() - 1.0) < 1e-9, "Frequency vector does not sum to 1.0"
 
 
 # ---------------------------------------------------------------------------
-# Kluczowe importy projektu
+# Key project imports
 # ---------------------------------------------------------------------------
 
 def test_key_imports() -> None:
-    """Wszystkie pakiety projektu musza byc importowalne."""
+    """All project packages must be importable."""
     required = [
         "polars",
         "statsmodels",
@@ -116,7 +116,7 @@ def test_key_imports() -> None:
         "psutil",
     ]
     missing = [p for p in required if not _try_import(p)]
-    assert not missing, f"Brakujace pakiety: {missing}"
+    assert not missing, f"Missing packages: {missing}"
 
 
 def _try_import(name: str) -> bool:
@@ -128,10 +128,10 @@ def _try_import(name: str) -> bool:
 
 
 def test_polars_version() -> None:
-    """Polars musi byc 1.x."""
+    """Polars must be 1.x."""
     import polars as pl
     major = int(pl.__version__.split(".")[0])
-    assert major >= 1, f"Wymagany Polars 1.x, znaleziono {pl.__version__}"
+    assert major >= 1, f"Polars 1.x required, found {pl.__version__}"
 
 
 # ---------------------------------------------------------------------------
@@ -139,7 +139,7 @@ def test_polars_version() -> None:
 # ---------------------------------------------------------------------------
 
 def test_joblib_parallel_loky() -> None:
-    """joblib.Parallel(backend='loky') musi dzialac — wymagane dla pipeline."""
+    """joblib.Parallel(backend='loky') must work — required by the pipeline."""
     from joblib import Parallel, delayed
 
     def _square(x: int) -> int:
@@ -152,17 +152,17 @@ def test_joblib_parallel_loky() -> None:
 
 
 # ---------------------------------------------------------------------------
-# Windows-specyficzne
+# Windows-specific
 # ---------------------------------------------------------------------------
 
 def test_windows_msvc() -> None:
-    """Na Windows: vcruntime140.dll musi byc obecna (wymagana przez Numba)."""
+    """On Windows: vcruntime140.dll must be present (required by Numba)."""
     if sys.platform != "win32":
-        pytest.skip("Test tylko dla Windows")
+        pytest.skip("Windows-only test")
     import ctypes
     try:
         ctypes.WinDLL("vcruntime140.dll")
     except OSError:
         pytest.fail(
-            "vcruntime140.dll nie znaleziona — zainstaluj MSVC Redist 2015-2022"
+            "vcruntime140.dll not found — install MSVC Redist 2015-2022"
         )

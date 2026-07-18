@@ -1,8 +1,9 @@
-"""Testy wlasciwosci MMD (W4).
+"""MMD property tests (W4).
 
-Weryfikuje: frequency vectors Δ⁴⁹, wlasciwosci MMD² (zero dla tego samego rozkladu,
-dodatni dla roznych), median heuristic (anti-leakage), kalibracje permutacyjna oraz
-prog stabilnosci FPR ≤ 7.5% na shuffled null przy N=200 (preregistration_v3 §3).
+Verifies: frequency vectors Δ⁴⁹, MMD² properties (zero for the same distribution,
+positive for different ones), the median heuristic (anti-leakage), permutation
+calibration, and the FPR ≤ 7.5% stability threshold on the shuffled null at N=200
+(preregistration_v3 §3).
 """
 from __future__ import annotations
 
@@ -27,7 +28,7 @@ from driftscope.methodology.k4_mmd import (
 # ---------------------------------------------------------------------------
 
 def test_frequency_vector_is_on_simplex() -> None:
-    """Wektor czestosci ma wymiar 50 i sumuje sie do 1 (p ∈ Δ⁴⁹)."""
+    """Frequency vector has dimension 50 and sums to 1 (p ∈ Δ⁴⁹)."""
     draws = generate_uniform_draws(100, "R2", np.random.default_rng(0))
     p = frequency_vector(draws)
     assert p.shape == (50,)
@@ -36,7 +37,7 @@ def test_frequency_vector_is_on_simplex() -> None:
 
 
 def test_sliding_windows_shape_and_simplex() -> None:
-    """Liczba okien = floor((n-w)/step)+1; kazdy wiersz na simpleksie."""
+    """Number of windows = floor((n-w)/step)+1; each row on the simplex."""
     draws = generate_uniform_draws(389, "R2", np.random.default_rng(1))
     vecs = sliding_frequency_vectors(draws, window=25, step=25)
     assert vecs.shape == ((389 - 25) // 25 + 1, 50)
@@ -50,25 +51,25 @@ def test_sliding_window_too_large_raises() -> None:
 
 
 # ---------------------------------------------------------------------------
-# MMD² — wlasciwosci estymatora
+# MMD² — estimator properties
 # ---------------------------------------------------------------------------
 
 def test_mmd_zero_for_identical_distributions() -> None:
-    """MMD² ~ 0 dla dwoch prob z TEGO SAMEGO rozkladu; istotnie mniejszy niz dla roznych."""
+    """MMD² ~ 0 for two samples from the SAME distribution; much smaller than for different ones."""
     rng = np.random.default_rng(3)
     X = rng.normal(size=(40, 50))
-    Y = rng.normal(size=(40, 50))           # ten sam rozklad
-    Z = rng.normal(loc=2.0, size=(40, 50))  # przesuniety rozklad
+    Y = rng.normal(size=(40, 50))           # same distribution
+    Z = rng.normal(loc=2.0, size=(40, 50))  # shifted distribution
     bw = median_heuristic(X)
     mmd_same = mmd_rbf_squared(X, Y, bw)
     mmd_diff = mmd_rbf_squared(X, Z, bw)
-    assert abs(mmd_same) < 0.05          # blisko zera (estymator nieobciazony, moze byc < 0)
-    assert mmd_diff > 0.3                # wyraznie dodatni dla roznych rozkladow
+    assert abs(mmd_same) < 0.05          # close to zero (unbiased estimator, may be < 0)
+    assert mmd_diff > 0.3                # clearly positive for different distributions
     assert mmd_diff > 10 * abs(mmd_same)
 
 
 def test_mmd_self_is_near_zero() -> None:
-    """MMD²(X, X) ~ 0 (nieobciazony estymator wyklucza diagonale)."""
+    """MMD²(X, X) ~ 0 (the unbiased estimator excludes the diagonal)."""
     rng = np.random.default_rng(4)
     X = rng.normal(size=(30, 50))
     bw = median_heuristic(X)
@@ -76,19 +77,19 @@ def test_mmd_self_is_near_zero() -> None:
 
 
 def test_median_heuristic_positive() -> None:
-    """Bandwidth > 0 dla niezdegenerowanych danych; fallback 1.0 dla <2 punktow."""
+    """Bandwidth > 0 for non-degenerate data; fallback 1.0 for <2 points."""
     rng = np.random.default_rng(5)
     X = rng.normal(size=(20, 50))
     assert median_heuristic(X) > 0.0
-    assert median_heuristic(X[:1]) == 1.0  # degeneracja → fallback
+    assert median_heuristic(X[:1]) == 1.0  # degenerate → fallback
 
 
 # ---------------------------------------------------------------------------
-# Test permutacyjny
+# Permutation test
 # ---------------------------------------------------------------------------
 
 def test_permutation_pvalue_in_range_and_detects_shift() -> None:
-    """p-value ∈ (0,1]; test odrzuca dla wyraznie roznych rozkladow."""
+    """p-value ∈ (0,1]; the test rejects for clearly different distributions."""
     rng = np.random.default_rng(6)
     X = rng.normal(size=(30, 50))
     Z = rng.normal(loc=1.5, size=(30, 50))
@@ -99,7 +100,7 @@ def test_permutation_pvalue_in_range_and_detects_shift() -> None:
 
 
 def test_permutation_does_not_reject_same_distribution() -> None:
-    """Dla prob z tego samego rozkladu p-value nieistotne (brak odrzucenia)."""
+    """For samples from the same distribution the p-value is not significant (no rejection)."""
     rng = np.random.default_rng(7)
     X = rng.normal(size=(40, 50))
     Y = rng.normal(size=(40, 50))
@@ -112,52 +113,52 @@ def test_permutation_does_not_reject_same_distribution() -> None:
 # ---------------------------------------------------------------------------
 
 def test_detector_rejects_overlapping_windows() -> None:
-    """step < window lamie wymienialnosc permutacyjna → zabronione (FPR ~1.0)."""
+    """step < window breaks permutation exchangeability → forbidden (FPR ~1.0)."""
     with pytest.raises(ValueError, match="non-overlap"):
         mmd_uniform_detector(window=25, step=5)
 
 
 def test_detector_detects_freq_shift() -> None:
-    """Detektor odrzuca H0 na strumieniu z silnym freq_shift (δ=0.10)."""
+    """The detector rejects H0 on a stream with a strong freq_shift (δ=0.10)."""
     det = mmd_uniform_detector(window=25, n_perm=199)
     draws = generate_planted_draws(389, "R2", "freq_shift", 0.10, np.random.default_rng(8))
     assert det(draws).reject_h0 is True
 
 
 def test_mmd_blind_to_pair_corr() -> None:
-    """MMD (frequency-vector, marginalny) jest slepy na pair_corr — power ≈ FPR.
+    """MMD (frequency-vector, marginal) is blind to pair_corr — power ≈ FPR.
 
-    pair_corr (v5, margin-preserving) trzyma czestosci marginalne ~uniform, wiec MMD²
-    na wektorach czestosci nie widzi sygnalu (caly jest w wymiarze JOINT). Dopelnia
-    test_chi2_blind_to_pair_correlation (test_driftsim_calibration) i
-    test_serial_blind_to_pair_corr (test_permutation_null): OBA filary marginalne (H1,
-    MMD) sa dowodliwie slepe; lapie tylko co-occurrence (test_detects_planted_pair_corr_
-    showcase). To uzasadnia, ze 'must agree' NIE jest twardym progiem (clean cell = 1/3).
-    Deterministyczne (estimate_rejection_rate: base_seed=42 + seed detektora z hash draws).
+    pair_corr (v5, margin-preserving) keeps the marginal frequencies ~uniform, so MMD²
+    on frequency vectors sees no signal (all of it is in the JOINT dimension). Complements
+    test_chi2_blind_to_pair_correlation (test_driftsim_calibration) and
+    test_serial_blind_to_pair_corr (test_permutation_null): BOTH marginal pillars (H1,
+    MMD) are provably blind; only co-occurrence catches it (test_detects_planted_pair_corr_
+    showcase). This justifies that 'must agree' is NOT a hard threshold (clean cell = 1/3).
+    Deterministic (estimate_rejection_rate: base_seed=42 + detector seed from draws hash).
     """
     det = mmd_uniform_detector(window=25, n_perm=99)
     pair_power = estimate_rejection_rate("pair_corr", 0.10, "R2", det, n_trials=50)
     freq_power = estimate_rejection_rate("freq_shift", 0.10, "R2", det, n_trials=50)
-    assert pair_power < 0.15, f"MMD nie powinien widziec pair_corr (power={pair_power})"
-    assert freq_power > 0.70, f"MMD powinien widziec freq_shift (power={freq_power})"
+    assert pair_power < 0.15, f"MMD should not see pair_corr (power={pair_power})"
+    assert freq_power > 0.70, f"MMD should see freq_shift (power={freq_power})"
     assert pair_power < freq_power
 
 
 # ---------------------------------------------------------------------------
-# Prog stabilnosci §3 — FPR ≤ 7.5% na shuffled null
+# §3 stability threshold — FPR ≤ 7.5% on the shuffled null
 # ---------------------------------------------------------------------------
 
 def test_mmd_stability_n200_fpr() -> None:
-    """FPR ≤ 7.5% na nullu uniform przy rozmiarze OKNA N=200 (preregistration_v3 §3).
+    """FPR ≤ 7.5% on the uniform null at WINDOW size N=200 (preregistration_v3 §3).
 
-    "N=200" = rozmiar okna, nie dlugosc strumienia. Okna nienakladajace sie (step=window)
-    to warunek wymienialnosci permutacyjnej; test permutacyjny z `+1` jest dowodliwie
-    konserwatywny (E[FPR] ≤ α=0.05). Strumien = 2000 losowan → 10 okien: przy N=200
-    potrzeba >=~10 okien dla stabilnej estymaty (5 okien daje liberalny, szumny FPR).
+    "N=200" = window size, not stream length. Non-overlapping windows (step=window) are
+    the permutation exchangeability condition; the permutation test with `+1` is provably
+    conservative (E[FPR] ≤ α=0.05). Stream = 2000 draws → 10 windows: at N=200 you need
+    >=~10 windows for a stable estimate (5 windows give a liberal, noisy FPR).
 
-    UWAGA metodologiczna: realny strumien EuroJackpot (~958) daje przy window=200 tylko
-    ~4 okna non-overlap — zbyt cienko. Wdrozona konfiguracja kalibracji to window=25
-    (wiele okien; zob. test_mmd_fpr_window25). W pelni deterministyczne (stale seedy).
+    Methodological note: the real EuroJackpot stream (~958) yields only ~4 non-overlap
+    windows at window=200 — too thin. The implemented calibration configuration is
+    window=25 (many windows; see test_mmd_fpr_window25). Fully deterministic (fixed seeds).
     """
     det = mmd_uniform_detector(window=200, n_perm=199)
     n_trials = 80
@@ -166,15 +167,15 @@ def test_mmd_stability_n200_fpr() -> None:
         for seq in make_worker_seeds(7, n_trials)
     )
     fpr = rejects / n_trials
-    assert fpr <= 0.075, f"FPR={fpr} przekracza prog stabilnosci §3 (7.5%)"
+    assert fpr <= 0.075, f"FPR={fpr} exceeds the §3 stability threshold (7.5%)"
 
 
 def test_mmd_fpr_window25() -> None:
-    """FPR ≤ 7.5% na WDROZONEJ konfiguracji kalibracji (window=25).
+    """FPR ≤ 7.5% on the IMPLEMENTED calibration configuration (window=25).
 
-    To faktyczny operating point harnessu DriftSim (window=25 → R2=15, R3=17 okien
-    non-overlap). FPR liczony pooled na R2+R3 (mniejsza wariancja MC). W pelni
-    deterministyczne (stale seedy + seed detektora z hash draws → czysta funkcja).
+    This is the DriftSim harness's actual operating point (window=25 → R2=15, R3=17
+    non-overlap windows). FPR computed pooled over R2+R3 (lower MC variance). Fully
+    deterministic (fixed seeds + detector seed from draws hash → pure function).
     """
     det = mmd_uniform_detector(window=25, n_perm=199)
     n_trials = 100
@@ -185,4 +186,4 @@ def test_mmd_fpr_window25() -> None:
             for seq in make_worker_seeds(7, n_trials)
         )
     fpr = rejects / (2 * n_trials)
-    assert fpr <= 0.075, f"FPR(window=25, R2+R3 pooled)={fpr} przekracza 7.5%"
+    assert fpr <= 0.075, f"FPR(window=25, R2+R3 pooled)={fpr} exceeds 7.5%"

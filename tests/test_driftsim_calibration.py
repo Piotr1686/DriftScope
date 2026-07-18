@@ -1,7 +1,7 @@
-"""Testy kalibracji DriftSim.
+"""DriftSim calibration tests.
 
-W2 (active): `null_uniform.generate_uniform_draws` — niezmienniki uczciwego nullu.
-W3 (stub):   detection power >70% dla planted signals (Decision Gate W5).
+W2 (active): `null_uniform.generate_uniform_draws` — honest-null invariants.
+W3 (stub):   detection power >70% for planted signals (Decision Gate W5).
 """
 from __future__ import annotations
 
@@ -34,17 +34,17 @@ SIGNALS = list(EFFECT_SIZES.keys())
 
 
 def _rng(base_seed: int = 42, offset: int = 0) -> np.random.Generator:
-    """Reprodukowalny generator z make_worker_seeds (oficjalna sciezka seedow)."""
+    """Reproducible generator from make_worker_seeds (the official seed path)."""
     return np.random.default_rng(make_worker_seeds(base_seed, offset + 1)[offset])
 
 
 # ---------------------------------------------------------------------------
-# Niezmienniki strukturalne
+# Structural invariants
 # ---------------------------------------------------------------------------
 
 @pytest.mark.parametrize("regime", REGIMES)
 def test_count_and_chronology(regime: str) -> None:
-    """Zwraca dokladnie n_draws rekordow w porzadku chronologicznym."""
+    """Returns exactly n_draws records in chronological order."""
     draws = generate_uniform_draws(200, regime, _rng())
     assert len(draws) == 200
     dates = [d.draw_date for d in draws]
@@ -53,7 +53,7 @@ def test_count_and_chronology(regime: str) -> None:
 
 @pytest.mark.parametrize("regime", REGIMES)
 def test_main_numbers_valid(regime: str) -> None:
-    """5 liczb glownych: rosnaco, unikalne, w zakresie 1-50."""
+    """5 main numbers: increasing, unique, in range 1-50."""
     for d in generate_uniform_draws(300, regime, _rng()):
         nums = d.main_numbers
         assert len(set(nums)) == 5
@@ -63,7 +63,7 @@ def test_main_numbers_valid(regime: str) -> None:
 
 @pytest.mark.parametrize("regime", REGIMES)
 def test_euron_range_matches_regime(regime: str) -> None:
-    """Euronumery: rosnaco, unikalne, w zakresie 1..pool(rezim) (§1)."""
+    """Euro numbers: increasing, unique, in range 1..pool(regime) (§1)."""
     high = EURON_POOL_SIZE[regime]
     seen_max = 0
     for d in generate_uniform_draws(500, regime, _rng()):
@@ -72,23 +72,23 @@ def test_euron_range_matches_regime(regime: str) -> None:
         assert euron == sorted(euron)
         assert all(1 <= e <= high for e in euron)
         seen_max = max(seen_max, *euron)
-    # Sanity: przy 500 losowaniach gorna granica puli realnie sie pojawia.
+    # Sanity: over 500 draws the pool's upper bound actually appears.
     assert seen_max == high
 
 
 # ---------------------------------------------------------------------------
-# Guard signal #4 — etykieta dnia tylko w R3 (preregistration_v2 §6)
+# Guard signal #4 — weekday label only in R3 (preregistration_v2 §6)
 # ---------------------------------------------------------------------------
 
 @pytest.mark.parametrize("regime", ["R1", "R2"])
 def test_pre_r3_single_weekday(regime: str) -> None:
-    """R1/R2: wszystkie losowania w piatki (kontrast Tue/Fri nie istnieje)."""
+    """R1/R2: all draws on Fridays (no Tue/Fri contrast exists)."""
     weekdays = {d.draw_date.weekday() for d in generate_uniform_draws(100, regime, _rng())}
-    assert weekdays == {4}  # 4 = piatek
+    assert weekdays == {4}  # 4 = Friday
 
 
 def test_r3_two_weekdays() -> None:
-    """R3: losowania we wtorki (1) i piatki (4) — umozliwia signal #4."""
+    """R3: draws on Tuesdays (1) and Fridays (4) — enables signal #4."""
     weekdays = {d.draw_date.weekday() for d in generate_uniform_draws(100, "R3", _rng())}
     assert weekdays == {1, 4}
 
@@ -99,38 +99,38 @@ def test_r3_two_weekdays() -> None:
 
 @pytest.mark.parametrize("regime", REGIMES)
 def test_determinism_same_seed(regime: str) -> None:
-    """Ten sam seed → bit-identyczny strumien (DoD-6 reproducibility)."""
+    """Same seed → bit-identical stream (DoD-6 reproducibility)."""
     a = generate_uniform_draws(150, regime, _rng(offset=0))
     b = generate_uniform_draws(150, regime, _rng(offset=0))
     assert [d.model_dump() for d in a] == [d.model_dump() for d in b]
 
 
 def test_different_seed_differs() -> None:
-    """Rozne seedy → rozne strumienie (RNG faktycznie zuzywany)."""
+    """Different seeds → different streams (RNG is actually consumed)."""
     a = generate_uniform_draws(150, "R2", _rng(offset=0))
     b = generate_uniform_draws(150, "R2", _rng(offset=1))
     assert [d.model_dump() for d in a] != [d.model_dump() for d in b]
 
 
 # ---------------------------------------------------------------------------
-# Marginalna jednorodnosc — null NIE produkuje falszywego sygnalu
+# Marginal uniformity — the null does NOT produce a false signal
 # ---------------------------------------------------------------------------
 
 @pytest.mark.parametrize("regime", REGIMES)
 def test_main_marginal_uniform(regime: str) -> None:
-    """chi-squared NIE odrzuca uniformu dla puli glownej pod nullem."""
+    """chi-squared does NOT reject uniformity for the main pool under the null."""
     draws = generate_uniform_draws(4000, regime, _rng())
     counts = np.zeros(50, dtype=int)
     for d in draws:
         for n in d.main_numbers:
             counts[n - 1] += 1
-    _, p = chisquare(counts)  # H0: rozklad jednostajny
+    _, p = chisquare(counts)  # H0: uniform distribution
     assert p > 0.05
 
 
 @pytest.mark.parametrize("regime", REGIMES)
 def test_euron_marginal_uniform(regime: str) -> None:
-    """chi-squared NIE odrzuca uniformu dla puli euron rezimu pod nullem."""
+    """chi-squared does NOT reject uniformity for the regime's euron pool under the null."""
     high = EURON_POOL_SIZE[regime]
     draws = generate_uniform_draws(4000, regime, _rng())
     counts = np.zeros(high, dtype=int)
@@ -142,7 +142,7 @@ def test_euron_marginal_uniform(regime: str) -> None:
 
 
 # ---------------------------------------------------------------------------
-# Walidacja wejscia
+# Input validation
 # ---------------------------------------------------------------------------
 
 def test_invalid_regime_raises() -> None:
@@ -160,17 +160,17 @@ def test_nonpositive_n_raises() -> None:
 # ===========================================================================
 
 def test_enumerate_scenarios_count() -> None:
-    """21 scenariuszy/rezim = 5 sygnalow × 4 effect + 1 null (§6)."""
+    """21 scenarios/regime = 5 signals × 4 effects + 1 null (§6)."""
     scen = enumerate_scenarios()
     assert len(scen) == 21
     assert ("null", None) in scen
     assert sum(1 for s, _ in scen if s != "null") == 20
-    assert len(scen) * 3 == 63  # × 3 rezimy = 63 unikalne
+    assert len(scen) * 3 == 63  # × 3 regimes = 63 unique
 
 
 @pytest.mark.parametrize("signal", SIGNALS)
 def test_planted_structurally_valid(signal: str) -> None:
-    """Plant na max effect: rekordy strukturalnie poprawne (R3 ma wszystkie sygnaly)."""
+    """Plant at max effect: records structurally valid (R3 has all signals)."""
     effect = EFFECT_SIZES[signal][-1]
     draws = generate_planted_draws(300, "R3", signal, effect, _rng())  # type: ignore[arg-type]
     assert len(draws) == 300
@@ -187,7 +187,7 @@ def test_planted_structurally_valid(signal: str) -> None:
 
 @pytest.mark.parametrize("signal", SIGNALS)
 def test_planted_determinism(signal: str) -> None:
-    """Ten sam seed → bit-identyczny plant (DoD-6)."""
+    """Same seed → bit-identical plant (DoD-6)."""
     effect = EFFECT_SIZES[signal][-1]
     a = generate_planted_draws(120, "R3", signal, effect, _rng(offset=0))  # type: ignore[arg-type]
     b = generate_planted_draws(120, "R3", signal, effect, _rng(offset=0))  # type: ignore[arg-type]
@@ -198,34 +198,34 @@ def test_planted_determinism(signal: str) -> None:
 
 @pytest.mark.parametrize("regime", ["R1", "R2"])
 def test_seasonality_degenerates_to_null(regime: str) -> None:
-    """seasonality poza R3 = czysty null (ten sam seed → identyczny strumien)."""
+    """seasonality outside R3 = pure null (same seed → identical stream)."""
     planted = generate_planted_draws(200, regime, "seasonality", 0.10, _rng(offset=0))  # type: ignore[arg-type]
     null = generate_uniform_draws(200, regime, _rng(offset=0))  # type: ignore[arg-type]
     assert [d.model_dump() for d in planted] == [d.model_dump() for d in null]
 
 
 def test_seasonality_active_in_r3() -> None:
-    """seasonality w R3 NIE jest nullem (kontrast Tue/Fri faktycznie wstrzykniety)."""
+    """seasonality in R3 is NOT the null (Tue/Fri contrast actually injected)."""
     planted = generate_planted_draws(200, "R3", "seasonality", 0.10, _rng(offset=0))
     null = generate_uniform_draws(200, "R3", _rng(offset=0))
     assert [d.model_dump() for d in planted] != [d.model_dump() for d in null]
 
 
-# --- Sygnal faktycznie obecny (sanity, NIE pelna kalibracja power) ---
+# --- Signal actually present (sanity, NOT full power calibration) ---
 
 def _planted_count(draws: list, number: int) -> int:
     return sum(number in d.main_numbers for d in draws)
 
 
 def test_freq_shift_boosts_target() -> None:
-    """freq_shift δ=0.10: liczba planted czesciej niz uniform (≈n·5/50)."""
+    """freq_shift δ=0.10: planted number more frequent than uniform (≈n·5/50)."""
     draws = generate_planted_draws(4000, "R2", "freq_shift", 0.10, _rng())
     uniform_expected = 4000 * 5 / 50  # = 400
     assert _planted_count(draws, PLANTED_MAIN) > 2 * uniform_expected
 
 
 def test_trend_grows_over_time() -> None:
-    """trend β=0.10: liczba planted czestsza w 2. polowie niz w 1."""
+    """trend β=0.10: planted number more frequent in the 2nd half than the 1st."""
     draws = generate_planted_draws(4000, "R2", "trend", 0.10, _rng())
     half = len(draws) // 2
     first = _planted_count(draws[:half], PLANTED_MAIN)
@@ -234,7 +234,7 @@ def test_trend_grows_over_time() -> None:
 
 
 def test_autocorr_increases_recurrence() -> None:
-    """autocorr ρ=0.20: wyzszy odsetek kolejnych losowan dzielacych liczbe niz null."""
+    """autocorr ρ=0.20: higher fraction of consecutive draws sharing a number than the null."""
     def shared_fraction(draws: list) -> float:
         hits = sum(
             bool(set(draws[i].main_numbers) & set(draws[i - 1].main_numbers))
@@ -248,10 +248,10 @@ def test_autocorr_increases_recurrence() -> None:
 
 
 def test_pair_corr_increases_cooccurrence_preserving_margins() -> None:
-    """pair_corr p=0.10: para planted wspolwystepuje czesciej, ALE marginesy ~uniform (v5).
+    """pair_corr p=0.10: planted pair co-occurs more often, BUT margins ~uniform (v5).
 
-    Nowy mechanizm (margin-preserving): podnosi joint (7,13) bez zmiany marginesow —
-    czysty sygnal joint, na ktory chi²/MMD sa dowodliwie slepe.
+    New mechanism (margin-preserving): raises the joint (7,13) without changing the margins —
+    a pure joint signal that chi²/MMD are provably blind to.
     """
     def cooc(draws: list) -> int:
         i, j = PLANTED_PAIR
@@ -261,13 +261,13 @@ def test_pair_corr_increases_cooccurrence_preserving_margins() -> None:
     null = generate_uniform_draws(8000, "R2", _rng(offset=0))
     assert cooc(planted) > cooc(null)
 
-    # Margines liczb pary ~ uniform (0.1): konstrukcja kompensuje przez "force-brak-obu".
+    # Pair numbers' margin ~ uniform (0.1): the construction compensates via "force-neither".
     i, j = PLANTED_PAIR
     margin_i = sum(i in d.main_numbers for d in planted) / len(planted)
     assert margin_i == pytest.approx(0.1, abs=0.015)
 
 
-# --- Walidacja wejscia ---
+# --- Input validation ---
 
 def test_planted_invalid_signal_raises() -> None:
     with pytest.raises(ValueError, match="Unknown signal"):
@@ -289,7 +289,7 @@ def test_planted_nonpositive_n_raises() -> None:
 # ===========================================================================
 
 def test_chi2_detector_basic() -> None:
-    """chi2_main_uniformity: nie odrzuca na nullu, odrzuca na silnym freq_shift."""
+    """chi2_main_uniformity: does not reject on the null, rejects on a strong freq_shift."""
     null = generate_uniform_draws(400, "R2", _rng())
     assert chi2_main_uniformity(null).reject_h0 is False
     planted = generate_planted_draws(400, "R2", "freq_shift", 0.10, _rng())
@@ -297,37 +297,37 @@ def test_chi2_detector_basic() -> None:
 
 
 def test_regime_n_matches_w0() -> None:
-    """Domyslne n kalibracji = realne liczby z seed CSV (W0)."""
+    """Default calibration n = real counts from the seed CSV (W0)."""
     assert REGIME_N == {"R1": 133, "R2": 389, "R3": 436}
 
 
 @pytest.mark.parametrize("regime", REGIMES)
 def test_specificity_fpr_near_alpha(regime: str) -> None:
-    """FPR na nullu ≈ α=0.05 (specificity ≈ 0.95); luzny gorny limit na MC error."""
+    """FPR on the null ≈ α=0.05 (specificity ≈ 0.95); loose upper limit for MC error."""
     fpr = false_positive_rate(regime, n_trials=200)
-    assert fpr <= 0.12  # α=0.05 + zapas na blad Monte Carlo (200 prob)
+    assert fpr <= 0.12  # α=0.05 + margin for Monte Carlo error (200 trials)
 
 
 def test_freq_shift_power_passes_gate() -> None:
-    """freq_shift δ=0.10 w R2: power > 70% (kryterium Decision Gate W5)."""
+    """freq_shift δ=0.10 in R2: power > 70% (Decision Gate W5 criterion)."""
     power = estimate_rejection_rate("freq_shift", 0.10, "R2", n_trials=200)
     assert power > 0.70
 
 
 def test_power_increases_with_effect() -> None:
-    """Power rosnie z effect-size (δ=0.01 sub-threshold < δ=0.10)."""
+    """Power grows with effect-size (δ=0.01 sub-threshold < δ=0.10)."""
     low = estimate_rejection_rate("freq_shift", 0.01, "R2", n_trials=150)
     high = estimate_rejection_rate("freq_shift", 0.10, "R2", n_trials=150)
     assert high > low
 
 
 def test_chi2_blind_to_pair_correlation() -> None:
-    """chi² (marginalny) jest slepy na pair_corr — power ≈ FPR << freq_shift.
+    """chi² (marginal) is blind to pair_corr — power ≈ FPR << freq_shift.
 
-    Nowy mechanizm pair_corr (v5) zachowuje marginesy DOKLADNIE → chi² jest dowodliwie
-    slepy nawet przy najsilniejszym p=0.10 (caly sygnal jest w wymiarze joint). Wykrywa go
-    tylko dedykowany test wspolwystapien (§5c, W6 — zob. test_cooccurrence).
-    (autocorr i seasonality chi² JEDNAK wykrywa — przez nadmierna dyspersje zliczen.)
+    The new pair_corr mechanism (v5) preserves the margins EXACTLY → chi² is provably blind
+    even at the strongest p=0.10 (the whole signal is in the joint dimension). Only the
+    dedicated co-occurrence test detects it (§5c, W6 — see test_cooccurrence).
+    (chi² DOES detect autocorr and seasonality, though — via over-dispersion of counts.)
     """
     pair_power = estimate_rejection_rate("pair_corr", 0.10, "R2", n_trials=150)
     freq_power = estimate_rejection_rate("freq_shift", 0.10, "R2", n_trials=150)
@@ -336,7 +336,7 @@ def test_chi2_blind_to_pair_correlation() -> None:
 
 
 def test_chi2_detects_overdispersion_signals() -> None:
-    """chi² wykrywa autocorr i seasonality (nadmierna dyspersja), nie tylko marginal."""
+    """chi² detects autocorr and seasonality (over-dispersion), not just the marginal."""
     autocorr_power = estimate_rejection_rate("autocorr", 0.20, "R3", n_trials=120)
     seasonality_power = estimate_rejection_rate("seasonality", 0.10, "R3", n_trials=120)
     assert autocorr_power > 0.70
@@ -344,14 +344,14 @@ def test_chi2_detects_overdispersion_signals() -> None:
 
 
 def test_estimate_determinism() -> None:
-    """Ten sam base_seed → identyczna estymata (DoD-6)."""
+    """Same base_seed → identical estimate (DoD-6)."""
     a = estimate_rejection_rate("freq_shift", 0.05, "R2", n_trials=60, base_seed=7)
     b = estimate_rejection_rate("freq_shift", 0.05, "R2", n_trials=60, base_seed=7)
     assert a == b
 
 
 def test_calibration_curve_shape() -> None:
-    """calibration_curve zwraca power per effect z siatki §6, w [0,1]."""
+    """calibration_curve returns power per effect from the §6 grid, in [0,1]."""
     curve = calibration_curve("freq_shift", "R2", n_trials=8)
     assert set(curve.keys()) == set(EFFECT_SIZES["freq_shift"])
     assert all(0.0 <= p <= 1.0 for p in curve.values())

@@ -1,4 +1,4 @@
-"""Smoke testy reporting/plots_static.py — figury renderują się headless (Agg)."""
+"""Smoke tests for reporting/plots_static.py — figures render headless (Agg)."""
 from __future__ import annotations
 
 from datetime import date, timedelta
@@ -20,7 +20,7 @@ def _make_draws(
     seed: int = 0,
     start_date: date = date(2020, 1, 7),
 ) -> list[DrawRecord]:
-    """n DrawRecord z losowymi euronumerami z euron_pool (wzorzec z test_h1_invariants)."""
+    """n DrawRecord with random euro numbers from euron_pool (pattern from test_h1_invariants)."""
     rng = np.random.default_rng(seed)
     draws = []
     for i in range(n):
@@ -38,7 +38,7 @@ def _make_draws(
 
 
 def _planted_changepoint_draws() -> list[DrawRecord]:
-    """Strumień z wszczepionym change-pointem puli euron (1-8 → 8-12) po 200 losowaniach."""
+    """Stream with a planted euron pool change-point (1-8 → 8-12) after 200 draws."""
     pre = _make_draws(list(range(1, 9)), 200, seed=10, start_date=date(2014, 1, 3))
     post_start = pre[-1].draw_date + timedelta(weeks=1)
     post = _make_draws(list(range(8, 13)), 200, seed=11, start_date=post_start)
@@ -46,7 +46,7 @@ def _planted_changepoint_draws() -> list[DrawRecord]:
 
 
 def test_plot_bocpd_changepoints_saves_png(tmp_path: Path) -> None:
-    """Figura renderuje się, plik PNG zapisany i niepusty (bez wyjątku, headless)."""
+    """Figure renders, PNG file saved and non-empty (no exception, headless)."""
     draws = _planted_changepoint_draws()
     out = tmp_path / "bocpd_euron.png"
 
@@ -58,7 +58,7 @@ def test_plot_bocpd_changepoints_saves_png(tmp_path: Path) -> None:
 
 
 def test_plot_bocpd_changepoints_default_path(tmp_path: Path, monkeypatch) -> None:
-    """Domyślna ścieżka = artifacts/bocpd_{field}.png; katalog tworzony w razie braku."""
+    """Default path = artifacts/bocpd_{field}.png; directory created if missing."""
     monkeypatch.chdir(tmp_path)
     draws = _make_draws(list(range(1, 13)), 120, seed=7)
 
@@ -70,7 +70,7 @@ def test_plot_bocpd_changepoints_default_path(tmp_path: Path, monkeypatch) -> No
 
 
 def test_plot_bocpd_changepoints_main_field(tmp_path: Path) -> None:
-    """Pole 'main' (N=50, K=5) renderuje się tak samo jak euron."""
+    """The 'main' field (N=50, K=5) renders the same way as euron."""
     draws = _make_draws(list(range(1, 13)), 150, seed=3)
     out = tmp_path / "bocpd_main.png"
 
@@ -81,7 +81,7 @@ def test_plot_bocpd_changepoints_main_field(tmp_path: Path) -> None:
 
 
 def test_plot_control_comparison_saves_png(tmp_path: Path) -> None:
-    """Figura pos/neg control (2 panele euron+main) renderuje się i zapisuje."""
+    """The pos/neg control figure (2 panels euron+main) renders and saves."""
     draws = _planted_changepoint_draws()
     out = tmp_path / "control_comparison.png"
 
@@ -93,7 +93,7 @@ def test_plot_control_comparison_saves_png(tmp_path: Path) -> None:
 
 
 def test_plot_control_comparison_default_path(tmp_path: Path, monkeypatch) -> None:
-    """Domyślna ścieżka = artifacts/control_comparison.png."""
+    """Default path = artifacts/control_comparison.png."""
     monkeypatch.chdir(tmp_path)
     draws = _make_draws(list(range(1, 13)), 120, seed=7)
 
@@ -104,7 +104,7 @@ def test_plot_control_comparison_default_path(tmp_path: Path, monkeypatch) -> No
 
 
 def test_animate_bocpd_hook_saves_file(tmp_path: Path) -> None:
-    """Hook animation zapisuje plik (.webm gdy ffmpeg; .gif fallback). Maly/szybki."""
+    """Hook animation saves a file (.webm when ffmpeg; .gif fallback). Small/fast."""
     draws = _planted_changepoint_draws()
     out = tmp_path / "hook.webm"
 
@@ -112,4 +112,4 @@ def test_animate_bocpd_hook_saves_file(tmp_path: Path) -> None:
 
     assert result.exists()
     assert result.stat().st_size > 0
-    assert result.suffix in {".webm", ".gif"}  # .gif = fallback bez ffmpeg
+    assert result.suffix in {".webm", ".gif"}  # .gif = fallback without ffmpeg

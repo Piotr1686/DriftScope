@@ -1,11 +1,11 @@
-"""Testy niezmiennikow zasobow dla DriftScope (pipeline CPU-only).
+"""Resource invariant tests for DriftScope (CPU-only pipeline).
 
-Nazwa pliku zachowana z template; "VRAM" repurposed na RAM/resource invariants
-(VRAM budget N/A — pipeline CPU-only, zob. §6.1 PROJECT_BRIEF.md).
+File name kept from the template; "VRAM" is repurposed for RAM/resource invariants
+(VRAM budget N/A — CPU-only pipeline, see §6.1 PROJECT_BRIEF.md).
 
 Fixtures:
-  load_pipeline   — dict z komponentami pipeline (placeholders do W1)
-  sample_input    — lista DrawRecord-compatible dictow (200 losowan)
+  load_pipeline   — dict of pipeline components (placeholders until W1)
+  sample_input    — list of DrawRecord-compatible dicts (200 draws)
 """
 import gc
 import os
@@ -25,9 +25,9 @@ from driftscope.methodology.h1_classical import run_all_h1
 
 @pytest.fixture
 def sample_input() -> list[dict]:  # type: ignore[type-arg]
-    """200 losowan EuroJackpot-compatible (main 1-50, euron 1-12).
+    """200 EuroJackpot-compatible draws (main 1-50, euron 1-12).
 
-    Zgodne ze schema DrawRecord (types.py, W1):
+    Conforms to the DrawRecord schema (types.py, W1):
       main: list[int] len=5, sorted, 1-50
       euron: list[int] len=2, sorted, 1-12
     """
@@ -42,34 +42,34 @@ def sample_input() -> list[dict]:  # type: ignore[type-arg]
 
 @pytest.fixture
 def sample_frequency_vector(sample_input: list[dict]) -> np.ndarray:  # type: ignore[type-arg]
-    """Wektor czestosci p w delta^49 dla liczb glownych 1-50."""
+    """Frequency vector p in delta^49 for main numbers 1-50."""
     all_main = [n for draw in sample_input for n in draw["main"]]
     arr = np.array(all_main, dtype=np.int32)
-    counts = np.bincount(arr, minlength=51)[1:]   # indeksy 1-50
+    counts = np.bincount(arr, minlength=51)[1:]   # indices 1-50
     return counts.astype(np.float64) / counts.sum()
 
 
 @pytest.fixture
 def load_pipeline() -> dict:  # type: ignore[type-arg]
-    """Placeholders komponentow pipeline — wypelniane implementacja w W1/W4.
+    """Pipeline component placeholders — filled by the implementation in W1/W4.
 
-    Klucze odpowiadaja modulom src/driftscope/methodology/.
+    Keys correspond to modules in src/driftscope/methodology/.
     """
     return {
-        "h1_classical": None,    # wypelnic w W1
-        "k4_mmd": None,          # wypelnic w W4
-        "permutation": None,     # wypelnic w W1 / W6
+        "h1_classical": None,    # fill in W1
+        "k4_mmd": None,          # fill in W4
+        "permutation": None,     # fill in W1 / W6
         "multiple_testing": None,
         "driftsim": None,
     }
 
 
 # ---------------------------------------------------------------------------
-# Testy schemat fixtures
+# Fixture schema tests
 # ---------------------------------------------------------------------------
 
 def test_sample_input_schema(sample_input: list[dict]) -> None:  # type: ignore[type-arg]
-    """sample_input musi miec poprawna strukture (DrawRecord-compatible)."""
+    """sample_input must have a valid structure (DrawRecord-compatible)."""
     assert len(sample_input) == 200
     for draw in sample_input:
         assert set(draw.keys()) >= {"main", "euron"}
@@ -82,21 +82,21 @@ def test_sample_input_schema(sample_input: list[dict]) -> None:  # type: ignore[
 
 
 def test_frequency_vector_invariants(sample_frequency_vector: np.ndarray) -> None:
-    """Wektor czestosci musi miec ksztalt (50,) i sumowac sie do 1."""
+    """Frequency vector must have shape (50,) and sum to 1."""
     assert sample_frequency_vector.shape == (50,)
     assert sample_frequency_vector.min() >= 0.0
     assert abs(sample_frequency_vector.sum() - 1.0) < 1e-9
 
 
 def test_load_pipeline_keys(load_pipeline: dict) -> None:  # type: ignore[type-arg]
-    """load_pipeline musi zwracac dict z kluczami pipeline."""
+    """load_pipeline must return a dict with the pipeline keys."""
     assert isinstance(load_pipeline, dict)
     for key in ("h1_classical", "k4_mmd", "permutation"):
         assert key in load_pipeline
 
 
 # ---------------------------------------------------------------------------
-# RAM budget niezmienniki (§6.1 PROJECT_BRIEF.md)
+# RAM budget invariants (§6.1 PROJECT_BRIEF.md)
 # ---------------------------------------------------------------------------
 
 def _rss_mb() -> float:
@@ -104,7 +104,7 @@ def _rss_mb() -> float:
 
 
 def test_ram_ingestion_budget(sample_input: list[dict]) -> None:  # type: ignore[type-arg]
-    """Fixture ingestion (200 losowan → Polars DataFrame) < 100 MB RAM budget."""
+    """Ingestion fixture (200 draws → Polars DataFrame) < 100 MB RAM budget."""
     rss_before = _rss_mb()
 
     rows = [
@@ -119,12 +119,12 @@ def test_ram_ingestion_budget(sample_input: list[dict]) -> None:  # type: ignore
 
     delta_mb = _rss_mb() - rss_before
     assert delta_mb < 100, (
-        f"Ingestion fixture zuzylo {delta_mb:.1f} MB > 100 MB budget (§6.1)"
+        f"Ingestion fixture used {delta_mb:.1f} MB > 100 MB budget (§6.1)"
     )
 
 
 def _make_h1_draws(n: int = 200) -> list[DrawRecord]:
-    """n losowan EuroJackpot-compatible jako DrawRecord (tygodniowy krok dat)."""
+    """n EuroJackpot-compatible draws as DrawRecord (weekly date step)."""
     rng = np.random.default_rng(42)
     start = date(2020, 1, 3)
     draws: list[DrawRecord] = []
@@ -143,31 +143,31 @@ def _make_h1_draws(n: int = 200) -> list[DrawRecord]:
 
 
 def test_ram_h1_run_below_budget() -> None:
-    """Delta RSS pojedynczego H1 run (run_all_h1) < 500 MB (§6.1).
+    """Delta RSS of a single H1 run (run_all_h1) < 500 MB (§6.1).
 
-    Mierzy PRZYROST RSS wokol jednego H1 run, NIE absolutny RSS procesu —
-    ten jest zdominowany przez import-footprint stacka (numba/scipy/statsmodels)
-    i platform-zalezny (~550 MB na Linux). Warm-up isoluje jednorazowy koszt
-    JIT (numba) od wlasciwego working-setu runu.
+    Measures the RSS INCREASE around one H1 run, NOT the process absolute RSS —
+    the latter is dominated by the stack import footprint (numba/scipy/statsmodels)
+    and is platform-dependent (~550 MB on Linux). Warm-up isolates the one-off
+    JIT cost (numba) from the run's actual working set.
     """
     draws = _make_h1_draws()
 
-    run_all_h1(draws)          # warm-up: JIT compile + lazy alloc poza pomiarem
+    run_all_h1(draws)          # warm-up: JIT compile + lazy alloc outside measurement
     gc.collect()
     rss_before = _rss_mb()
-    run_all_h1(draws)          # mierzony run
+    run_all_h1(draws)          # measured run
     delta_mb = _rss_mb() - rss_before
 
     assert delta_mb < 500, (
-        f"H1 run zuzyl {delta_mb:.1f} MB > 500 MB budget (§6.1)"
+        f"H1 run used {delta_mb:.1f} MB > 500 MB budget (§6.1)"
     )
 
 
 def test_frequency_vector_mmd_memory() -> None:
-    """Macierz kernela MMD dla N=500 (max) musi zmiescie sie w <800 MB."""
+    """MMD kernel matrix for N=500 (max) must fit within <800 MB."""
     n = 500
-    # Symulacja macierzy kernela N×N float64
-    matrix_mb = (n * n * 8) / 1e6   # 8 bajtow na float64
+    # Simulate an N×N float64 kernel matrix
+    matrix_mb = (n * n * 8) / 1e6   # 8 bytes per float64
     assert matrix_mb < 800, (
-        f"Macierz {n}×{n} to {matrix_mb:.1f} MB > 800 MB MMD budget"
+        f"{n}×{n} matrix is {matrix_mb:.1f} MB > 800 MB MMD budget"
     )

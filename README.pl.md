@@ -298,6 +298,31 @@ się jako **clear**: samotne odrzucenie MMD przy p ≈ 0.03 to dokładnie **fał
 jest odkryciem bez zbieżności. Strukturalnie inna prawdziwa gra (4× pula, 4× rozmiar losowania), ten
 sam skalibrowany instrument, ta sama zdyscyplinowana cisza.
 
+## World Lottery Audit: ślepa replikacja na oficjalnych danych
+
+Najmocniejszy dotąd test: **ślepe odzyskanie *udokumentowanych* zmian reguł w grach, których
+framework nigdy nie widział**. Historie Powerball (5-z-69) i Mega Millions (5-z-75) pochodzą
+wprost z oficjalnego portalu NY Open Data ([data.ny.gov](https://data.ny.gov)) — 4 488 losowań
+(2002–2026) niosących **cztery publicznie udokumentowane zmiany matrycy**, w tym *skurczenie*
+puli (Mega Millions 75→70, 2017) — cel trudniejszy niż jakakolwiek ekspansja
+(`python scripts/lottery_audit.py`).
+
+| Udokumentowana zmiana | Onset BOCPD (ślepy) | Kontrast Family B | wykryta |
+|---|---|---|---|
+| Mega Millions 56→75 (2013-10-22) | **2013-10-22 — dzień zero** | pojawiły się {57..75} | ✓✓ |
+| Mega Millions 52→56 (2005-06-24) | poniżej progu | pojawiły się {53,54,55,56} | ✓ |
+| Mega Millions 75→70 shrink (2017-10-31) | poniżej progu | **zniknęły {71..75}** | ✓ |
+| Powerball 59→69 (2015-10-07) | near-miss (p = 0.065) | pojawiły się {60..69} | ✓ |
+
+**4/4 udokumentowanych zmian wykryte, 0 fałszywych onsetów, delta matrycy odzyskana co do
+symbolu.** Po drodze dwa uczciwe ustalenia: pik zmiany Powerball ląduje na empirycznym
+**p = 0.065** — formalnie *nie*istotny i tak właśnie raportowany (detekcję niesie Family B);
+a przypadek shrink obnaża *strukturalną* asymetrię — BOCPD reaguje natychmiast na nowy symbol,
+ale jest niemal ślepy na wycofanie symbolu, gdzie moc ma tylko dwustronny test Family B.
+Argument komplementarności Disagreement Protocol, pokazany wcześniej na syntetycznych
+sygnałach, **replikuje się na prawdziwym, udokumentowanym ground truth**: każda zmiana zostaje
+złapana, ale żaden pojedynczy filar nie łapie wszystkich.
+
 ## Dlaczego można zaufać — każde twierdzenie mapuje się na plik
 
 Wartością tego projektu jest jego uczciwość, więc twierdzenia o zaufaniu mapują się bezpośrednio na
@@ -363,6 +388,7 @@ driftscope run --no-figures                   # pomiń generowanie figur
 quarto render src/driftscope/reporting/report.qmd --to html   # odtwórz pełny raport HTML
 python scripts/prng_benchmark.py                              # macierz czułości/swoistości PRNG
 python scripts/multimulti_audit.py                           # druga prawdziwa gra (Multi Multi, 20-z-80)
+python scripts/lottery_audit.py                              # World Lottery Audit (Powerball + Mega Millions)
 python scripts/make_readme_assets.py                         # regeneruj figury README
 ```
 
@@ -371,7 +397,7 @@ python scripts/make_readme_assets.py                         # regeneruj figury 
 | Metryka | Wartość | Warunki |
 |---|---|---|
 | Pełny audyt | **~4.5 s**, **~220 MB** peak RAM | 958 losowań, `n_perm=999`, i5-12500H (CPU-only) |
-| Zestaw testów | **279 zebranych**, CI-green | 277 pass / 2 skip lokalnie (Win11) |
+| Zestaw testów | **284 zebranych**, CI-green | 282 pass / 2 skip lokalnie (Win11) |
 | Gorące pętle JIT | **~2.7×** vs baseline NumPy | permutacyjny PoC (`notebooks/poc_permutation_engine.py`) |
 
 > Cyfra ~4 GB RAM czasem przypisywana DriftScope to **budżet pełnego sweepu kalibracyjnego DriftSim**

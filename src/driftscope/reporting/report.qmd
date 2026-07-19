@@ -427,7 +427,76 @@ This closes the reusability loop on **real** data. DriftScope is not a EuroJackp
 same calibrated instrument audits a structurally different real game (4× the pool, 4× the draw
 size) and behaves exactly as designed — quiet where there is no convergent signal.
 
-# 7. Reproducibility (DoD-6)
+# 7. World Lottery Audit — Powerball & Mega Millions
+
+Multi Multi answers "does the instrument stay quiet on a clean second game?". The World
+Lottery Audit asks the sharper question: **does it blindly recover *documented* rule changes
+in games it has never seen?** Powerball (5-of-69) and Mega Millions (5-of-75) histories come
+from the official NY Open Data portal (`data.ny.gov`), and their matrix changes are public
+record — four ground-truth change-points across 4,488 draws (2002–2026), including a pool
+*shrink* (Mega Millions 75→70 in 2017), a harder target than the EuroJackpot-style expansions.
+
+Two reusability-layer refinements were fixed before reading any results (both documented in
+`reporting/lottery_audit.py`): a **coverage warm-up** of ⌈(N/k)·H_N⌉ draws — for k=5 pools the
+default N∕∕K warm-up grossly under-covers the coupon-collector transient, whose first-appearance
+spikes otherwise inflate the null (mean null max 0.43 → 0.19 after the fix; thresholds
+re-calibrated at this warm-up: pool 69 → 0.49, pool 75 → 0.39, FPR≈0.05) — and **onset-based
+localization**, because a pool expansion smears its signature over months of new-symbol debuts
+(measured: +81 days for Powerball, +189 days for Mega Millions).
+
+```{python}
+#| label: lottery-audit
+#| echo: false
+#| output: asis
+#| cache: true
+from driftscope.reporting.lottery_audit import GAME_CONFIGS, run_lottery_audit
+
+rows = {game: run_lottery_audit(game) for game in GAME_CONFIGS}
+
+def _fmt(symbols):
+    if not symbols:
+        return "—"
+    inner = f"{symbols[0]}..{symbols[-1]}" if len(symbols) > 6 else ",".join(map(str, symbols))
+    return f"{{{inner}}}"
+
+print("| Documented change | BOCPD onset (blind) | Family B contrast | detected |")
+print("|---|---|---|---|")
+for row in rows.values():
+    for ea in row.events:
+        onset = (f"{ea.onset_date} (Δ {ea.onset_delta_days:+d} d)"
+                 if ea.onset_date else "below threshold")
+        fb = []
+        if ea.fb_appeared:
+            fb.append(f"appeared {_fmt(ea.fb_appeared)}")
+        if ea.fb_vanished:
+            fb.append(f"vanished {_fmt(ea.fb_vanished)}")
+        detected = "yes" if (ea.onset_date is not None or ea.fb_confirms) else "NO"
+        print(f"| {ea.event.label} | {onset} | {'; '.join(fb) or '—'} | {detected} |")
+
+n_spurious = sum(len(r.spurious_onsets) for r in rows.values())
+n_events = sum(len(r.events) for r in rows.values())
+n_detected = sum(r.n_events_detected for r in rows.values())
+print()
+print(f"**{n_detected}/{n_events} documented changes detected; "
+      f"{n_spurious} spurious onsets** across "
+      f"{sum(r.n_draws for r in rows.values()):,} draws.")
+```
+
+Three results deserve emphasis. **First**, the Mega Millions 2013 expansion is localized
+**blind to the exact day** (onset 2013-10-22, Δ = 0), and the Family B pre/post contrast
+recovers the *exact* matrix delta symbol-by-symbol in all four events — {60..69} appearing in
+Powerball 2015, {71..75} vanishing in the 2017 shrink. **Second**, the honest near-miss:
+Powerball's change peak reaches max cp\_prob = 0.474 against the pool-69 null threshold of
+0.49 — an empirical **p = 0.065**, formally *not* significant at α = 0.05. The framework
+reports it as such; the change is instead carried decisively by Family B. **Third**, the
+shrink case exposes a *structural* detector asymmetry: BOCPD reacts instantly to a new symbol
+(a zero-count category appearing is a likelihood shock) but is nearly blind to symbol
+*retirement*, where evidence accumulates only from absence. Family B's two-sided binomial has
+no such asymmetry. This is the Disagreement Protocol's complementarity argument — previously
+demonstrated on synthetic planted signals (§4) — replicating on real, documented ground truth:
+every change is caught, but no single pillar catches all of them.
+
+# 8. Reproducibility (DoD-6)
 
 - **Determinism:** every detector is a pure function of the stream; the RNG is seeded from
   the data contents (⊕ `BASE_SEED`), independent of call order.

@@ -121,6 +121,12 @@ _MAIN_REJECT_THRESHOLD_BY_POOL: dict[int, float] = {
                # cross-validation n=5000/trials=200: p95=0.3314 (delta=0.0000), FPR@0.34=0.04
                # → length-invariant (burn-in transient, prereg v6 §0): the threshold holds
                #   independently of the MM series length
+    # World Lottery Audit (reporting/lottery_audit.py): thresholds calibrated at the
+    # COVERAGE warm-up ceil((N/k)·H_N) — NOT the default N//K, which grossly under-covers
+    # the coupon-collector transient for k=5 pools (null mean max drops 0.43→0.19).
+    # Callers MUST pass the matching warmup (see lottery_audit.coverage_warmup).
+    69: 0.49,  # Powerball white N=69, K=5, warmup=67; p95 null = 0.4815 (n=1968, trials=200)
+    75: 0.39,  # Mega Millions white N=75, K=5, warmup=74; p95 null = 0.3858 (n=2520, trials=200)
 }
 
 

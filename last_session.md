@@ -3,8 +3,9 @@
 **Sesja:** 2026-07-20 · 20:30–21:30
 **Status:** ✓ Zakończona poprawnie
 **Punkt odniesienia (git):** 4f368b5 @ master — ostatni commit KODU
-**Uwaga:** na wierzchu siedzi jeszcze commit `chore(session)` z tym plikiem (stąd HEAD ≠ 4f368b5;
-to normalne, nie desync). Łącznie **5 commitów ahead origin/master — NIE pushed.**
+**Uwaga:** na wierzchu siedzą jeszcze commity `chore(session)`/`data(randao)` (stąd HEAD ≠ 4f368b5;
+to normalne, nie desync). **Wszystko wypchnięte na origin/master, CI zielone** (run 29781038700,
+3m30s: ruff + mypy --strict + pytest na ubuntu/py3.10).
 
 ---
 
@@ -58,7 +59,7 @@ README EN/PL, re-render `docs/`, push + CI.
 ## Co zostało (backlog sesji)
 
 - ⟳ **B3: skan (20% zrobione) + audyt + raport** — patrz NASTĘPNY KROK.
-- ⟳ **Push 4 commitów** — nic nie poszło na origin w tej sesji; CI nie było uruchamiane.
+- ✓ ~~Push~~ — wykonany na koniec sesji, 7 commitów, CI zielone.
 - ⟳ **Migracja i18n:** `scripts/` (Batch 6; nowe `fetch_beacons`/`fetch_beacon_chain`/`randao_audit`
   już EN), flip konwencji CLAUDE.md („Język komentarzy: polski"→EN), `preregistration_v7.md`,
   `demo/app.py`. `notebooks/` świadomie poza zakresem.

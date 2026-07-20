@@ -1,3 +1,145 @@
+## ═══ Sesja zarchiwizowana [2026-07-20 23:22] ═══
+
+# last_session.md
+
+**Sesja:** 2026-07-19/20 · przedłużona (audyt bojowy + World Lottery Audit + i18n)
+**Status:** ✓ Zakończona poprawnie
+**Punkt odniesienia (git):** 6cd9f8d @ master (zsynchronizowany z origin/master, CI zielone)
+
+---
+
+## ▸ NASTĘPNY KROK (zacznij tutaj)
+
+**Ścieżka B: adapter `BeaconStream` (RANDAO/drand/NIST) — research źródeł danych + implementacja.**
+Zacznij od researchu API: Ethereum RANDAO (beacon chain `randao_mix` per epoka — beaconcha.in
+API lub bezpośrednio z beacon node), drand (League of Entropy, publiczne REST API) i NIST
+Randomness Beacon jako kontrole crypto-clean. Zaprojektuj `BeaconStream` wg protokołu
+`BitStream` z `src/driftscope/ingestion/rng_streams.py` (patrz `MT19937Stream`/`ChaCha20Stream`
+jako wzorzec adaptera), potem `draws_from_stream` bez zmian. Cel: audyt manipulowalności
+RANDAO (proposer withholding) tą samą baterią co PRNG benchmark.
+
+Kontekst: user zdecydował (2026-07-19) na wdrożenie „w boju" DriftScope = ścieżka A (World
+Lottery Audit) + B (RANDAO) sekwencyjnie, po odrzuceniu 9 linków AI/Kaggle usera jako
+metodologicznie nieadekwatnych (brak struktury k-z-N z uniform nullem). **Ścieżka A w pełni
+SHIPPED tej sesji** (dane + kalibracja + runner + raport + push + CI zielone) — zob.
+MEMORY.md [2026-07-19]. B jest logicznym następnym krokiem na tej samej infrastrukturze.
+
+---
+
+## Co zrobiono w tej sesji
+
+- ✓ **Dokończony Batch 5 i18n** — `tests/` 20 plików PL→EN (`7b992a7`), 277 pass, ruff clean.
+- ✓ **Audyt generalizowalności kodu** — potwierdzono ~85% reużywalności frameworka poza EJ
+  (pool_size w 13 plikach, progi per-pool, szablon runnera = multimulti_audit).
+- ✓ **Odrzucone 9 linków AI/Kaggle usera** (metodologicznie nieadekwatne) + wybrana ścieżka
+  A+B (World Lottery Audit → RANDAO), zapisane w pamięci agenta.
+- ✓ **A1 — dane:** oficjalne CSV z data.ny.gov (Powerball 1968 losowań, Mega Millions 2520
+  losowań) → `scripts/convert_ny_lottery.py` → seedy w `data/seed/` (`ad741e8`).
+- ✓ **A2 — kalibracja:** coverage warm-up `ceil((N/k)·H_N)` dla pul k=5 (domyślny `N//K`
+  rażąco nie pokrywał transientu coupon-collector); progi BOCPD pool 69→0.49, 75→0.39.
+- ✓ **A3 — runner:** `reporting/lottery_audit.py` + CLI + 5 testów (`5dd9942`). **WYNIK: 4/4
+  udokumentowanych zmian matrycy wykryte blind (day-zero MM 2013, shrink 2017 złapany przez
+  Family B, PB 2015 near-miss p=0.065), 0 spurious onsetów.**
+- ✓ **A4 — raport:** sekcja 7 `report.qmd` (live chunk) + tabele README EN/PL + re-render
+  `docs/` (webm+plotly zweryfikowane) + push + CI ubuntu zielone 2m25s (`6cd9f8d`).
+- ✓ Suite końcowa: **284 collected (282 pass / 2 skip)**.
+
+## Co zostało (backlog sesji)
+
+- ⟳ **Ścieżka B (RANDAO/beacony)** — patrz NASTĘPNY KROK powyżej. Nierozpoczęte.
+- ⟳ **Migracja i18n — reszta:** `scripts/` (Batch 6, ~10 plików, teraz +2 nowe: `convert_ny_lottery.py`
+  już EN, `lottery_audit.py` już EN), flip konwencji `CLAUDE.md` („Język komentarzy: polski"→EN),
+  `preregistration_v7.md` → EN, `demo/app.py` (opcjonalne). `notebooks/` świadomie poza zakresem.
+- ⟳ Stretch A (NIE weszły do raportu): strumienie bonus (k=1, cooc N/A dla pojedynczej liczby),
+  UK Lotto (licencja mirrorów pełnej historii TBD — oficjalne archiwum tylko ~180 dni),
+  rodzynki rygoru (Bułgaria 2009, RPA 2020 single-event fallacy, moc na fraud Tiptona).
+
+## Aktywne pliki
+
+- NOWE (committed, pushed): `scripts/convert_ny_lottery.py`, `data/seed/{powerball,megamillions}_{,bonus_}history.csv`,
+  `src/driftscope/reporting/lottery_audit.py`, `scripts/lottery_audit.py`, `tests/test_lottery_audit.py`,
+  `src/driftscope/methodology/h1_classical.py` (`_MAIN_REJECT_THRESHOLD_BY_POOL` +69/+75).
+- ZMIENIONE: `report.qmd` (nowa sekcja 7, Reproducibility→8), `README.md`/`README.pl.md`
+  (sekcja World Lottery Audit + test count 279→284), `docs/report.html`/`docs/index.html` (re-render).
+- ZROBIONE wcześniej w sesji: `tests/*.py` (20 plików, i18n).
+- DO ZROBIENIA (i18n): `scripts/*` (reszta), `CLAUDE.md`, `preregistration_v7.md`, `demo/app.py`.
+
+## Otwarte pytania
+
+- Brak blokujących. Repo zsynchronizowane, working tree czyste (poza plikami stanu tej sesji),
+  CI zielone na `6cd9f8d`.
+- UK Lotto do ścieżki A: czy szukać mirrora z pełną historią (merseyworld / Kaggle) i
+  weryfikować licencję, czy zostawić PB+MM jako wystarczający dowód replikacji?
+
+## Do MEMORY.md (przeniesiono)
+
+- Projektowy `MEMORY.md` (Architektura): **[2026-07-19]** — World Lottery Audit (Ścieżka A)
+  SHIPPED: dane real (data.ny.gov), coverage warm-up dla pul k=5, runner z onset-based
+  localization + kontrastem Family B, 4/4 zdarzeń wykrytych blind, 0 spurious. Asymetria
+  BOCPD (natychmiastowy na nowy symbol, ślepy na wycofanie) jako finding komplementarności
+  na realnym ground truth. Gotcha SSL (AVG MITM) — `httpx verify=ssl.create_default_context()`.
+  HEAD=`6cd9f8d`, pushed, CI zielone.
+- Agent-memory: [Battle deployment A+B](battle_deployment_a_plus_b.md) zaktualizowany o wyniki A.
+
+## ═══ Sesja zarchiwizowana [2026-07-20 21:49] ═══
+
+# last_session.md
+
+**Sesja:** 2026-06-29 · ~przedłużona (audyt + migracja EN)
+**Status:** ✓ Zakończona poprawnie
+**Punkt odniesienia (git):** 4ed01bb @ master (zsynchronizowany z origin/master)
+
+---
+
+## ▸ NASTĘPNY KROK (zacznij tutaj)
+
+**Kontynuuj migrację PL→EN — Batch 3: `driftsim/` + `adaptive/` + `pipeline.py` (docstringi/komentarze).**
+Konkretnie przetłumacz prozę (docstringi, komentarze, komunikaty błędów; kod 1:1) w:
+`src/driftscope/driftsim/{null_uniform,planted_signals,calibration}.py`,
+`src/driftscope/adaptive/honest_watchlist.py` (zostały docstringi — komunikaty już EN),
+`src/driftscope/pipeline.py` (zostały docstringi — output już EN).
+Po każdym: `ruff check` + `mypy --strict` + odpowiednie testy; uważaj na (a) komunikaty
+błędów matchowane w testach, (b) E501 po wydłużeniu PL→EN. Commit per batch.
+
+Kontekst: user zdecydował (2026-06-29) że CAŁY projekt ma być po angielsku poza
+`README.pl.md`. Zakres A „shipped+active". ZROBIONE: core/ + ingestion/ + methodology/
+(15 plików). ZOSTAŁO ~39 plików .py + reporting/ + tests/ (25) + scripts/ (10) + demo/ +
+report.qmd + preregistration_v7.md + flip konwencji w CLAUDE.md + re-render HTML.
+
+---
+
+## Co zrobiono w tej sesji
+
+- ✓ **Audyt README↔kod** (`CLAUDE_CODE_README_AUDIT_PROMPT.md`) — dowodowy (27 claimów, żywe runy), 5 ról, runda adwersarialna. Deliverables `docs/audit/README_AUDIT.md` + `README_REVISED.md/.pl.md` (commit `c6104d5`). Główny finding: `p=0.005` PRNG = permutation floor (n_perm=199, nie default 499), nieoznaczony.
+- ✓ **MUST fixy README** (`5e6205b`): floor `≤` w tabeli PRNG + caveat halucynacji przy haśle (EN+PL).
+- ✓ **B — defekt kodu** (`09b5044`): `FAMILY_B_SIZE 450→150` (numeracja v7).
+- ✓ **SHOULD/NICE** (`f17242a`+`28b50aa`): mini-słowniczek, „What you'll see", złagodzone „must agree", DoD-6 wording, FPR CI, „Beyond the Lottery" wyżej, linki do testów, **nowy `test_mmd_blind_to_pair_corr`**, **output CLI/raportu PL→EN**. Testy 279 collected (277 pass/2 skip).
+- ✓ **START migracji PL→EN** (zakres A): `core/` (`1606e64`), `h1_classical`+`k4_mmd` (`c67eeb4`), reszta `methodology/` (`4ed01bb`) — 15 plików, ruff+mypy+testy zielone po każdym batchu.
+- ✓ **Push** — wszystko na origin/master, `## master...origin/master` (synced 0/0).
+
+## Co zostało (backlog sesji)
+
+- ⟳ **Migracja EN — Batch 3+:** driftsim/, adaptive/, pipeline.py (docstringi) → potem reporting/ (6 plików), tests/ (25), scripts/ (10), demo/app.py.
+- ⟳ **report.qmd** + **preregistration_v7.md** → EN; **flip CLAUDE.md** („Język komentarzy w kodzie: angielski"); **re-render** report.html/executive_summary.html (Quarto — może wymagać quarto CLI).
+- ⟳ Residuum: `docs/report.html`/`executive_summary.html` mogą nieść starą tabelę PRNG (n_perm=199) + polskie summary — domknie się przy re-renderze.
+- ⟳ `docs/audit/README_REVISED.*` zastąpione przez żywe README (zostają jako ślad audytowy).
+
+## Aktywne pliki
+
+- ZROBIONE (committed, pushed): `src/driftscope/{core,ingestion,methodology}/*.py` (EN), README.md/README.pl.md (fixy+EN output example), `multiple_testing.py` (FAMILY_B_SIZE), `pipeline.py`/`cli.py`/`adaptive/honest_watchlist.py` (output EN, docstringi nadal PL), `tests/test_mmd_properties.py` (+test), `docs/audit/*`.
+- DO ZROBIENIA: `src/driftscope/{driftsim,reporting,adaptive,pipeline.py}` docstringi, `tests/*`, `scripts/*`, `demo/app.py`, `report.qmd`, `preregistration_v7.md`, `CLAUDE.md`.
+- ACTIVE prereg = **v7** (treść bez zmian; tłumaczenie EN zaplanowane).
+
+## Otwarte pytania
+
+- Brak blokujących. Repo zsynchronizowane, working tree czyste.
+- Czy `tests/` docstringi tłumaczyć w pełni (zakres A je obejmuje) — TAK wg decyzji, ale to objętościowo największy kawałek.
+
+## Do MEMORY.md (przeniesiono)
+
+- Projektowy `MEMORY.md` (Architektura): **[2026-06-29]** — audyt README↔kod + MUST/SHOULD/NICE fixy + START migracji PL→EN (core+ingestion+methodology done, 15 plików). HEAD=`4ed01bb`, pushed. Decyzja: cały projekt EN poza README.pl.md; odpowiedzi asystenta zostają PL.
+- Agent-memory: bez nowego wpisu (realizacja zapisana w repo + MEMORY.md projektu).
+
 ## ═══ Sesja zarchiwizowana [2026-06-29 18:40] ═══
 
 # last_session.md
@@ -174,137 +316,3 @@ predykcyjny (zob. agent-memory `project_pivot_prediction.md`), jeśli kierunek s
   expected-rate 14%, deliverable (nota + §4 chunk + re-render). HEAD=`bfa5754`, pushed.
 - Agent-memory: bez nowego wpisu (czysta realizacja zaplanowanego stretcha, w pełni zapisana w repo).
 
-## ═══ Sesja zarchiwizowana [2026-06-14 21:45] ═══
-
-# last_session.md
-
-**Sesja:** 2026-06-13 · 21:00-22:50 (sesja 2)
-**Status:** ✓ Zakończona poprawnie
-**Punkt odniesienia (git):** da3b50d @ master (zsynchronizowany z origin/master)
-
----
-
-## ▸ NASTĘPNY KROK (zacznij tutaj)
-
-**Cały backlog z 2026-06-13 domknięty — brak narzuconego następnego kroku.**
-Najbardziej naturalny kandydat: **decyzja, czy przełączyć GitHub Pages na source
-"GitHub Actions" + własny `actions/deploy-pages`**, by wyciszyć Node20-deprecation
-annotation we wbudowanym `pages-build-deployment` (używa wewnętrznie `checkout@v4`/
-`upload-artifact@v4`). To jedyny znany otwarty „dług hygieniczny" CI (zob. MEMORY
-[2026-06-06] gotcha Pages-deploy). Alternatywnie: analiza pary (10,25) z R2 (single-pillar
-co-occurrence 1/3) jako mini-study, albo zostawić framework jako domknięty (Ścieżka A).
-
-Kontekst: framework (Ścieżka A) jest kompletny i opublikowany; ta sesja zamknęła dwa
-findingi code-review + trzy polish. Nie ma „następnego kroku roadmapy" — pozostałe pozycje
-to opcjonalne stretche/hygiena, nie zobowiązania.
-
----
-
-## Co zrobiono w tej sesji
-
-- ✓ **PUSH zaległego commitu sesyjnego** (`79c03e9..4fd16f9`) — stan z poprzedniej sesji wypchnięty na origin.
-- ✓ **Sub-Finding #1: granularność Family B dla EJ-`'real'` w §5** (`adb7e74`) — decyzja usera = **full-stream (50) + caveat**, NIE per-reżim. Caveat (EN) w `report.qmd §5` + nota docstring `run_battery` + zdanie w README. Re-render `docs/{index,report}.html` (grep-zweryfikowany przed kopią). Reporting-only, prereg v7 nietknięty.
-- ✓ **Finding #2 → README** (`d2abd12`) — akapit „Why we do not hard-gate on ≥2/3" (analog `report.qmd §4`, strukturalna ślepota na 1/3). README-only, bez re-renderu.
-- ✓ **Polish 1: ruff `scripts/{check_api_key,smoke_test}.py`** (`90e4e38`) — 3× I001 (auto-fix) + 1× F841 (`data = check(...)`→`check(...)`). Pre-existing dług sprzątnięty.
-- ✓ **Polish 2: exec summary 1×A4** — ZWERYFIKOWANE headless Edge `--print-to-pdf` → `/Type /Page` = 1 strona. Verify-only.
-- ✓ **Polish 3: BOCPD cross-walidacja progu pool=80 @ n=5000** (`da3b50d`) — p95=**0.3314 = identyczne z n=2000** (Δ=0.0000), FPR@0.34=0.04. Length-invariance potwierdzona (prereg v6 §0). Komentarz w `h1_classical.py`.
-- ✓ **Polska wersja README (prywatna, POZA repo)** — `D:\Programming_Projects\zz_INNE\README_PL\README.md` (383 linie). Nagłówek HTML = prywatna/nieoficjalna; niewersjonowana.
-- ✓ Walidacja: ruff+mypy --strict na dotkniętych plikach czyste; wszystkie 4 commity na origin/master, drzewo czyste.
-
-## Co zostało (backlog sesji)
-
-- ⟳ **Hygiena Pages-deploy (opcjonalna):** przełączyć Pages source na „GitHub Actions" + `actions/deploy-pages`, by wyciszyć Node20 annotation w `pages-build-deployment` (nasz `ci.yml` już zbumpowany).
-- ⟳ **Analiza pary (10,25)** z R2 (single-pillar co-occurrence 1/3) — opcjonalne mini-study, NIE finding (nie przeszło bramki konwergencji+FDR).
-- ⟳ Stretche domknięte: pełna piątka RNG, demo Streamlit, IT supplement, MM gra 2 — Ścieżka A kompletna.
-
-## Aktywne pliki
-
-- ZMIENIONE (committed, pushed): `src/driftscope/reporting/{prng_benchmark.py,report.qmd}`,
-  `src/driftscope/methodology/h1_classical.py`, `README.md`, `docs/{index,report}.html`,
-  `scripts/{check_api_key,smoke_test}.py`
-- POZA REPO (prywatne): `D:\Programming_Projects\zz_INNE\README_PL\README.md`
-- ACTIVE prereg = **v7** (bez zmian — reporting/docs/style-only)
-
-## Otwarte pytania
-
-- Brak nierozstrzygniętych. Oba findingi (#1 full-stream, #2 honest-disclosure) i sub-decyzja Family B zamknięte decyzją usera.
-- Strategiczne (nie blokujące): czy framework jest „done" (Ścieżka A), czy podejmować opcjonalne hygiena/stretche?
-
-## Do MEMORY.md (przeniesiono)
-
-- Projektowy `MEMORY.md` (Architektura): **[2026-06-13 sesja 2]** — sub-Finding #1 full-stream+caveat,
-  Finding #2→README, 3 polish (ruff/exec-1A4/BOCPD length-invariance), polska wersja README poza repo.
-  HEAD=`da3b50d`, pushed. Highlight: BOCPD p95(n=5000)=p95(n=2000)=0.3314 (Δ=0.0000) — empiryczne domknięcie length-invariance prereg v6 §0.
-
-## ═══ Sesja zarchiwizowana [2026-06-13 22:50] ═══
-
-# last_session.md
-
-**Sesja:** 2026-06-13 · 11:30-12:30
-**Status:** ✓ Zakończona poprawnie
-**Punkt odniesienia (git):** 79c03e9 @ master (zsynchronizowany z origin/master, CI green)
-
----
-
-## ▸ NASTĘPNY KROK (zacznij tutaj)
-
-**Podjąć DECYZJĘ na Finding code-review #1 z 2026-06-11: polityka werdyktu wiersza
-`klass='real'` (EuroJackpot) w benchmarku §5 — czy `family_b_per_number_pvalues`
-powinno być regime-split.** Konkretnie: benchmark PRNG (`reporting/prng_benchmark.py`,
-`run_battery`) liczy Family B na PEŁNYM strumieniu EJ (full-stream), podczas gdy główny
-pipeline robi to per-reżim (R1/R2/R3, BY pooled /150). Pytanie: ujednolicić EJ-real
-w benchmarku do per-reżim (spójność z headline) czy zostawić full-stream z caveat
-w prozie? (Reporting-only, bez prereg.)
-
-Kontekst: werdykt OR→Disagreement (#1) i honest-disclosure 1/3 (#2) ZROBIONE w tej sesji
-(`e553820`/`79c03e9`). Pozostała sub-decyzja granularności Family B dla wiersza 'real' —
-zaparkowana, bo wymaga rozstrzygnięcia user (spójność vs prostota benchmarku).
-
----
-
-## Co zrobiono w tej sesji
-
-- ✓ **PUSH zaległości** — 14 commitów taska struktury (`7ed0ca6..38aec30`) wypchnięte,
-  CI green (`27461790549`).
-- ✓ **Doc-sync** (`e890b08`) — liczniki testów 266/268→272/274 (README:49/223/316 +
-  `executive_summary.html:213`), docstring `run_multimulti_audit` „all-clear"→„clear",
-  kwalifikator naive-OR w `calibrate_mmd_pool.py:3`.
-- ✓ **Finding #1** (`e553820`) — `BenchmarkRow.flagged` OR → **Disagreement ≥2 z {Family B,
-  MMD, co-occurrence}**, IT non-voting (nowe `core_votes`). Spójne z `MultiMultiAuditRow`
-  + prozą §5. Sensitivity zachowana (bias=2, period=3; n=600 i n=1500). Przy n=1500
-  wartości Verdict bez zmian (usuwa kruchość specificity, nie headline). 4 testy regresyjne.
-  Komentarz MM `:47` zaktualizowany.
-- ✓ **Finding #2** (`e553820`, `report.qmd §4`) — honest-disclosure: sygnał widoczny tylko
-  jednej rodzinie (pair_corr→cooc) = 1/3; twarda reguła ≥2/3 byłaby strukturalnie ślepa;
-  bramka watchlisty = FDR primary + konwergencja ≥1 (NIE hard ≥2/3). Bez zmian kodu.
-- ✓ **Re-render Pages** (`79c03e9`) — `report.qmd` (§4+§5) → quarto → `docs/index.html`+
-  `report.html`, zweryfikowane grep-em PRZED kopią (per-reżim, /150, period(50), webm). CI green.
-- ✓ Liczniki podbite 274→278 (po +4 testach). Walidacja: pytest **276/2skip**, ruff+mypy --strict czyste, CI 2× green.
-- ✓ Pamięć: projektowy MEMORY.md wpis [2026-06-13]; agent-memory gotcha `cd`→podwojone ścieżki.
-
-## Co zostało (backlog sesji)
-
-- ⟳ **NASTĘPNY KROK:** decyzja #1 — granularność Family B dla wiersza EJ-'real' w §5 (full-stream vs per-reżim).
-- ⟳ Dług ruff `scripts/{check_api_key,smoke_test}.py` (4×: I001 + unused `data`) —
-  pre-existing, POZA scope CI; sprzątnąć przy pracy w tych plikach.
-- ⟳ Wizualny check exec summary Ctrl+P = 1×A4; cross-check kalibracji BOCPD n=5000 pool=80.
-- ⟳ Stretche: pełna piątka RNG domknięta; demo Streamlit zbudowane — Ścieżka A kompletna.
-
-## Aktywne pliki
-
-- ZMIENIONE (commited): `src/driftscope/reporting/{prng_benchmark,multimulti_audit,report.qmd}.py/.qmd`,
-  `tests/test_prng_benchmark.py`, `README.md`, `docs/{executive_summary,index,report}.html`,
-  `scripts/{multimulti_audit,calibrate_mmd_pool}.py`
-- ACTIVE prereg = **v7** (bez zmian — reporting-only, methodology/ nietknięte)
-
-## Otwarte pytania
-
-- Finding #1 (sub-decyzja): wiersz EJ 'real' w benchmarku §5 — Family B full-stream czy per-reżim?
-- Finding #2 domknięty prozą; czy dodać analogiczny akapit do README (obecnie tylko report.qmd §4)?
-
-## Do MEMORY.md (przeniesiono)
-
-- Projektowy `MEMORY.md` (Architektura): **[2026-06-13]** push zaległości + doc-sync +
-  Finding #1 (werdykt PRNG OR→Disagreement ≥2) + Finding #2 (honest-disclosure 1/3),
-  HEAD=`79c03e9`, pushed, CI green. Gotcha narzędziowy `cd`→podwojone ścieżki.
-- Agent-memory: `bash-cd-persists-doubled-paths.md` (feedback).

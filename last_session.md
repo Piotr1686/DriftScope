@@ -1,56 +1,89 @@
 # last_session.md
 
-**Sesja:** 2026-06-29 · ~przedłużona (audyt + migracja EN)
+**Sesja:** 2026-07-20 · 20:30–21:30
 **Status:** ✓ Zakończona poprawnie
-**Punkt odniesienia (git):** 4ed01bb @ master (zsynchronizowany z origin/master)
+**Punkt odniesienia (git):** 4f368b5 @ master — ostatni commit KODU
+**Uwaga:** na wierzchu siedzi jeszcze commit `chore(session)` z tym plikiem (stąd HEAD ≠ 4f368b5;
+to normalne, nie desync). Łącznie **5 commitów ahead origin/master — NIE pushed.**
 
 ---
 
 ## ▸ NASTĘPNY KROK (zacznij tutaj)
 
-**Kontynuuj migrację PL→EN — Batch 3: `driftsim/` + `adaptive/` + `pipeline.py` (docstringi/komentarze).**
-Konkretnie przetłumacz prozę (docstringi, komentarze, komunikaty błędów; kod 1:1) w:
-`src/driftscope/driftsim/{null_uniform,planted_signals,calibration}.py`,
-`src/driftscope/adaptive/honest_watchlist.py` (zostały docstringi — komunikaty już EN),
-`src/driftscope/pipeline.py` (zostały docstringi — output już EN).
-Po każdym: `ruff check` + `mypy --strict` + odpowiednie testy; uważaj na (a) komunikaty
-błędów matchowane w testach, (b) E501 po wydłużeniu PL→EN. Commit per batch.
+**Wznów skan beacon chain, potem policz audyt:**
 
-Kontekst: user zdecydował (2026-06-29) że CAŁY projekt ma być po angielsku poza
-`README.pl.md`. Zakres A „shipped+active". ZROBIONE: core/ + ingestion/ + methodology/
-(15 plików). ZOSTAŁO ~39 plików .py + reporting/ + tests/ (25) + scripts/ (10) + demo/ +
-report.qmd + preregistration_v7.md + flip konwencji w CLAUDE.md + re-render HTML.
+```bash
+python scripts/fetch_beacon_chain.py --resume --rate 20 --out data/seed
+python scripts/randao_audit.py
+```
+
+Skan stoi na **19200/96000 slotów (600/3000 epok, 71 pominięć)**, w pełni checkpointowany —
+`--resume` podejmie od `cursor` w `data/seed/randao_scan_meta.json`. Pozostałe ~77 tys. slotów
+przy ~19 req/s to **~65–70 min w tle**. Potem `scripts/randao_audit.py` drukuje profil pozycji,
+test pierwotny (pozycja 31), wtórny (ogon 28–31), omnibus Family B i **wiązanie mocy**.
+
+Kontekst: cała infrastruktura B3 jest zbudowana, przetestowana (16 testów) i zacommitowana —
+brakuje wyłącznie danych i raportu. Specyfikacja testu została zacommitowana (`606dee3`) **zanim
+wyniki istniały**, więc historia gita dowodzi kolejności; nie zmieniaj definicji testu po
+zobaczeniu liczb, bo to zniweczy jedyny mocny argument tej sekcji.
+
+Po wyniku: sekcja 8 `report.qmd` (World Lottery Audit jest 7, Reproducibility → 9), tabele
+README EN/PL, re-render `docs/`, push + CI.
 
 ---
 
 ## Co zrobiono w tej sesji
 
-- ✓ **Audyt README↔kod** (`CLAUDE_CODE_README_AUDIT_PROMPT.md`) — dowodowy (27 claimów, żywe runy), 5 ról, runda adwersarialna. Deliverables `docs/audit/README_AUDIT.md` + `README_REVISED.md/.pl.md` (commit `c6104d5`). Główny finding: `p=0.005` PRNG = permutation floor (n_perm=199, nie default 499), nieoznaczony.
-- ✓ **MUST fixy README** (`5e6205b`): floor `≤` w tabeli PRNG + caveat halucynacji przy haśle (EN+PL).
-- ✓ **B — defekt kodu** (`09b5044`): `FAMILY_B_SIZE 450→150` (numeracja v7).
-- ✓ **SHOULD/NICE** (`f17242a`+`28b50aa`): mini-słowniczek, „What you'll see", złagodzone „must agree", DoD-6 wording, FPR CI, „Beyond the Lottery" wyżej, linki do testów, **nowy `test_mmd_blind_to_pair_corr`**, **output CLI/raportu PL→EN**. Testy 279 collected (277 pass/2 skip).
-- ✓ **START migracji PL→EN** (zakres A): `core/` (`1606e64`), `h1_classical`+`k4_mmd` (`c67eeb4`), reszta `methodology/` (`4ed01bb`) — 15 plików, ruff+mypy+testy zielone po każdym batchu.
-- ✓ **Push** — wszystko na origin/master, `## master...origin/master` (synced 0/0).
+- ✓ **Research źródeł beaconów** — drand, NIST 2.0, Ethereum RANDAO: endpointy, formaty, dostępność
+  historyczna, limity. Wszystkie sprawdzone na żywo z tej maszyny.
+- ✓ **ODRZUCONO zapisany plan B** jako metodologicznie błędny (patrz „Otwarte pytania" → rozstrzygnięte).
+  Bateria uniformności na miksie RANDAO ma **moc zerową** wobec withholdingu.
+- ✓ **B2 SHIPPED** (`fd79f61`) — `ingestion/beacon_streams.py`, `scripts/fetch_beacons.py`,
+  12 testów, 2678 rund drand + 1339 pulsów NIST (~486 KB) zacommitowane. **Oba `clear` na 4 osiach.**
+  Wiersze w tabelach README EN/PL + uzasadnienie + nota o wykluczeniu RANDAO.
+- ✓ **B3 spec zacommitowana PRZED wynikami** (`606dee3`) — `reporting/randao_audit.py`,
+  `ingestion/beacon_chain.py`, 2 CLI, 16 testów. Git dowodzi, że test wybrano bez wglądu w wynik.
+- ✓ **Analiza mocy** — tabela epoki × wykrywalny atakujący; 3000 epok → 1 wstrzymanie / 259 epok.
+- ✓ **Bug AIMD znaleziony i naprawiony w locie** (`8afe77a`) — czysty backoff zabetonował skan
+  na 4 req/s; po poprawce ~19 req/s. 2 testy regresyjne.
+- ✓ **Sync drzewa CLAUDE.md** (`4f368b5`) — ścieżki A i B, 25→28 plików testowych.
+- ✓ Suite **284 → 312 collected**; ruff + mypy --strict czyste w zakresie CI.
 
 ## Co zostało (backlog sesji)
 
-- ⟳ **Migracja EN — Batch 3+:** driftsim/, adaptive/, pipeline.py (docstringi) → potem reporting/ (6 plików), tests/ (25), scripts/ (10), demo/app.py.
-- ⟳ **report.qmd** + **preregistration_v7.md** → EN; **flip CLAUDE.md** („Język komentarzy w kodzie: angielski"); **re-render** report.html/executive_summary.html (Quarto — może wymagać quarto CLI).
-- ⟳ Residuum: `docs/report.html`/`executive_summary.html` mogą nieść starą tabelę PRNG (n_perm=199) + polskie summary — domknie się przy re-renderze.
-- ⟳ `docs/audit/README_REVISED.*` zastąpione przez żywe README (zostają jako ślad audytowy).
+- ⟳ **B3: skan (20% zrobione) + audyt + raport** — patrz NASTĘPNY KROK.
+- ⟳ **Push 4 commitów** — nic nie poszło na origin w tej sesji; CI nie było uruchamiane.
+- ⟳ **Migracja i18n:** `scripts/` (Batch 6; nowe `fetch_beacons`/`fetch_beacon_chain`/`randao_audit`
+  już EN), flip konwencji CLAUDE.md („Język komentarzy: polski"→EN), `preregistration_v7.md`,
+  `demo/app.py`. `notebooks/` świadomie poza zakresem.
+- ⟳ **Zastane 9 błędów ruff w `scripts/make_readme_assets.py`** — poza zakresem CI (`ruff check src tests`),
+  nieblokujące, ale warto posprzątać przy Batch 6.
+- ⟳ Stretch A: strumienie bonus (k=1), UK Lotto (licencja mirrorów), rodzynki rygoru.
 
 ## Aktywne pliki
 
-- ZROBIONE (committed, pushed): `src/driftscope/{core,ingestion,methodology}/*.py` (EN), README.md/README.pl.md (fixy+EN output example), `multiple_testing.py` (FAMILY_B_SIZE), `pipeline.py`/`cli.py`/`adaptive/honest_watchlist.py` (output EN, docstringi nadal PL), `tests/test_mmd_properties.py` (+test), `docs/audit/*`.
-- DO ZROBIENIA: `src/driftscope/{driftsim,reporting,adaptive,pipeline.py}` docstringi, `tests/*`, `scripts/*`, `demo/app.py`, `report.qmd`, `preregistration_v7.md`, `CLAUDE.md`.
-- ACTIVE prereg = **v7** (treść bez zmian; tłumaczenie EN zaplanowane).
+- NOWE (zacommitowane): `src/driftscope/ingestion/{beacon_streams,beacon_chain}.py`,
+  `src/driftscope/reporting/randao_audit.py`, `scripts/{fetch_beacons,fetch_beacon_chain,randao_audit}.py`,
+  `tests/{test_beacon_streams,test_randao_audit}.py`, `data/seed/{drand,nist}_beacon.csv`.
+- ZMIENIONE (zacommitowane): `reporting/prng_benchmark.py` (+klasa `beacon`), `scripts/prng_benchmark.py`,
+  `tests/test_prng_benchmark.py`, `README.md`/`README.pl.md`, `CLAUDE.md`.
+- **NIEŚLEDZONE (świadomie):** `data/seed/randao_missed_slots.csv` + `randao_scan_meta.json` —
+  skan częściowy. Dane niepełne nie należą do kanonicznego `data/seed/`; potrzebne lokalnie do `--resume`.
+  **Nie usuwaj ich** — to 20 min skanowania publicznego węzła.
 
 ## Otwarte pytania
 
-- Brak blokujących. Repo zsynchronizowane, working tree czyste.
-- Czy `tests/` docstringi tłumaczyć w pełni (zakres A je obejmuje) — TAK wg decyzji, ale to objętościowo największy kawałek.
+- **ROZSTRZYGNIĘTE w tej sesji:** (1) plan B z poprzedniej sesji odrzucony jako metodologicznie
+  nieadekwatny; (2) prereg v8 — user zdecydował **NIE**, wystarczy commit przed wynikami.
+- Nierozstrzygnięte: czy po B3 wracamy do stretch A (UK Lotto / bonus streams), czy zamykamy
+  wdrożenie bojowe i wracamy do i18n Batch 6.
+- UK Lotto: mirror z pełną historią i jego licencja — nadal TBD (odziedziczone).
 
 ## Do MEMORY.md (przeniesiono)
 
-- Projektowy `MEMORY.md` (Architektura): **[2026-06-29]** — audyt README↔kod + MUST/SHOULD/NICE fixy + START migracji PL→EN (core+ingestion+methodology done, 15 plików). HEAD=`4ed01bb`, pushed. Decyzja: cały projekt EN poza README.pl.md; odpowiedzi asystenta zostają PL.
-- Agent-memory: bez nowego wpisu (realizacja zapisana w repo + MEMORY.md projektu).
+- Projektowy `MEMORY.md` (Architektura): **[2026-07-20]** — pełny wpis: korekta planu B (dlaczego
+  bateria uniformności ma moc zerową wobec withholdingu), właściwy obserwowalny (pozycja pominięcia
+  w epoce), konfundent pozycji 0 i dlaczego czyni test ogonowy czystym, decyzja o braku prereg v8,
+  moc jako obowiązkowy element wyniku null, B2 clear/clear, DoD-6 bez ziarna dla beaconów,
+  zmierzona dostępność danych (stany przycięte / nagłówki 2M+), pułapka burst-vs-podtrzymany rate
+  limit, bug AIMD i lekcja, reguła 404-vs-nie-wiemy w ingestion, stan skanu. HEAD=`4f368b5`.

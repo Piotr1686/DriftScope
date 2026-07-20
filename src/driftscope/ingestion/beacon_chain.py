@@ -99,16 +99,28 @@ class ScanMeta:
 
 
 class RateLimiter:
-    """Token-bucket limiter that backs off permanently when the server pushes back.
+    """Token-bucket limiter with AIMD congestion control (halve on 429, creep back on success).
 
-    A 429 is treated as evidence the configured rate is too high, not as a transient blip: the
-    rate is cut and never automatically restored, so a long scan converges on a rate the server
-    tolerates instead of repeatedly rediscovering the ceiling.
+    Multiplicative decrease alone is not enough for a long scan: a short burst of throttling
+    would pin the rate at the floor for hours afterwards. Measured on this workload, four 429s
+    took a 35 req/s scan down to 4 req/s and it never recovered, turning a ~45 minute job into
+    a multi-hour one. Additive increase lets the scan climb back toward the target once the
+    server stops complaining, so it tracks the sustainable rate instead of the worst rate ever
+    observed — the same reason TCP uses AIMD rather than pure backoff.
     """
 
+    #: successes required before nudging the rate back up
+    RECOVERY_INTERVAL = 150
+    #: fraction of the target rate added per recovery step
+    RECOVERY_STEP = 0.10
+    #: never drop below this — a stalled scan is worse than a slow one
+    FLOOR = 2.0
+
     def __init__(self, rate: float) -> None:
+        self.target = rate
         self.rate = rate
         self._next = 0.0
+        self._ok_streak = 0
         self._lock = asyncio.Lock()
 
     async def acquire(self) -> None:
@@ -120,8 +132,18 @@ class RateLimiter:
             await asyncio.sleep(wait)
 
     def throttled(self) -> None:
-        """Server returned 429 — halve the rate (floor 2 req/s)."""
-        self.rate = max(2.0, self.rate / 2)
+        """Server returned 429 — halve the rate and restart the recovery streak."""
+        self.rate = max(self.FLOOR, self.rate / 2)
+        self._ok_streak = 0
+
+    def succeeded(self) -> None:
+        """A clean response — after a long enough streak, creep back toward the target."""
+        if self.rate >= self.target:
+            return
+        self._ok_streak += 1
+        if self._ok_streak >= self.RECOVERY_INTERVAL:
+            self._ok_streak = 0
+            self.rate = min(self.target, self.rate + self.target * self.RECOVERY_STEP)
 
 
 async def _slot_present(
@@ -148,12 +170,16 @@ async def _slot_present(
             last = f"{type(exc).__name__}: {exc}"
         else:
             if r.status_code == 404:
+                limiter.succeeded()
                 return False
             if r.status_code == 200:
                 try:
-                    return bool(r.json().get("data"))
+                    present = bool(r.json().get("data"))
                 except ValueError as exc:
                     last = f"malformed JSON: {exc}"
+                else:
+                    limiter.succeeded()
+                    return present
             elif r.status_code == 429:
                 limiter.throttled()
                 last = "HTTP 429 (rate limited)"

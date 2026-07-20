@@ -237,7 +237,34 @@ def test_rate_limiter_backs_off_with_floor() -> None:
     limiter = RateLimiter(64.0)
     for _ in range(20):
         limiter.throttled()
-    assert limiter.rate == 2.0
+    assert limiter.rate == RateLimiter.FLOOR
+
+
+def test_rate_limiter_recovers_after_backoff() -> None:
+    """Sustained success creeps the rate back up — AIMD, not pure backoff.
+
+    Without this a short throttling burst would pin a multi-hour scan at the floor forever;
+    that regression cost a real scan run before it was fixed.
+    """
+    limiter = RateLimiter(40.0)
+    limiter.throttled()
+    limiter.throttled()
+    depressed = limiter.rate
+    assert depressed < 40.0
+
+    for _ in range(RateLimiter.RECOVERY_INTERVAL * 5):
+        limiter.succeeded()
+    assert limiter.rate > depressed
+    assert limiter.rate <= limiter.target  # never overshoots the configured target
+
+
+def test_rate_limiter_recovery_needs_a_streak() -> None:
+    """A single success does not undo a backoff (otherwise it would oscillate)."""
+    limiter = RateLimiter(40.0)
+    limiter.throttled()
+    after = limiter.rate
+    limiter.succeeded()
+    assert limiter.rate == after
 
 
 def test_resume_range_mismatch_rejected(tmp_path: Path) -> None:

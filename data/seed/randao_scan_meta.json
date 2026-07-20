@@ -1,0 +1,9 @@
+{
+  "start_slot": 14717024,
+  "end_slot": 14813024,
+  "n_slots": 19200,
+  "n_missed": 71,
+  "node": "https://ethereum-beacon-api.publicnode.com",
+  "fetched_at": "2026-07-20T21:19:02.668011+00:00",
+  "cursor": 14736224
+}

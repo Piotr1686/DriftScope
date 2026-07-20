@@ -130,7 +130,11 @@ DriftScope/
 ├── .github/workflows/ci.yml          # CI: ruff + mypy --strict + pytest (ubuntu, py3.10)
 ├── data/seed/
 │   ├── eurojackpot_history.csv       # committed; Tier-1 fallback (958 losowań)
-│   └── multimulti_history.csv        # committed; gra 2 (16827 losowań, pool=80)
+│   ├── multimulti_history.csv        # committed; gra 2 (16827 losowań, pool=80)
+│   ├── powerball_history.csv         # World Lottery Audit (ścieżka A); + _bonus_ wariant
+│   ├── megamillions_history.csv      # World Lottery Audit (ścieżka A); + _bonus_ wariant
+│   ├── drand_beacon.csv              # ścieżka B2; 2678 rund drand (32 B/runda)
+│   └── nist_beacon.csv               # ścieżka B2; 1339 pulsów NIST (64 B/puls)
 ├── scripts/
 │   ├── smoke_test.py                 # deps import + CPU check + wersje
 │   ├── archive.py                    # SHA-256 manifest generator
@@ -141,6 +145,9 @@ DriftScope/
 │   ├── calibrate_mmd_pool.py         # kalibracja FPR MMD per pool (np. 80)
 │   ├── multimulti_audit.py           # CLI runner audytu MM (gra 2)
 │   ├── prng_benchmark.py             # CLI PRNG benchmark (reusability showcase)
+│   ├── fetch_beacons.py              # CLI: cache digestów drand/NIST (B2)
+│   ├── fetch_beacon_chain.py         # CLI: skan zajętości slotów Ethereum, --resume (B3)
+│   ├── randao_audit.py               # CLI: audyt withholdingu RANDAO (B3)
 │   └── scraper_selectors.md          # nota W0.1 (deliverable kontraktu — zob. PROJECT_BRIEF)
 ├── docs/                             # GitHub Pages source (Deploy from branch /docs)
 │   ├── index.html                    # landing
@@ -174,7 +181,9 @@ DriftScope/
 │   ├── ingestion/
 │   │   ├── lotto_scraper.py          # httpx + selectolax + tenacity; load_seed_csv / load_generic_seed_csv
 │   │   ├── regime_split.py           # 2014/2022 split → regime_{1,2,3} (warstwa danych)
-│   │   └── rng_streams.py            # PRNG: MT19937/Xorshift/ChaCha20/AES-CTR-DRBG + defekty
+│   │   ├── rng_streams.py            # PRNG: MT19937/Xorshift/ChaCha20/AES-CTR-DRBG + defekty
+│   │   ├── beacon_streams.py         # B2: drand/NIST jako BitStream (finite, bez ziarna)
+│   │   └── beacon_chain.py           # B3: zajętość slotów Ethereum, limiter AIMD, --resume
 │   ├── methodology/
 │   │   ├── preregistration_v1.md     # SUPERSEDED przez v2 (history)
 │   │   ├── preregistration_v2.md     # SUPERSEDED przez v3 (history)
@@ -202,10 +211,12 @@ DriftScope/
 │   │   ├── information_theory.py     # suplement LZ76 (NIE 4. filar)
 │   │   ├── prng_benchmark.py         # bateria reusability (PRNG ground-truth)
 │   │   ├── multimulti_audit.py       # runner gra 2 (Multi Multi, negative control)
+│   │   ├── lottery_audit.py          # runner World Lottery Audit (ścieżka A)
+│   │   ├── randao_audit.py           # B3: audyt withholdingu (pozycja pominięć w epoce)
 │   │   └── report.qmd                # Quarto source
 │   └── adaptive/
 │       └── honest_watchlist.py       # TYLKO gdy DoD-3 (FDR) + DoD-4 pass; else None (DoD-5)
-└── tests/                            # 25 plików test_*.py + conftest (macierz DoD-1..6 + reporting + reuse)
+└── tests/                            # 28 plików test_*.py + conftest (macierz DoD-1..6 + reporting + reuse)
     ├── conftest.py                   # pytest.approx defaults, seed fixtures
     ├── test_environment.py           # Numba + Win11 + numpy 2.x (Oś 0)
     ├── test_vram_invariants.py       # RAM budget niezmienniki (CPU-only)
@@ -224,6 +235,9 @@ DriftScope/
     ├── test_pipeline.py              # run_audit end-to-end (pos/neg control)
     ├── test_regime_split.py          # granice reżimów + Parquet determinizm
     ├── test_rng_streams.py           # PRNG streams + defekty (favor/period)
+    ├── test_beacon_streams.py        # B2: cache digestów, wyczerpanie, determinizm bez ziarna
+    ├── test_randao_audit.py          # B3: czułość/swoistość + moc + integralność skanu
+    ├── test_lottery_audit.py         # ścieżka A: replikacja PB/MM
     ├── test_prng_benchmark.py        # bateria reusability
     ├── test_generic_pool_invariants.py  # loader + wyprowadzanie pool z rekordów (gra 2)
     ├── test_information_theory.py     # LZ76 suplement (komplementarność)

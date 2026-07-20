@@ -24,8 +24,14 @@ test pierwotny (pozycja 31), wtórny (ogon 28–31), omnibus Family B i **wiąza
 
 Kontekst: cała infrastruktura B3 jest zbudowana, przetestowana (16 testów) i zacommitowana —
 brakuje wyłącznie danych i raportu. Specyfikacja testu została zacommitowana (`606dee3`) **zanim
-wyniki istniały**, więc historia gita dowodzi kolejności; nie zmieniaj definicji testu po
-zobaczeniu liczb, bo to zniweczy jedyny mocny argument tej sekcji.
+wyniki istniały**, więc historia gita dowodzi kolejności.
+
+> ⚠ **NIE ZMIENIAJ DEFINICJI TESTU.** Ani pozycji pierwotnej (31), ani zbioru ogonowego (28–31),
+> ani wykluczenia pozycji 0. Kolejność commitów to jedyny mocny argument prerejestracyjny tej
+> sekcji i przepisanie testu po zobaczeniu liczb niweczy go bezpowrotnie.
+> **Odnotowane jawnie:** przy weryfikacji integralności pliku widziano już częściowe zliczenia
+> (poz. 0 = 23 pominięcia vs średnia 1.5 na poz. 1–31 → 15× nadmiar = przewidziany konfundent
+> przejścia epoki; poz. 31 = 1, na średniej). Wstępny odczyt to „clear", zgodnie z literaturą.
 
 Po wyniku: sekcja 8 `report.qmd` (World Lottery Audit jest 7, Reproducibility → 9), tabele
 README EN/PL, re-render `docs/`, push + CI.
@@ -67,9 +73,10 @@ README EN/PL, re-render `docs/`, push + CI.
   `tests/{test_beacon_streams,test_randao_audit}.py`, `data/seed/{drand,nist}_beacon.csv`.
 - ZMIENIONE (zacommitowane): `reporting/prng_benchmark.py` (+klasa `beacon`), `scripts/prng_benchmark.py`,
   `tests/test_prng_benchmark.py`, `README.md`/`README.pl.md`, `CLAUDE.md`.
-- **NIEŚLEDZONE (świadomie):** `data/seed/randao_missed_slots.csv` + `randao_scan_meta.json` —
-  skan częściowy. Dane niepełne nie należą do kanonicznego `data/seed/`; potrzebne lokalnie do `--resume`.
-  **Nie usuwaj ich** — to 20 min skanowania publicznego węzła.
+- **ZACOMMITOWANE:** `data/seed/randao_missed_slots.csv` + `randao_scan_meta.json` — skan częściowy
+  (19200/96000, `complete = False`). Wcześniejsza decyzja o nieśledzeniu **odwrócona**: rekord jest
+  samoopisujący się (`ScanMeta.cursor`/`.complete`, `load_scan` waliduje względem metadanych), a pliki
+  nieśledzone nie przeżywają `git clean` ani zmiany maszyny. Ciągłość > purystyczne `data/seed/`.
 
 ## Otwarte pytania
 

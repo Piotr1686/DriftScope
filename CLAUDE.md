@@ -134,7 +134,9 @@ DriftScope/
 │   ├── powerball_history.csv         # World Lottery Audit (ścieżka A); + _bonus_ wariant
 │   ├── megamillions_history.csv      # World Lottery Audit (ścieżka A); + _bonus_ wariant
 │   ├── drand_beacon.csv              # ścieżka B2; 2678 rund drand (32 B/runda)
-│   └── nist_beacon.csv               # ścieżka B2; 1339 pulsów NIST (64 B/puls)
+│   ├── nist_beacon.csv               # ścieżka B2; 1339 pulsów NIST (64 B/puls)
+│   ├── randao_missed_slots.csv       # ścieżka B3; pominięte sloty (skan CZĘŚCIOWY, --resume)
+│   └── randao_scan_meta.json         # ścieżka B3; mianowniki + cursor skanu (complete=False)
 ├── scripts/
 │   ├── smoke_test.py                 # deps import + CPU check + wersje
 │   ├── archive.py                    # SHA-256 manifest generator

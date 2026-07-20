@@ -235,8 +235,8 @@ Etykieta 1/3 *routuje* („wymaga kontekstu mocy"); nie odrzuca.
 
 [Heatmapa powyżej](#3--ten-sam-instrument-skalibrowany-na-znanych-defektach) to historia; tu tabela za
 nią. **Dokładnie ta sama bateria** jest kierowana na generatory o znanym ground truth — dwa dobre, dwa
-kryptograficzne, ten sam generator z dwoma wstrzykniętymi defektami i prawdziwy EuroJackpot dla
-odniesienia.
+kryptograficzne, **dwa prawdziwe publiczne beacony losowości**, ten sam generator z dwoma
+wstrzykniętymi defektami i prawdziwy EuroJackpot dla odniesienia.
 
 ```bash
 python scripts/prng_benchmark.py          # domyślnie: n_draws=1500, n_perm=499
@@ -248,6 +248,8 @@ python scripts/prng_benchmark.py          # domyślnie: n_draws=1500, n_perm=499
 | Xorshift64 | good | 0/50 | 0.710 | 0.430 | 0.302 | **clear** |
 | ChaCha20 | crypto | 0/50 | 0.160 | 0.664 | 0.626 | **clear** |
 | AES-CTR-DRBG | crypto | 0/50 | 0.740 | 0.264 | 0.720 | **clear** |
+| drand (League of Entropy) | beacon | 0/50 | 0.914 | 0.674 | 0.288 | **clear** |
+| NIST Beacon 2.0 | beacon | 0/50 | 0.580 | 0.950 | 0.478 | **clear** |
 | MT19937 + bias | **defekt** (brzegowy) | **1/50** | **≤ 0.002** | 0.430 | 0.948 | **FLAG** (wąski) |
 | MT19937 + period-truncation | **defekt** (krótki cykl) | **27/50** | **≤ 0.002** | **≤ 0.002** | **≤ 0.002** | **FLAG** (szeroki) |
 | EuroJackpot (main 1–50) | real | 0/50 | 0.864 | 0.952 | 0.698 | **clear** |
@@ -255,8 +257,22 @@ python scripts/prng_benchmark.py          # domyślnie: n_draws=1500, n_perm=499
 Dwa defekty zapalają się **inaczej, i ten kontrast jest pokazem.** *Bias brzegowy* jest łapany wąsko
 (dwumianowy per-liczba + częstość okienna), ale **nie** przez co-occurrence, celujące w pary.
 *Period-truncation* (krótki cykl zamrażający cały rozkład) jest łapany **szeroko, przez wszystkie trzy
-filary naraz.** Oba dobre PRNG, oba prymitywy kryptograficzne i prawdziwy EuroJackpot wracają jako
-**clear**.
+filary naraz.** Oba dobre PRNG, oba prymitywy kryptograficzne, oba publiczne beacony i prawdziwy
+EuroJackpot wracają jako **clear**.
+
+Dwa wiersze **beacon** odpowiadają na uczciwy zarzut wobec wierszy crypto: *ChaCha20 i AES-CTR-DRBG to
+generatory, które budujemy sami, z ziarna, które sami wybieramy.* [drand](https://drand.love) (League
+of Entropy, progowy BLS, takt 30 s) i [NIST Randomness Beacon 2.0](https://csrc.nist.gov/Projects/interoperable-randomness-beacons/beacon-20)
+(entropia sprzętowa, pulsy 60 s) są wytwarzane i publikowane przez **strony trzecie**, bez ziarna pod
+naszą kontrolą — dlatego odtwarzalność bierze się tu z **zacommitowanego cache'u digestów**, a nie z
+`BASE_SEED` (`python scripts/fetch_beacons.py both`). Milczenie baterii na entropii, której nie
+wyprodukowaliśmy, to mocniejsze roszczenie o swoistości niż milczenie na entropii, którą wyprodukowaliśmy.
+
+**RANDAO Ethereum jest świadomie nieobecny w tej tabeli.** Audyt uniformności jego miksu testowałby
+złą hipotezę: walidator wstrzymujący blok wybiera jeden z `2^k` kandydatów wg użyteczności określonej
+na *przydziale obowiązków w dół strumienia*, a nie na bitach — więc rozkład brzegowy pozostaje pod
+atakiem uniformny. Manipulowalność RANDAO jest audytowana **osobno**, przez ślad, który wstrzymywanie
+faktycznie zostawia: pozycję pominiętych slotów wewnątrz epoki.
 
 <details>
 <summary>🤓 Odczyt wartości p · suplement LZ76 · relacja do NIST STS / Dieharder</summary>
@@ -397,7 +413,7 @@ python scripts/make_readme_assets.py                         # regeneruj figury 
 | Metryka | Wartość | Warunki |
 |---|---|---|
 | Pełny audyt | **~4.5 s**, **~220 MB** peak RAM | 958 losowań, `n_perm=999`, i5-12500H (CPU-only) |
-| Zestaw testów | **284 zebranych**, CI-green | 282 pass / 2 skip lokalnie (Win11) |
+| Zestaw testów | **296 zebranych**, CI-green | 294 pass / 2 skip lokalnie (Win11) |
 | Gorące pętle JIT | **~2.7×** vs baseline NumPy | permutacyjny PoC (`notebooks/poc_permutation_engine.py`) |
 
 > Cyfra ~4 GB RAM czasem przypisywana DriftScope to **budżet pełnego sweepu kalibracyjnego DriftSim**

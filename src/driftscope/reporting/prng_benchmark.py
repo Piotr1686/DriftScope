@@ -17,6 +17,7 @@ from pathlib import Path
 import driftscope
 from driftscope.core.config import settings
 from driftscope.core.types import DrawRecord
+from driftscope.ingestion.beacon_streams import load_beacon_csv
 from driftscope.ingestion.lotto_scraper import load_seed_csv
 from driftscope.ingestion.rng_streams import (
     AESCtrDrbgStream,
@@ -34,6 +35,12 @@ from driftscope.reporting.information_theory import information_detector
 _ROOT = Path(driftscope.__file__).resolve().parents[2]
 _DEFAULT_FAVOR = (7, 0.15)  # marginal defect: number 7 over-represented in 15% of draws
 _DEFAULT_PERIOD = 50  # period-truncation defect: a 50-draw cycle repeated (frozen frequencies)
+
+#: Real public randomness beacons (label, cached digest CSV) — see ingestion/beacon_streams.py.
+#: Ethereum RANDAO is deliberately absent: auditing its mix for uniformity tests the wrong
+#: hypothesis (withholding biases downstream duty assignment, not the bits) and its historical
+#: state is pruned on public nodes. RANDAO is audited for manipulability separately.
+_BEACON_SOURCES = (("drand", "drand_beacon.csv"), ("NIST-Beacon", "nist_beacon.csv"))
 
 
 @dataclass(frozen=True)
@@ -145,6 +152,12 @@ def build_sources(
       - `+bias(k)`  — a marginal defect (one number over-represented; Family B/MMD),
       - `+period(p)`— period-truncation (frozen cycle frequencies; Family B over-dispersion).
 
+    Appends real public BEACONS (drand, NIST) if their digest caches exist → expected clear.
+    These extend the specificity axis beyond generators we manufacture ourselves: third-party
+    entropy (threshold BLS / hardware), no seed under our control. A beacon cache is finite, so
+    a source is CLAMPED to its capacity rather than raising — the actual count is reported in
+    the `n` column, keeping any parity gap visible instead of aborting the whole benchmark.
+
     Appends real EuroJackpot if the seed CSV exists (from config by default). Real = the audit's
     honest null (expected clear, like the 1-50 negative control).
     """
@@ -164,6 +177,15 @@ def build_sources(
             draws_from_stream(MT19937Stream(seed), n_draws, period=period),
         ),
     ]
+    for label, fname in _BEACON_SOURCES:
+        bpath = _ROOT / "data" / "seed" / fname
+        if not bpath.exists():
+            continue
+        stream = load_beacon_csv(bpath, label)
+        n_avail = min(n_draws, stream.capacity_draws)
+        if n_avail > 0:
+            sources.append((label, "beacon", draws_from_stream(stream, n_avail)))
+
     path = seed_csv if seed_csv is not None else _ROOT / settings.data_seed_path
     if path.exists():
         sources.append(("EuroJackpot", "real", load_seed_csv(path)))

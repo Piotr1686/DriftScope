@@ -85,7 +85,7 @@ def main() -> None:
     good_clear = all(not r.flagged for r in rows if r.klass != "DEFECT")
     print(
         f"\nSensitivity (defekt -> FLAG): {'OK' if defects_flagged else 'MISS'} | "
-        f"Specificity (good/crypto/real -> clear): {'OK' if good_clear else 'MISS'}"
+        f"Specificity (good/crypto/beacon/real -> clear): {'OK' if good_clear else 'MISS'}"
     )
 
     if args.out is not None:

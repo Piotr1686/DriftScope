@@ -230,8 +230,8 @@ context"); it does not dismiss.
 
 The [heatmap above](#3--the-same-instrument-calibrated-on-known-defects) is the story; here is the
 table behind it. The **exact same battery** is pointed at generators with a known ground truth — two
-well-behaved, two cryptographic, the same generator with two injected defects, and real EuroJackpot
-for reference.
+well-behaved, two cryptographic, **two real public randomness beacons**, the same generator with two
+injected defects, and real EuroJackpot for reference.
 
 ```bash
 python scripts/prng_benchmark.py          # defaults: n_draws=1500, n_perm=499
@@ -243,6 +243,8 @@ python scripts/prng_benchmark.py          # defaults: n_draws=1500, n_perm=499
 | Xorshift64 | good | 0/50 | 0.710 | 0.430 | 0.302 | **clear** |
 | ChaCha20 | crypto | 0/50 | 0.160 | 0.664 | 0.626 | **clear** |
 | AES-CTR-DRBG | crypto | 0/50 | 0.740 | 0.264 | 0.720 | **clear** |
+| drand (League of Entropy) | beacon | 0/50 | 0.914 | 0.674 | 0.288 | **clear** |
+| NIST Beacon 2.0 | beacon | 0/50 | 0.580 | 0.950 | 0.478 | **clear** |
 | MT19937 + bias | **defect** (marginal) | **1/50** | **≤ 0.002** | 0.430 | 0.948 | **FLAG** (narrow) |
 | MT19937 + period-truncation | **defect** (short cycle) | **27/50** | **≤ 0.002** | **≤ 0.002** | **≤ 0.002** | **FLAG** (broad) |
 | EuroJackpot (main 1–50) | real | 0/50 | 0.864 | 0.952 | 0.698 | **clear** |
@@ -250,8 +252,22 @@ python scripts/prng_benchmark.py          # defaults: n_draws=1500, n_perm=499
 The two defects fire **differently, and that contrast is the showcase.** A *marginal bias* is caught
 narrowly (per-number binomial + windowed frequency) but **not** co-occurrence, which targets pairs. A
 *period-truncation* (a short cycle that freezes the whole distribution) is caught **broadly across all
-three pillars at once.** Both good PRNGs, both crypto primitives, and real EuroJackpot come back
-**clear**.
+three pillars at once.** Both good PRNGs, both crypto primitives, both public beacons, and real
+EuroJackpot come back **clear**.
+
+The two **beacon** rows answer a fair objection to the crypto rows: *ChaCha20 and AES-CTR-DRBG are
+generators we build ourselves, from a seed we choose.* [drand](https://drand.love) (League of Entropy
+threshold BLS, 30 s cadence) and the [NIST Randomness Beacon 2.0](https://csrc.nist.gov/Projects/interoperable-randomness-beacons/beacon-20)
+(hardware entropy, 60 s pulses) are produced and published by **third parties**, with no seed under
+our control — so reproducibility here comes from a **committed digest cache**, not from `BASE_SEED`
+(`python scripts/fetch_beacons.py both`). The battery staying silent on entropy it did not manufacture
+is a stronger specificity claim than staying silent on entropy it did.
+
+Ethereum's **RANDAO is deliberately absent from this table.** Auditing its mix for uniformity would
+test the wrong hypothesis: a validator withholding a block picks one of `2^k` candidate mixes by a
+utility defined on *downstream duty assignment*, not on the bits, so the marginal distribution stays
+uniform under the attack. RANDAO's manipulability is audited **separately**, through the trace that
+withholding actually leaves — the position of missed slots within an epoch.
 
 <details>
 <summary>🤓 Reading the p-values · the LZ76 supplement · relation to NIST STS / Dieharder</summary>
@@ -389,7 +405,7 @@ python scripts/make_readme_assets.py                         # regenerate the RE
 | Metric | Value | Conditions |
 |---|---|---|
 | Full audit | **~4.5 s**, **~220 MB** peak RAM | 958 draws, `n_perm=999`, i5-12500H (CPU-only) |
-| Test suite | **284 collected**, CI-green | 282 pass / 2 skip locally (Win11) |
+| Test suite | **296 collected**, CI-green | 294 pass / 2 skip locally (Win11) |
 | JIT hot loops | **~2.7×** vs NumPy baseline | permutation PoC (`notebooks/poc_permutation_engine.py`) |
 
 > The ~4 GB RAM figure sometimes quoted is the **budget for the full DriftSim calibration sweep**

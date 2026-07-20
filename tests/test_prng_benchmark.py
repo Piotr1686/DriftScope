@@ -81,6 +81,9 @@ def test_defect_flagged_and_good_clear() -> None:
     # Specificity: no good/crypto fired (both crypto: ChaCha20 + AES-CTR-DRBG).
     assert all(not r.flagged for r in by_class.get("good", []))
     assert all(not r.flagged for r in by_class.get("crypto", []))
+    # Specificity on entropy we did NOT manufacture: real published beacons (drand, NIST).
+    # Skipped when the digest caches are absent (scripts/fetch_beacons.py not run).
+    assert all(not r.flagged for r in by_class.get("beacon", []))
 
     # IT supplement (sequential LZ76): ITS strength is period-truncation (serial structure),
     # blind to marginal bias (order-shuffle preserves the multiset). Complementary to the battery.
@@ -91,7 +94,11 @@ def test_defect_flagged_and_good_clear() -> None:
 
 
 def test_run_benchmark_without_real_csv(tmp_path: Path) -> None:
-    """Non-existent seed CSV → no 'real' row (purely synthetic sources)."""
+    """Non-existent seed CSV → no 'real' row.
+
+    Beacon rows are NOT affected: they load from their own committed digest caches, not from
+    `seed_csv`, so they still appear here when those caches exist.
+    """
     rows = run_benchmark(n_draws=300, n_perm=49, seed_csv=tmp_path / "nope.csv")
     assert all(r.klass != "real" for r in rows)
     assert {"good", "crypto", "DEFECT"} <= {r.klass for r in rows}

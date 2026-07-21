@@ -496,7 +496,81 @@ no such asymmetry. This is the Disagreement Protocol's complementarity argument 
 demonstrated on synthetic planted signals (§4) — replicating on real, documented ground truth:
 every change is caught, but no single pillar catches all of them.
 
-# 8. Reproducibility (DoD-6)
+# 8. Beacon withholding — a bespoke observable for a battery-invisible attack
+
+The reusability battery (§5) reads two live public randomness beacons — **drand** and the
+**NIST Beacon** — as `clear`. But a uniformity battery is the wrong instrument for the sharpest
+attack on a *proposer-driven* beacon like Ethereum's **RANDAO**, and reporting `clear` there
+would be dishonest: **the battery has provably zero power against it.**
+
+An epoch's final RANDAO mix fixes proposer duties two epochs later, and a validator can only
+influence it by *not publishing* — withholding a block. Crucially, the attacker selects among
+candidate mixes that are each still uniform, so the mix's marginal distribution is **unchanged**;
+MMD, Family B and co-occurrence all see nothing. The trace withholding actually leaves is a
+**missed slot at the *tail* of an epoch**, because prediction is only possible when no
+unpredictable contribution follows — at the epoch's last slot (position 31), extending backward
+only across a contiguous tail run the attacker owns. So the attack's signature is an **excess of
+misses at position 31**, decaying toward the front of the epoch.
+
+This turns a benign confound into an asset. Position **0** carries a structurally elevated miss
+rate (the epoch transition — justification, finalization, shuffling — is computed there and slow
+nodes miss it), but position 0 is the *least* profitable withholding slot, with 31 unpredictable
+contributions still to come. Benign and adversarial explanations point at **opposite ends of the
+epoch**, which is exactly what makes the tail test clean. Position 0 is a **pre-specified**
+exclusion from the null reference (identified in a scouting probe *before* the test was designed)
+and reported separately rather than quietly dropped. The full test — primary binomial on
+position 31, secondary on the tail set 28–31, omnibus Family B over all 32 positions — was
+**committed before the scan produced any numbers** (`606dee3`); the git history is the
+pre-registration.
+
+```{python}
+#| label: randao-audit
+#| echo: false
+#| output: asis
+#| cache: true
+from driftscope.ingestion.beacon_chain import SLOTS_PER_EPOCH, load_scan
+from driftscope.reporting.randao_audit import (
+    LAST_POSITION,
+    TAIL_POSITIONS,
+    audit_randao,
+)
+
+missed, meta = load_scan(
+    ROOT / "data/seed/randao_missed_slots.csv",
+    ROOT / "data/seed/randao_scan_meta.json",
+)
+res = audit_randao(missed, meta)
+
+n_epochs = res.n_slots // SLOTS_PER_EPOCH
+print(f"Scanned **{res.n_slots:,} slots ({n_epochs:,} epochs)**, "
+      f"{res.n_missed} missed ({res.miss_rate:.3%}). Null reference: {res.n_reference} misses "
+      f"at positions 1–31 (position 0 excluded — {res.confound_count} misses, "
+      f"**{res.confound_ratio:.0f}× the reference mean**, the epoch-transition confound).\n")
+
+print("| Test | Observed | Expected | p (one-sided) |")
+print("|---|---|---|---|")
+print(f"| **primary** — position {LAST_POSITION} (last slot) | {res.last_count} "
+      f"| {res.last_expected:.1f} | {res.last_p:.3f} |")
+print(f"| secondary — tail {TAIL_POSITIONS[0]}–{TAIL_POSITIONS[-1]} | {res.tail_count} "
+      f"| {res.tail_expected:.1f} | {res.tail_p:.3f} |")
+fb = ", ".join(res.family_b_reject) if res.family_b_reject else "none"
+print(f"| omnibus — Family B (32 positions) | rejects: {fb} | — | — |")
+print()
+print(f"**Verdict: {res.verdict}.** At 80% power this scan would have caught an attacker "
+      f"withholding **1 block per {res.detectable_period:.0f} epochs** "
+      f"({res.detectable_attacks:.0f} withholds, {res.detectable_phi:.1%} of all misses). "
+      f"A null result *bounds* the attack — it does not certify its absence.")
+```
+
+The tail is quiet: the last slot sits within a whisker of its expectation and the primary test
+does not reject. The **only** Family B rejection is position 0 — the framework surfaces the
+benign confound explicitly rather than hiding it, and the confound sits at the *opposite* end of
+the epoch from any withholding signature, so it cannot masquerade as one. This is the discipline
+of the whole project applied to a live adversarial setting: the right observable chosen *before*
+the data, a `clear` verdict reported **with the power bound that makes it readable**, and a known
+confound named out loud instead of swept under the null.
+
+# 9. Reproducibility (DoD-6)
 
 - **Determinism:** every detector is a pure function of the stream; the RNG is seeded from
   the data contents (⊕ `BASE_SEED`), independent of call order.

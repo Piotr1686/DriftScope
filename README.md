@@ -267,7 +267,14 @@ Ethereum's **RANDAO is deliberately absent from this table.** Auditing its mix f
 test the wrong hypothesis: a validator withholding a block picks one of `2^k` candidate mixes by a
 utility defined on *downstream duty assignment*, not on the bits, so the marginal distribution stays
 uniform under the attack. RANDAO's manipulability is audited **separately**, through the trace that
-withholding actually leaves — the position of missed slots within an epoch.
+withholding actually leaves — the position of missed slots within an epoch. Across a scan of
+**96,000 slots (3,000 epochs)** of the live beacon chain, the tail test comes back **clear**
+(position 31: 9 misses vs 8.1 expected, *p* = 0.43); the *only* Family-B rejection is the
+structurally confounded position 0 (13× the reference rate — the epoch-transition, at the
+*opposite* end of the epoch from any withholding signature). Reported with its power bound: at
+80% power this scan would have caught an attacker withholding **1 block per ~330 epochs**. See
+§8 of the [report](https://piotr1686.github.io/DriftScope/report.html) — the test was committed
+before the scan produced any numbers.
 
 <details>
 <summary>🤓 Reading the p-values · the LZ76 supplement · relation to NIST STS / Dieharder</summary>

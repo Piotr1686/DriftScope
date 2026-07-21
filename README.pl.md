@@ -272,7 +272,13 @@ wyprodukowaliśmy, to mocniejsze roszczenie o swoistości niż milczenie na entr
 złą hipotezę: walidator wstrzymujący blok wybiera jeden z `2^k` kandydatów wg użyteczności określonej
 na *przydziale obowiązków w dół strumienia*, a nie na bitach — więc rozkład brzegowy pozostaje pod
 atakiem uniformny. Manipulowalność RANDAO jest audytowana **osobno**, przez ślad, który wstrzymywanie
-faktycznie zostawia: pozycję pominiętych slotów wewnątrz epoki.
+faktycznie zostawia: pozycję pominiętych slotów wewnątrz epoki. Na skanie **96 000 slotów (3 000
+epok)** żywego beacon chain test ogonowy wraca **clear** (pozycja 31: 9 pominięć vs 8,1 oczekiwane,
+*p* = 0,43); jedynym odrzuceniem Family B jest strukturalnie skonfundowana pozycja 0 (13× stopa
+referencyjna — przejście epoki, na *przeciwnym* końcu epoki niż jakakolwiek sygnatura wstrzymywania).
+Raportowane z wiązaniem mocy: przy 80% mocy skan wykryłby atakującego wstrzymującego **1 blok na ~330
+epok**. Zob. §8 [raportu](https://piotr1686.github.io/DriftScope/report.html) — test został
+zacommitowany, zanim skan wyprodukował jakiekolwiek liczby.
 
 <details>
 <summary>🤓 Odczyt wartości p · suplement LZ76 · relacja do NIST STS / Dieharder</summary>

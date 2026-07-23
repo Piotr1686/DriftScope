@@ -1,76 +1,83 @@
 # last_session.md
 
-**Sesja:** 2026-07-21 · 21:55–22:30
+**Sesja:** 2026-07-23 · do 22:36
 **Status:** ✓ Zakończona poprawnie
-**Punkt odniesienia (git):** a2a83b0 @ master — wszystko wypchnięte na origin/master, **CI zielone**
-(run 29864924359: ruff + mypy --strict + pytest na ubuntu/py3.10, wszystkie kroki ✓).
+**Punkt odniesienia (git):** d077f0a @ master — wypchnięte na origin/master, **CI zielone**
+(run 30042430052, wszystkie kroki ✓, 3m27s).
 
 ---
 
 ## ▸ NASTĘPNY KROK (zacznij tutaj)
 
-**i18n Batch 6 — migracja `scripts/` na EN + flip konwencji komentarzy w CLAUDE.md.**
+**Rozpocząć Stretch A — UK Lotto (unblocked, ready). Pierwsza akcja: pozyskanie seed CSV.**
 
 Konkretnie, w tej kolejności:
-1. `scripts/make_readme_assets.py` — przetłumaczyć polskie stringi/komentarze na EN **oraz**
-   posprzątać zastane **9 błędów ruff** (poza zakresem CI `ruff check src tests`, ale warto).
-2. Pozostałe `scripts/` z polskimi komentarzami (nowe `fetch_beacons`/`fetch_beacon_chain`/
-   `randao_audit` już są EN — sprawdzić resztę: `calibrate_*`, `convert_mm_seed`, `multimulti_audit`,
-   `prng_benchmark`, `check_api_key`, `manual_import`, `smoke_test`, `archive`).
-3. Flip konwencji w `CLAUDE.md`: „Język komentarzy w kodzie: polski" → EN (decyzja i18n).
-4. `preregistration_v7.md` + `demo/app.py` — pozostałe pliki z PL. `notebooks/` **świadomie poza zakresem**.
+1. **User pobiera** pełną historię UK Lotto z `national-lottery.co.uk/results/lotto/draw-history`
+   (Download CSV / feed XML) → zapis do `data/seed/uk_lotto_history.csv`. **Konieczne ręcznie** —
+   oficjalny serwis zwraca 403 anti-bot na automatyczny fetch (ścieżka Tier-1, jak EJ).
+2. Napisać konwerter/loader (wzorzec `scripts/convert_mm_seed.py` + `load_generic_seed_csv`):
+   format UK Lotto = data + 6 liczb głównych (pula zmienna 49→59) + bonus ball.
+3. `regime_split` dla UK Lotto: granica **2015-10-10** (pool 1-49 → 1-59). Rozstrzygnąć
+   **design negative-control** (patrz Otwarte pytania — UK Lotto NIE ma naturalnego euron-vs-main).
+4. Pos control BOCPD na puli głównej (wykrywa 2015-10-10) + bateria neg-control per reżim.
 
-Kontekst: całe wdrożenie bojowe A+B jest SHIPPED (B3 RANDAO domknięty w tej sesji), więc backlog
-schodzi do polish/i18n. i18n Batch 6 to najbardziej konkretny, niezablokowany następny krok.
-**Alternatywa (fork — decyzja usera):** stretch A (bonus streams k=1 / UK Lotto), ale **UK Lotto
-licencja mirrorów nadal TBD** → ryzyko rabbit-hole. Dlatego i18n rekomendowany jako następny.
+Kontekst: bramka licencyjna wykonana w tej sesji → GO (blocker rozpuszczony, CP 2015-10-10
+potwierdzony, licencja nie-blocker). To najlepiej rozpoznany, niezablokowany kierunek. Start
+wymaga TYLKO pobrania CSV przez usera. **Alternatywy** (gdyby nie UK Lotto): analiza pary
+(10,25) z R2 / W9 executive summary PDF.
 
 ---
 
-## Co zrobiono w tej sesji
+## Co zrobiono w tej sesji [2026-07-23]
 
-- ✓ **Skan beacon chain UKOŃCZONY** (`a0a258b`) — `--resume` podjął checkpointowany skan (19200)
-  do końca: **96000 slotów / 3000 epok, 358 pominięć (0,373%)**, `complete=True`. Realny rate
-  **~40 req/s** (AIMD rozpędzony) → ~30 min zamiast szacowanych 65. Bug AIMD z poprzedniej sesji
-  potwierdzony naprawiony.
-- ✓ **Audyt RANDAO policzony → `clear`** — primary poz. 31 (9 vs 8,1; p=0,426), secondary ogon
-  28–31 (34 vs 32,5; p=0,418), omnibus Family B odrzuca **tylko pos_0** (13× referencja =
-  konfundent przejścia epoki, przeciwny koniec niż withholding). Moc: 1 wstrzymanie / **332 epoki**
-  przy 80%. Wynik null zaraportowany Z wiązaniem mocy.
-- ✓ **Sekcja 8 `report.qmd`** „Beacon withholding" (żywy chunk `audit_randao`); Reproducibility
-  (DoD-6) przenumerowana **§8→§9**. Chunk zwalidowany standalone PRZED renderem.
-- ✓ **Re-render `docs/`** (Quarto, QUARTO_PYTHON=miniconda) — `docs/{report,index}.html` (1,65 MB),
-  zweryfikowane grep-em PRZED kopiowaniem. **README EN+PL** — konkretny wynik RANDAO + moc dopisane.
-- ✓ **28/28** testów randao/beacon zielone; skan partial→complete NIE złamał testów (fixture'y
-  syntetyczne). **2 commity** (`a0a258b` dane + `a2a83b0` report), **push OK**, **CI zielone**.
-- ✓ **Pamięć agenta zaktualizowana** — `battle-deployment-a-plus-b`: B3 „w toku" → **SHIPPED**.
-- ✓ **MEMORY.md** — wpis [2026-07-21] B3 SHIPPED (sekcja Architektura).
+**i18n Batch 6 — commit `bb5c0fb` (13 plików, +403/−394), push OK, CI zielone (run 30039207821).**
+- ✓ **CLAUDE.md flip** — „Język komentarzy w kodzie: polski" → **angielski** (+ nota: migracja
+  legacy w toku, `notebooks/` świadomie poza zakresem).
+- ✓ **`make_readme_assets.py`** — PL→EN **+ naprawa 9 błędów ruff** (F401 `FancyArrowPatch`,
+  F841 `grey`, 7× E501).
+- ✓ **9 skryptów PL→EN** (docstringi/komentarze/CLI): `archive`, `check_api_key`, `smoke_test`,
+  `convert_mm_seed`, `manual_import`, `prng_benchmark`, `multimulti_audit`,
+  `calibrate_bocpd_threshold`, `calibrate_mmd_pool`. Reszta skryptów już była EN.
+- ✓ **`demo/app.py`** — PL→EN (docstringi + cała warstwa UI Streamlit). `test_demo_smoke` 4/4.
+- ✓ **`preregistration_v7.md`** — proza PL→EN (269 linii) + wpis i18n w §7. **Precedens §0
+  (decyzja usera):** tłumaczenie prozy = edycja językowa, NIE rewizja metody; tylko v7, chain
+  v1–v6 zostaje PL jako zamrożona historia.
+- ✓ Walidacja: ruff czyste; **pytest 310 passed / 2 skip**; CI ubuntu zielone.
+
+**README — commit `d077f0a` (korekta liczb testów, push OK, CI zielone run 30042430052).**
+- ✓ Nieaktualne liczby (dług pre-existing z B2/B3, wykryty na prośbę usera): `296 collected /
+  294 pass / 279 tests` → **312 collected / 310 pass / 2 skip** w obu `README.md` + `README.pl.md`.
+
+**Bramka UK Lotto (research, zero kodu) → GO, parked (decyzja usera).**
+- ✓ **Blocker „licencja mirrorów TBD" ROZPUSZCZONY.** CP 1-49→1-59 (2015-10-10) potwierdzony;
+  licencja nie-blocker (fakty + oficjalne national-lottery.co.uk + precedens EJ); gotcha 403
+  anti-bot → Tier-1 ręczny CSV. Pełny werdykt: MEMORY.md [2026-07-23].
 
 ## Co zostało (backlog sesji)
 
-- ⟳ **i18n Batch 6** — patrz NASTĘPNY KROK (scripts/ EN, flip CLAUDE.md, prereg_v7, demo).
-- ⟳ **9 błędów ruff w `scripts/make_readme_assets.py`** — poza zakresem CI, nieblokujące.
-- ⟳ **Stretch A** — bonus streams (k=1), UK Lotto (licencja mirrorów TBD), rodzynki rygoru.
+- ⟳ **Stretch A — UK Lotto: UNBLOCKED, READY** (patrz NASTĘPNY KROK; start = user pobiera seed CSV).
+- ⟳ **W9 executive summary PDF** (roadmap; ryzyko redundancji z report.html).
+- ⟳ Analiza pary (10,25) z R2 (single-pillar cooc, „requires power context", NIE finding).
 
 ## Aktywne pliki
 
-- ZMIENIONE (zacommitowane): `src/driftscope/reporting/report.qmd` (nowa §8 + renumber),
-  `docs/{index,report}.html` (re-render), `README.md`/`README.pl.md` (wynik RANDAO).
-- DANE (zacommitowane, teraz TRACKED+complete): `data/seed/randao_missed_slots.csv` +
-  `randao_scan_meta.json` (96000 slotów, `complete=True`).
-- ARTEFAKT (gitignorowany, odtwarzalny): `artifacts/randao_audit.csv`.
+- Zacommitowane `bb5c0fb`: `CLAUDE.md`, `demo/app.py`, 10× `scripts/*.py`,
+  `src/driftscope/methodology/preregistration_v7.md`.
+- Zacommitowane `d077f0a`: `README.md`, `README.pl.md`.
+- Working tree czysty (poza plikami stanu sesji). Wszystko na `origin/master`, CI zielone.
 
 ## Otwarte pytania
 
-- **Fork kierunku (do decyzji usera):** i18n Batch 6 (rekomendowany, niezablokowany) vs stretch A
-  (bonus/UK Lotto — UK Lotto licencja TBD, ryzyko rabbit-hole).
-- UK Lotto: mirror z pełną historią + licencja — nadal TBD (odziedziczone).
+- **Kolejny kierunek (do decyzji usera):** Stretch A (UK Lotto) UNBLOCKED-READY jako domyślny;
+  alternatywy para (10,25) / W9 PDF.
+- **Design neg-control dla UK Lotto (do rozstrzygnięcia przy budowie):** EJ miał wbudowany
+  neg-control (główne 1-50 vs euron); UK Lotto ma jedną pulę główną → jak zbudować negative
+  control? (opcje: bonus ball jako osobny strumień, stacjonarność WEWNĄTRZ reżimu 49 i WEWNĄTRZ
+  59, syntetyczny uniform null). Rozstrzygnąć PRZED implementacją regime-aware audytu.
 
 ## Do MEMORY.md (przeniesiono)
 
-- Projektowy `MEMORY.md` (Architektura): **[2026-07-21]** — B3 SHIPPED. Pełny wpis: skan ukończony
-  (96000/3000 epok/358 pominięć, rate ~40 req/s), audyt clear z rozbiciem primary/secondary/omnibus
-  + konfundent pos_0, moc 1 blok/332 epoki, sekcja 8 raportu + renumber §9, re-render+README,
-  rewizja decyzji o tracking (skan complete należy do `data/seed/`), dyscyplina spec-przed-danymi.
-  HEAD=`a2a83b0`.
-- Pamięć agenta `battle-deployment-a-plus-b`: B3 w toku → SHIPPED (opis + gotcha).
+- Projektowy `MEMORY.md` (Architektura) [2026-07-23]: dwa wpisy — (1) i18n Batch 6 SHIPPED +
+  flip konwencji EN + **precedens §0** (tłumaczenie prozy prereg = edycja językowa, nie rewizja
+  metody; rozszerza precedens mypy 2026-06-05); (2) bramka UK Lotto → GO (CP 2015-10-10, licencja
+  nie-blocker, gotcha 403 anti-bot, zakres implementacji + problem neg-control). HEAD=`d077f0a`.

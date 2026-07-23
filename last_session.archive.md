@@ -1,3 +1,90 @@
+## ═══ Sesja zarchiwizowana [2026-07-23 22:36] ═══
+
+# last_session.md
+
+**Sesja:** 2026-07-23 · checkpoint (trwa)
+**Status:** ⟳ W toku — i18n Batch 6 SHIPPED, push + CI zielone
+**Punkt odniesienia (git):** d077f0a @ master — wypchnięte na origin/master, **CI zielone**
+(run 30042430052, wszystkie kroki ✓, 3m27s). Commity sesji: bb5c0fb (i18n Batch 6) → d077f0a
+(korekta liczb testów README). Poprzedni punkt: a556f68 (session-save 2026-07-21).
+
+---
+
+## ▸ NASTĘPNY KROK (zacznij tutaj)
+
+**i18n Batch 6 DOMKNIĘTY. Bramka UK Lotto ROZSTRZYGNIĘTA → GO (parked).** Opcje na następną sesję:
+
+1. **Stretch A — UK Lotto: UNBLOCKED, READY (blocker rozpuszczony 2026-07-23).** Ground-truth CP
+   = pula **1-49→1-59, 2015-10-10** (mocny, czystszy niż EJ). Licencja nie-blocker (fakty +
+   oficjalne źródło national-lottery.co.uk omija mirrory; precedens EJ). **Akwizycja:** oficjalny
+   serwis 403 anti-bot → Tier-1 **ręcznie pobrany seed CSV** (user pobiera), NIE live scraping.
+   **Zakres:** seed CSV → regime split 2015-10-10 (pool 49→59) → pos/neg control (neg-control do
+   przemyślenia — brak naturalnego euron-vs-main jak w EJ) → ew. sekcja raportu. Kilka godzin =
+   świadomie osobna sesja. Pełny werdykt bramki: MEMORY.md [2026-07-23].
+2. **Rodzynki rygoru** — analiza pary (10,25) z R2 (single-pillar cooc, „requires power context").
+3. **W9 executive summary PDF** (roadmap; ryzyko redundancji z report.html).
+4. `notebooks/` i18n **świadomie poza zakresem** (decyzja utrzymana).
+
+Kontekst: całe wdrożenie A+B SHIPPED; framework (Ścieżka A) domknięty. Stretch A jest teraz
+najlepiej rozpoznanym, niezablokowanym kierunkiem (wymaga tylko pobrania CSV przez usera na start).
+
+---
+
+## Co zrobiono w tej sesji [2026-07-23]
+
+**i18n Batch 6 — commit `bb5c0fb` (13 plików, +403/−394), push OK, CI zielone (run 30039207821).**
+- ✓ **CLAUDE.md flip** — „Język komentarzy w kodzie: polski" → **angielski** (+ nota: migracja
+  legacy w toku, `notebooks/` świadomie poza zakresem).
+- ✓ **`make_readme_assets.py`** — PL→EN **+ naprawa 9 błędów ruff** (F401 unused `FancyArrowPatch`,
+  F841 unused `grey`, 7× E501 — refaktor fallback dict + zawinięcia).
+- ✓ **9 skryptów PL→EN** (docstringi/komentarze/stringi CLI): `archive`, `check_api_key`,
+  `smoke_test`, `convert_mm_seed`, `manual_import`, `prng_benchmark`, `multimulti_audit`,
+  `calibrate_bocpd_threshold`, `calibrate_mmd_pool`. Pozostałe (`convert_ny_lottery`,
+  `lottery_audit`, `randao_audit`, `fetch_beacons`, `fetch_beacon_chain`) już były EN (grep ✓).
+- ✓ **`demo/app.py`** — PL→EN (docstringi buildery + cała warstwa UI Streamlit: title/caption/
+  taby/subheadery/Turing test). `test_demo_smoke` 4/4 (asertuje klucze strukturalne, nie prozę).
+- ✓ **`preregistration_v7.md`** — proza PL→EN (269 linii, terminy statystyczne 1:1) + wpis i18n
+  w §7. **Decyzja usera (§0):** tylko v7, in-place, nota w logu; BEZ rewizji metody (zero zmiany
+  progu/nulla/statystyki/DoD → edycja językowa, precedens z sesji mypy 2026-06-05). Chain v1–v6
+  zostaje PL jako zamrożona historia (git status potwierdził: tylko v7 zmieniony).
+- ✓ **Walidacja:** `ruff check src tests scripts demo` czyste; **pytest 310 passed / 2 skip**
+  (suite urósł od B2/B3); CI ubuntu zielone (wszystkie kroki ✓, 3m1s).
+
+**Bramka UK Lotto (research, zero kodu) → GO, parked (decyzja usera).**
+- ✓ **Blocker „licencja mirrorów TBD" ROZPUSZCZONY.** Ground-truth CP = pula 1-49→1-59 (2015-10-10,
+  potwierdzony); licencja nie-blocker (fakty + oficjalne national-lottery.co.uk omija mirrory +
+  precedens EJ). Gotcha: oficjalny serwis 403 anti-bot → Tier-1 ręczny CSV. Pełny werdykt:
+  MEMORY.md [2026-07-23]. Implementacja świadomie odłożona na osobną sesję.
+
+## Co zostało (backlog)
+
+- ⟳ **Stretch A — UK Lotto: UNBLOCKED, READY** (patrz NASTĘPNY KROK; start = user pobiera seed CSV).
+- ⟳ **W9 executive summary PDF** (roadmap; ryzyko redundancji z report.html).
+- ⟳ Analiza pary (10,25) z R2 (single-pillar cooc, „requires power context", NIE finding).
+
+## Aktywne pliki
+
+- ZMIENIONE (zacommitowane `bb5c0fb`): `CLAUDE.md`, `demo/app.py`, 10× `scripts/*.py`,
+  `src/driftscope/methodology/preregistration_v7.md`.
+- ZMIENIONE (zacommitowane `d077f0a`, pushed, CI zielone): `README.md` + `README.pl.md` — korekta
+  nieaktualnych liczb testów (296 collected/294 pass/279 → **312 collected/310 pass/2 skip**). Dług
+  pre-existing z B2/B3 (NIE z i18n); wykryty przy weryfikacji README na prośbę usera.
+
+## Otwarte pytania
+
+- **Kolejny kierunek (do decyzji usera):** Stretch A (UK Lotto) jest teraz UNBLOCKED-READY —
+  najlepiej rozpoznany kierunek; start wymaga tylko pobrania seed CSV przez usera. Alternatywy:
+  para (10,25) / W9 PDF.
+- **Design neg-control dla UK Lotto (do rozstrzygnięcia przy budowie):** EJ miał wbudowany
+  neg-control (główne 1-50 vs euron); UK Lotto ma jedną pulę główną → jak zbudować negative
+  control? (opcje: bonus ball, per-reżim stacjonarność wewnątrz 49 i wewnątrz 59, syntetyczny null).
+
+## Do MEMORY.md (przeniesiono)
+
+- Projektowy `MEMORY.md` (Architektura): **[2026-07-23]** — i18n Batch 6 SHIPPED + decyzja
+  konwencji EN + precedens §0 (tłumaczenie prozy prereg = edycja językowa, nie rewizja metody).
+  HEAD=`bb5c0fb`.
+
 ## ═══ Sesja zarchiwizowana [2026-07-21 22:26] ═══
 
 # last_session.md
@@ -296,61 +383,3 @@ kontynuacja taska — dlatego brak pojedynczego „pliku do edycji".
 
 - Projektowy `MEMORY.md` (Architektura): **[2026-06-27]** — dwujęzyczny README EN/PL (układ Neural-Mosaic), social preview wgrany, sekcje Configuration/Usage/Requirements z kodu, weryfikacja LZ76/bz2, parytet 20 sekcji, kotwice PL. HEAD=`7a4010d`, pushed.
 - Agent-memory: bez nowego wpisu (realizacja w pełni zapisana w repo + MEMORY.md projektu).
-
-## ═══ Sesja zarchiwizowana [2026-06-27 21:50] ═══
-
-# last_session.md
-
-**Sesja:** 2026-06-26 · ~20:40-21:35
-**Status:** ✓ Zakończona poprawnie
-**Punkt odniesienia (git):** a345fb4 @ master (zsynchronizowany z origin/master, CI green)
-
----
-
-## ▸ NASTĘPNY KROK (zacznij tutaj)
-
-**Wgrać social preview ręcznie:** GitHub repo → **Settings → (General) → Social preview →
-Edit → Upload an image** → wybrać `docs/assets/social_preview.png` (1280×640, już w repo).
-
-Kontekst: to JEDYNY pozostały rekomendowany krok portfolio-readiness, którego nie da się
-zautomatyzować — GitHub nie ma API (REST/GraphQL) do social preview, to funkcja wyłącznie
-web-UI. Mój token `gh` (scope `repo`) zrobił już wszystko inne (About, Release v0.1.0, push).
-Po wgraniu: framework + portfolio w pełni domknięte.
-
-Alternatywnie (opcjonalne, do decyzji): (a) ostrożny wariant **K4** — podciągnąć skondensowane
-„What I built" wyżej w README (bez re-orderingu lejka); (b) przygotować `deploy-pages.yml`
-do ręcznego pusha (hygiena Node20 — wymaga scope `workflow`, którego token nie ma; niski ROI).
-
----
-
-## Co zrobiono w tej sesji
-
-- ✓ **Adwersarialny audyt README** — 3 agenci (fact-check / sceptyk statystyczny / krytyk klarowności). Werdykt: liczby solidne (cała tabela PRNG zgodna z `report.html`), ale overclaim przez przemilczenie + redundancja.
-- ✓ **Korekty NAPRAWCZE N1–N7** (`a80e1ce`): ujawniony top-1 CP 2015-01-23 (aftershock); „independent"→„complementary"; Benjamini-Yekutieli „arbitrary dependence"; caveat mocy R1 n=133; licznik 278; crypto-bullet jako negative control; „bit-identical" zawężone do pinned env.
-- ✓ **Polish KLAROWNOŚCI K1/K3/K7/K8** (`df9c05d`): skrócony hard-gate, 6→3 domeny, quickstart, roadmap. K2/K4/K5/K6 świadomie pominięte.
-- ✓ **Portfolio-readiness batch:** About przez `gh` (opis+homepage+12 topiców, było puste); `pyproject` metadane (`05570e9`: urls/keywords/classifiers — naprawiona gotcha TOML zagnieżdżenia `dependencies`); **Release v0.1.0** (tag+notes); social card 1280×640 (`c6420bf`); CONTRIBUTING + issue/PR templates (`a345fb4`).
-- ✓ Wszystkie 5 commitów wypchnięte na origin/master; CI zielone (run `28261897434`).
-
-## Co zostało (backlog sesji)
-
-- ⟳ **Social preview upload** (ręczne, user — patrz NASTĘPNY KROK). Jedyny pozostały rekomendowany item.
-- ⟳ K4 ostrożny re-weight README (opcjonalne, redakcyjne).
-- ⟳ Hygiena Pages-deploy Node20 (wymaga scope `workflow`; niski ROI, świadomie odłożone).
-- ⟳ Profile README + pinned repo na koncie GitHub (poza tym repo).
-- ⟳ Strategiczne: framework „done" (Ścieżka A) vs pivot predykcyjny (`project_pivot_prediction.md`).
-
-## Aktywne pliki
-
-- ZMIENIONE (committed, pushed): `README.md` (N1–N7 + K1/K3/K7/K8), `pyproject.toml` (urls/keywords/classifiers), `docs/assets/social_preview.png` (NOWY), `CONTRIBUTING.md` (NOWY), `.github/PULL_REQUEST_TEMPLATE.md` + `.github/ISSUE_TEMPLATE/{bug_report,feature_request,config}.yml` (NOWE)
-- ACTIVE prereg = **v7** (bez zmian — reporting/docs/meta-only)
-
-## Otwarte pytania
-
-- Brak blokujących. Social preview czeka na ręczne wgranie (limit GitHuba, nie uprawnień).
-- Strategiczne: czy robić ostrożny K4, czy framework „done".
-
-## Do MEMORY.md (przeniesiono)
-
-- Projektowy `MEMORY.md` (Architektura): **[2026-06-26]** — adwersarialny audyt README, korekty N1–N7, polish K1/K3/K7/K8, batch portfolio-readiness (About/Release/pyproject/social/community-health), oraz finding dostępu `gh` (scope `repo` tak / `workflow` nie; social preview = BRAK API GitHub). HEAD=`a345fb4`, pushed.
-- Agent-memory: bez nowego wpisu (realizacja w pełni zapisana w repo + MEMORY.md projektu).
-

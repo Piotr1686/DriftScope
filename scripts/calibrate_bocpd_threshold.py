@@ -1,13 +1,14 @@
-"""Kalibracja progu reject_h0 dla BOCPD (h1_classical.run_bocpd).
+"""Calibration of the reject_h0 threshold for BOCPD (h1_classical.run_bocpd).
 
-Magiczny prog `max_cp_prob > 0.3` zastapiony empirycznym 95. percentylem rozkladu
-max(cp_prob[warmup:]) pod nullem uniform-iid (FPR ~= 0.05). Rozklad nullowy zalezy
-od (N, K), wiec kalibrujemy osobno dla pol 'euron' (N=12, K=2) i 'main' (N=50, K=5).
+The magic threshold `max_cp_prob > 0.3` is replaced by the empirical 95th percentile of the
+max(cp_prob[warmup:]) distribution under the uniform-iid null (FPR ~= 0.05). The null
+distribution depends on (N, K), so we calibrate separately for the 'euron' (N=12, K=2) and
+'main' (N=50, K=5) fields.
 
-Warm-up = N // K (preregistration_v6 §0): pomija transient burn-in, w ktorym cp_prob
-sztucznie rosnie zanim pula symboli zostanie "zobaczona" (argmax pod nullem ~= 4-7).
+Warm-up = N // K (preregistration_v6 §0): skips the transient burn-in where cp_prob rises
+artificially before the symbol pool has been "seen" (argmax under the null ~= 4-7).
 
-Uruchomienie:
+Usage:
     python scripts/calibrate_bocpd_threshold.py
 """
 from __future__ import annotations
@@ -43,7 +44,7 @@ def _report(label: str, n_draws: int, max_probs: np.ndarray) -> None:
 
 
 def calibrate(field: str, n_draws: int) -> None:
-    """Kalibracja EuroJackpot (pole euron N=12/K=2 lub main N=50/K=5)."""
+    """Calibrate EuroJackpot (field euron N=12/K=2 or main N=50/K=5)."""
     seeds = make_worker_seeds(BASE_SEED, N_TRIALS)
     max_probs = np.empty(N_TRIALS)
     for i, seq in enumerate(seeds):
@@ -55,11 +56,12 @@ def calibrate(field: str, n_draws: int) -> None:
 
 
 def calibrate_generic(pool_size: int, k: int, n_draws: int) -> None:
-    """Kalibracja progu BOCPD dla generycznej puli main (np. Multi Multi N=80, K=20).
+    """Calibrate the BOCPD threshold for a generic main pool (e.g. Multi Multi N=80, K=20).
 
-    Placeholder progu (1.0) wstrzykiwany przed wywolaniem, bo `run_bocpd(field='main')`
-    odpytuje slownik progow — `res.statistic` (max cp_prob) jest jednak NIEZALEZNY od progu.
-    p95 wpisac recznie do `_MAIN_REJECT_THRESHOLD_BY_POOL[pool_size]` w h1_classical.py.
+    A placeholder threshold (1.0) is injected before the call, because `run_bocpd(field='main')`
+    queries the threshold dict — but `res.statistic` (max cp_prob) is INDEPENDENT of the
+    threshold. Enter p95 manually into `_MAIN_REJECT_THRESHOLD_BY_POOL[pool_size]` in
+    h1_classical.py.
     """
     _MAIN_REJECT_THRESHOLD_BY_POOL.setdefault(pool_size, 1.0)
     seeds = make_worker_seeds(BASE_SEED, N_TRIALS)
@@ -76,6 +78,6 @@ if __name__ == "__main__":
     for n_draws in (436, 958):
         for field in ("euron", "main"):
             calibrate(field, n_draws)
-    # Multi Multi (20-z-80) — druga gra, negative control. Prog NIEzalezny od dlugosci serii.
+    # Multi Multi (20-of-80) — second game, negative control. Threshold length-independent.
     for n_mm in (2000, 5000):
         calibrate_generic(pool_size=80, k=20, n_draws=n_mm)

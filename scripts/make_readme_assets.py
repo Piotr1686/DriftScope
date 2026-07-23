@@ -1,16 +1,16 @@
-"""Generuje marketingowe grafiki README do `docs/assets/` (reprodukowalnie).
+"""Generate README marketing graphics into `docs/assets/` (reproducibly).
 
-Wywołanie:
+Usage:
     python scripts/make_readme_assets.py
 
-Produkuje:
-  * docs/assets/story_bocpd.png      — pozytywna kontrola (euron) z adnotacjami "rule change"
-  * docs/assets/story_control.png    — pozytywna vs negatywna kontrola (side-by-side)
-  * docs/assets/story_prng.png       — heatmapa PRNG (CLEAR/FLAG) — pokaz czułości
+Produces:
+  * docs/assets/story_bocpd.png      — positive control (euron) annotated with "rule change"
+  * docs/assets/story_control.png    — positive vs negative control (side-by-side)
+  * docs/assets/story_prng.png       — PRNG heatmap (CLEAR/FLAG) — sensitivity showcase
 
-Podpisy w pełni angielskie (README front-door jest publiczny/EN). Figury BOCPD
-korzystają z `reporting.plots_static`; heatmapa PRNG czyta `artifacts/prng_benchmark.csv`
-z fallbackiem na wartości wkompilowane (parytet z README).
+Captions are fully English (the README front-door is public/EN). BOCPD figures use
+`reporting.plots_static`; the PRNG heatmap reads `artifacts/prng_benchmark.csv` with a
+fallback to hard-coded values (parity with the README).
 """
 from __future__ import annotations
 
@@ -22,7 +22,6 @@ import matplotlib
 matplotlib.use("Agg")
 
 import matplotlib.pyplot as plt  # noqa: E402
-from matplotlib.patches import FancyArrowPatch  # noqa: E402
 
 from driftscope.ingestion.lotto_scraper import load_seed_csv  # noqa: E402
 from driftscope.methodology.h1_classical import compute_bocpd_curve  # noqa: E402
@@ -38,7 +37,7 @@ ASSETS.mkdir(parents=True, exist_ok=True)
 
 
 def _story_bocpd(draws: list) -> Path:
-    """Adnotowana krzywa BOCPD (euron) — hero fabuły: piki = zmiany zasad 2014/2022."""
+    """Annotated BOCPD curve (euron) — story hero: peaks = 2014/2022 rule changes."""
     cp_probs, _rl, warmup, threshold = compute_bocpd_curve(draws, "euron")
     date_to_idx = {str(d.draw_date): i for i, d in enumerate(draws)}
     idx_2014 = date_to_idx.get("2014-11-28")
@@ -52,7 +51,7 @@ def _story_bocpd(draws: list) -> Path:
     ax.axhline(threshold, color=_COLOR_CP, ls="--", lw=1.0, alpha=0.7,
                label=f"alarm threshold = {threshold:.2f}")
 
-    # Adnotacje "rule change" ze strzałkami do pików.
+    # "Rule change" annotations with arrows pointing at the peaks.
     annotations = [
         (idx_2014, "1st draw with a '9'\nRULE CHANGE 2014", -60),
         (idx_2022, "1st draw with an '11'\nRULE CHANGE 2022", -60),
@@ -90,25 +89,28 @@ def _load_prng_rows() -> list[dict]:
     if csv_path.exists():
         with csv_path.open(newline="") as fh:
             return list(csv.DictReader(fh))
-    # Fallback wkompilowany (parytet z README).
+    # Hard-coded fallback (parity with the README).
+    clear = dict(familyB_reject="0/50", mmd_reject="false", cooc_reject="false", verdict="clear")
     return [
-        dict(source="MT19937", **{"class": "good"}, familyB_reject="0/50", mmd_reject="false", cooc_reject="false", verdict="clear"),
-        dict(source="Xorshift64", **{"class": "good"}, familyB_reject="0/50", mmd_reject="false", cooc_reject="false", verdict="clear"),
-        dict(source="ChaCha20", **{"class": "crypto"}, familyB_reject="0/50", mmd_reject="false", cooc_reject="false", verdict="clear"),
-        dict(source="AES-CTR-DRBG", **{"class": "crypto"}, familyB_reject="0/50", mmd_reject="false", cooc_reject="false", verdict="clear"),
-        dict(source="MT19937+bias(7)", **{"class": "DEFECT"}, familyB_reject="1/50", mmd_reject="true", cooc_reject="false", verdict="FLAG"),
-        dict(source="MT19937+period(50)", **{"class": "DEFECT"}, familyB_reject="27/50", mmd_reject="true", cooc_reject="true", verdict="FLAG"),
-        dict(source="EuroJackpot", **{"class": "real"}, familyB_reject="0/50", mmd_reject="false", cooc_reject="false", verdict="clear"),
+        dict(source="MT19937", **{"class": "good"}, **clear),
+        dict(source="Xorshift64", **{"class": "good"}, **clear),
+        dict(source="ChaCha20", **{"class": "crypto"}, **clear),
+        dict(source="AES-CTR-DRBG", **{"class": "crypto"}, **clear),
+        dict(source="MT19937+bias(7)", **{"class": "DEFECT"}, familyB_reject="1/50",
+             mmd_reject="true", cooc_reject="false", verdict="FLAG"),
+        dict(source="MT19937+period(50)", **{"class": "DEFECT"}, familyB_reject="27/50",
+             mmd_reject="true", cooc_reject="true", verdict="FLAG"),
+        dict(source="EuroJackpot", **{"class": "real"}, **clear),
     ]
 
 
 def _story_prng() -> Path:
-    """Heatmapa PRNG: CLEAR (zielone) vs FLAG (czerwone) na 3 detektorach + werdykt."""
+    """PRNG heatmap: CLEAR (green) vs FLAG (red) across 3 detectors + verdict."""
     rows = _load_prng_rows()
     detectors = ["Family B\n(per-number)", "MMD\n(distribution)", "Co-occurrence\n(pairs)"]
     keys = ["familyB_reject", "mmd_reject", "cooc_reject"]
 
-    green, red, grey = "#16A34A", "#DC2626", "#E5E7EB"
+    green, red = "#16A34A", "#DC2626"
 
     def fired(row: dict, key: str) -> bool:
         v = row[key]
@@ -131,7 +133,7 @@ def _story_prng() -> Path:
                     ha="center", va="center", fontsize=8,
                     color="white", fontweight="bold")
 
-    # Etykiety wierszy (źródło + klasa) po lewej.
+    # Row labels (source + class) on the left.
     cls_color = {"good": "#334155", "crypto": "#334155", "real": "#334155", "DEFECT": "#B91C1C"}
     for r, row in enumerate(rows):
         cls = row["class"]
@@ -140,7 +142,7 @@ def _story_prng() -> Path:
                 fontweight="bold" if cls == "DEFECT" else "normal",
                 color=cls_color.get(cls, "#334155"))
         ax.text(-0.12, r + 0.5, "", ha="right", va="center")
-        # Werdykt po prawej.
+        # Verdict on the right.
         verdict = row["verdict"]
         vcol = red if verdict.upper() == "FLAG" else green
         ax.text(len(detectors) + 0.12, r + 0.5, verdict.upper(),

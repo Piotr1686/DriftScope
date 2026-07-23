@@ -1,15 +1,15 @@
-"""Kalibracja FPR detektora MMD dla generycznej puli (Multi Multi N=80, K=20).
+"""Calibration of the MMD detector FPR for a generic pool (Multi Multi N=80, K=20).
 
-Krok 8 planu MM. Runner MM (`reporting/multimulti_audit`) dal FLAG przez graniczny MMD
-(p=0.03) — to byl werdykt pod STARA, naiwna polityka OR (dowolny filar zapala FLAG);
-pod Disagreement Protocol samotny filar 1/3 = clear, NIE finding. 12-seedowy probny FPR
-sugerowal lekkie zawyzenie (2/12), wiec kalibracja i tak zasadna. `mmd_uniform_detector`
-(window=25) byl walidowany dla EJ (pool=50, k=5) — ten skrypt sprawdza FPR na uczciwym
-nullu uniform k-z-pool dla pool=80 i przemiata `window`, by znalezc konfiguracje FPR~=0.05.
+MM plan step 8. The MM runner (`reporting/multimulti_audit`) gave a FLAG via a borderline MMD
+(p=0.03) — that verdict came under the OLD, naive OR policy (any pillar fires a FLAG); under
+the Disagreement Protocol a lone pillar 1/3 = clear, NOT a finding. A 12-seed pilot FPR
+suggested a slight inflation (2/12), so calibration is warranted anyway. `mmd_uniform_detector`
+(window=25) was validated for EJ (pool=50, k=5) — this script checks the FPR on an honest
+uniform k-of-pool null for pool=80 and sweeps `window` to find a FPR~=0.05 configuration.
 
-Determinizm: make_worker_seeds(BASE_SEED, N_TRIALS) — niezalezne strumienie (DoD-6).
+Determinism: make_worker_seeds(BASE_SEED, N_TRIALS) — independent streams (DoD-6).
 
-Uruchomienie:
+Usage:
     python scripts/calibrate_mmd_pool.py
 """
 from __future__ import annotations
@@ -31,7 +31,7 @@ WINDOWS = (25, 40, 50)
 
 
 def calibrate_mmd(window: int) -> None:
-    """FPR MMD na nullu uniform k-z-pool dla zadanego okna (non-overlap)."""
+    """MMD FPR on the uniform k-of-pool null for the given window (non-overlap)."""
     detector = mmd_uniform_detector(window=window, n_perm=N_PERM, alpha=ALPHA)
     seeds = make_worker_seeds(BASE_SEED, N_TRIALS)
     pvals = np.empty(N_TRIALS)
@@ -44,7 +44,7 @@ def calibrate_mmd(window: int) -> None:
         rejects += int(res.reject_h0)
     n_windows = N_DRAWS // window
     fpr = rejects / N_TRIALS
-    # 95% Wilson-ish CI proxy: blad MC ~= sqrt(p(1-p)/n)
+    # 95% Wilson-ish CI proxy: MC error ~= sqrt(p(1-p)/n)
     mc_err = float(np.sqrt(fpr * (1 - fpr) / N_TRIALS))
     print(
         f"--- MMD window={window} (n_windows={n_windows}, pool={POOL_SIZE}, k={K}, "

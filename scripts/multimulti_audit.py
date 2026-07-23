@@ -1,17 +1,17 @@
 """Multi Multi audit — CLI (second real-world case study, reusability showcase).
 
-Cienki wrapper nad `driftscope.reporting.multimulti_audit.run_multimulti_audit`: aplikuje
-DOKLADNIE ten sam battery negative-control co audyt EuroJackpot na drugiej, niezaleznej grze
-(Multi Multi 20-z-80) i drukuje jednowierszowa macierz detekcji:
+Thin wrapper over `driftscope.reporting.multimulti_audit.run_multimulti_audit`: applies
+EXACTLY the same negative-control battery as the EuroJackpot audit to a second, independent
+game (Multi Multi 20-of-80) and prints a single-row detection matrix:
 
     BOCPD(main) + Family B (per-number exact binomial) + MMD + co-occurrence + IT
 
-Werdykt = Disagreement Protocol po 3 filarach rdzeniowych (BOCPD/MMD/cooc): FLAG dopiero
-przy konwergencji >=2/3; samotny filar (1/3) = clear (oczekiwany false-positive przy
-alpha=0.05, NIE finding). IT = suplement, Family B = osobna bramka FDR (w macierzy, poza
-werdyktem). Oczekiwany wynik: CLEAR (honest null — framework nie halucynuje sygnalu).
+Verdict = Disagreement Protocol over the 3 core pillars (BOCPD/MMD/cooc): FLAG only on
+convergence >=2/3; a lone pillar (1/3) = clear (expected false-positive at alpha=0.05, NOT
+a finding). IT = supplement, Family B = separate FDR gate (in the matrix, outside the
+verdict). Expected result: CLEAR (honest null — the framework does not hallucinate a signal).
 
-Uruchomienie:
+Usage:
     python scripts/multimulti_audit.py
     python scripts/multimulti_audit.py --window 2000 --out artifacts/multimulti_audit.csv
 """
@@ -55,11 +55,11 @@ def main() -> None:
         description="DriftScope Multi Multi audit (second real-world case study)"
     )
     parser.add_argument(
-        "--window", type=int, default=2000, help="ostatnie losowania MM (BOCPD O(T^2))"
+        "--window", type=int, default=2000, help="last MM draws (BOCPD O(T^2))"
     )
-    parser.add_argument("--n-perm", type=int, default=499, help="permutacje MMD/cooc/IT")
+    parser.add_argument("--n-perm", type=int, default=499, help="permutations MMD/cooc/IT")
     parser.add_argument("--alpha", type=float, default=0.05)
-    parser.add_argument("--out", type=Path, default=None, help="opcjonalny zapis CSV")
+    parser.add_argument("--out", type=Path, default=None, help="optional CSV output")
     args = parser.parse_args()
 
     row = run_multimulti_audit(window=args.window, n_perm=args.n_perm, alpha=args.alpha)
@@ -68,7 +68,7 @@ def main() -> None:
 
     table = _to_table(row)
     print("\n=== DriftScope Multi Multi audit - negative control matrix ===")
-    # ASCII tables: konsola Win (cp1250) nie zniesie domyslnych ramek unicode polars.
+    # ASCII tables: the Win console (cp1250) can't render polars' default unicode borders.
     with pl.Config(tbl_rows=-1, tbl_cols=-1, fmt_str_lengths=40, set_ascii_tables=True):
         print(table)
 
@@ -78,18 +78,18 @@ def main() -> None:
         f"({row.disagreement.label})"
     )
     print(
-        f"Supplements (poza werdyktem): Family B {b.family_b_reject}/{b.family_b_size} | "
+        f"Supplements (outside the verdict): Family B {b.family_b_reject}/{b.family_b_size} | "
         f"IT {'reject' if b.it_reject else 'clear'}"
     )
     print(
         f"Verdict: {row.verdict.upper()} "
-        f"(FLAG wymaga konwergencji >=2/3 filarow rdzeniowych - Disagreement Protocol)"
+        f"(FLAG requires convergence >=2/3 core pillars - Disagreement Protocol)"
     )
 
     if args.out is not None:
         args.out.parent.mkdir(parents=True, exist_ok=True)
         table.write_csv(args.out)
-        print(f"\nZapisano: {args.out}")
+        print(f"\nSaved: {args.out}")
 
 
 if __name__ == "__main__":

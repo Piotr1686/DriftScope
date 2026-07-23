@@ -1,18 +1,18 @@
-"""Cryptographic PRNG benchmark side-by-side — CLI (wow Opcja α, reusability showcase).
+"""Cryptographic PRNG benchmark side-by-side — CLI (wow option α, reusability showcase).
 
-Cienki wrapper nad `driftscope.reporting.prng_benchmark.run_benchmark`: aplikuje ten sam
-battery detektorow co audyt EuroJackpot na strumienie z GROUND-TRUTH labelem i drukuje
-macierz "ktory test wykrywa jaki defekt per RNG":
+Thin wrapper over `driftscope.reporting.prng_benchmark.run_benchmark`: applies the same
+detector battery as the EuroJackpot audit to streams with a GROUND-TRUTH label and prints
+a "which test detects which defect per RNG" matrix:
 
-    MT19937      (good, non-crypto)     -> oczekiwany CLEAR
-    Xorshift64   (good, non-crypto)     -> oczekiwany CLEAR
-    ChaCha20     (crypto)               -> oczekiwany CLEAR  (specificity)
-    AES-CTR-DRBG (crypto)               -> oczekiwany CLEAR  (specificity)
-    MT19937+bias (defekt marginalny)    -> oczekiwany FLAG   (sensitivity)
-    MT19937+period (period-truncation)  -> oczekiwany FLAG   (sensitivity)
-    EuroJackpot  (real, main 1-50)      -> oczekiwany CLEAR  (honest null audytu)
+    MT19937      (good, non-crypto)     -> expected CLEAR
+    Xorshift64   (good, non-crypto)     -> expected CLEAR
+    ChaCha20     (crypto)               -> expected CLEAR  (specificity)
+    AES-CTR-DRBG (crypto)               -> expected CLEAR  (specificity)
+    MT19937+bias (marginal defect)      -> expected FLAG   (sensitivity)
+    MT19937+period (period-truncation)  -> expected FLAG   (sensitivity)
+    EuroJackpot  (real, main 1-50)      -> expected CLEAR  (audit's honest null)
 
-Uruchomienie:
+Usage:
     python scripts/prng_benchmark.py
     python scripts/prng_benchmark.py --n-draws 1500 --n-perm 499 --out artifacts/prng_benchmark.csv
 """
@@ -50,18 +50,18 @@ def _to_table(rows: list[BenchmarkRow]) -> pl.DataFrame:
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="DriftScope PRNG benchmark side-by-side")
-    parser.add_argument("--n-draws", type=int, default=1500, help="losowan per syntetyczny RNG")
-    parser.add_argument("--n-perm", type=int, default=499, help="permutacje MMD/co-occurrence/IT")
+    parser.add_argument("--n-draws", type=int, default=1500, help="draws per synthetic RNG")
+    parser.add_argument("--n-perm", type=int, default=499, help="permutations MMD/co-occurrence/IT")
     parser.add_argument("--alpha", type=float, default=0.05)
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument(
-        "--favor-number", type=int, default=7, help="numer defektu (nadreprezentowany)"
+        "--favor-number", type=int, default=7, help="defect number (over-represented)"
     )
-    parser.add_argument("--favor-prob", type=float, default=0.15, help="prawd. defektu")
+    parser.add_argument("--favor-prob", type=float, default=0.15, help="defect probability")
     parser.add_argument(
-        "--period", type=int, default=50, help="dlugosc cyklu defektu period-truncation"
+        "--period", type=int, default=50, help="period-truncation defect cycle length"
     )
-    parser.add_argument("--out", type=Path, default=None, help="opcjonalny zapis CSV")
+    parser.add_argument("--out", type=Path, default=None, help="optional CSV output")
     args = parser.parse_args()
 
     rows = run_benchmark(
@@ -77,21 +77,21 @@ def main() -> None:
 
     table = _to_table(rows)
     print("\n=== DriftScope PRNG benchmark - defect detection matrix ===")
-    # ASCII tables: konsola Win (cp1250) nie zniesie domyslnych ramek unicode polars.
+    # ASCII tables: the Win console (cp1250) can't render polars' default unicode borders.
     with pl.Config(tbl_rows=-1, tbl_cols=-1, fmt_str_lengths=40, set_ascii_tables=True):
         print(table)
 
     defects_flagged = all(r.flagged for r in rows if r.klass == "DEFECT")
     good_clear = all(not r.flagged for r in rows if r.klass != "DEFECT")
     print(
-        f"\nSensitivity (defekt -> FLAG): {'OK' if defects_flagged else 'MISS'} | "
+        f"\nSensitivity (defect -> FLAG): {'OK' if defects_flagged else 'MISS'} | "
         f"Specificity (good/crypto/beacon/real -> clear): {'OK' if good_clear else 'MISS'}"
     )
 
     if args.out is not None:
         args.out.parent.mkdir(parents=True, exist_ok=True)
         table.write_csv(args.out)
-        print(f"\nZapisano: {args.out}")
+        print(f"\nSaved: {args.out}")
 
 
 if __name__ == "__main__":

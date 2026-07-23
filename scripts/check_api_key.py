@@ -1,13 +1,13 @@
-"""Quick test weryfikujacy klucz API developers.lotto.pl.
+"""Quick test verifying the developers.lotto.pl API key.
 
-Uruchomienie: python scripts/check_api_key.py
-Wymaga: .env z LOTTO_API_KEY
+Usage: python scripts/check_api_key.py
+Requires: .env with LOTTO_API_KEY
 """
 import json
 import os
 import sys
 
-# Laduj .env recznie (bez pydantic-settings, zeby test byl standalone)
+# Load .env manually (without pydantic-settings, so the test stays standalone)
 from pathlib import Path
 
 
@@ -36,8 +36,8 @@ def check(label: str, url: str, params: dict | None = None) -> dict | None:
     import httpx
     headers = {"secret": API_KEY}
     try:
-        # verify=False: obejscie bledu SSL certyfikatow Miniconda na Win11
-        # W produkcji: uzyc pip install pip-system-certs lub certyfikat CA
+        # verify=False: works around the Miniconda SSL certificate error on Win11
+        # In production: use pip install pip-system-certs or a proper CA certificate
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
             r = httpx.get(url, headers=headers, params=params, timeout=15, verify=False)
@@ -47,40 +47,40 @@ def check(label: str, url: str, params: dict | None = None) -> dict | None:
         print(f"  Status: {r.status_code}")
         if r.status_code == 200:
             data = r.json()
-            # Wypisz pierwsze 2 elementy jesli lista, albo top-level klucze
+            # Print the first 2 items if a list, or the top-level keys
             if isinstance(data, list):
-                print(f"  Typ:    lista, {len(data)} elementow")
+                print(f"  Type:   list, {len(data)} items")
                 for item in data[:2]:
                     print(f"  Item:   {json.dumps(item, ensure_ascii=False, indent=4)[:500]}")
             elif isinstance(data, dict):
-                print(f"  Klucze: {list(data.keys())}")
+                print(f"  Keys:   {list(data.keys())}")
                 print(f"  JSON:   {json.dumps(data, ensure_ascii=False, indent=4)[:800]}")
             return data
         else:
             print(f"  Body:   {r.text[:300]}")
             return None
     except Exception as exc:
-        print(f"\n[{label}] BLAD: {exc}")
+        print(f"\n[{label}] ERROR: {exc}")
         return None
 
 
 def main() -> int:
     print("=" * 60)
-    print("DriftScope — TEST KLUCZA API (developers.lotto.pl)")
+    print("DriftScope — API KEY TEST (developers.lotto.pl)")
     print("=" * 60)
 
     if not API_KEY or API_KEY == "TUTAJ_WKLEJ_SWOJ_KLUCZ":
-        print("\nBRAK KLUCZA: ustaw LOTTO_API_KEY w .env")
+        print("\nNO KEY: set LOTTO_API_KEY in .env")
         return 1
-    print(f"\nKlucz zaladowany: {API_KEY[:6]}...{API_KEY[-4:]}")
+    print(f"\nKey loaded: {API_KEY[:6]}...{API_KEY[-4:]}")
 
-    # Test 1: ostatnie wyniki wszystkich gier
+    # Test 1: last results for all games
     check(
-        "last-results (wszystkie gry)",
+        "last-results (all games)",
         f"{BASE_URL}/api/open/v1/lotteries/draw-results/last-results",
     )
 
-    # Test 2: ostatnie wyniki per gra (probujemy rozne nazwy EuroJackpot)
+    # Test 2: last results per game (try different EuroJackpot names)
     for game_id in ["eurojackpot", "EuroJackpot", "EUROJACKPOT", "ej"]:
         result = check(
             f"last-results-per-game [{game_id}]",
@@ -88,10 +88,10 @@ def main() -> int:
             params={"gameType": game_id},
         )
         if result:
-            print(f"\n  --> POPRAWNA NAZWA GRY: gameType={game_id!r}")
+            print(f"\n  --> CORRECT GAME NAME: gameType={game_id!r}")
             break
 
-    # Test 3: paginacja index-based (1-based), 5 najstarszych losowan
+    # Test 3: index-based pagination (1-based), 5 oldest draws
     check(
         "by-date-per-game [index=1, size=5, asc]",
         f"{BASE_URL}/api/open/v1/lotteries/draw-results/by-date-per-game",
@@ -99,7 +99,7 @@ def main() -> int:
                 "index": 1, "size": 5},
     )
 
-    # Test 4: zakres dat (kolo change-pointa 2022-03-25)
+    # Test 4: date range (around the 2022-03-25 change-point)
     check(
         "by-date-per-game [2022-03-01..2022-04-01, index=1, size=10]",
         f"{BASE_URL}/api/open/v1/lotteries/draw-results/by-date-per-game",
@@ -108,7 +108,7 @@ def main() -> int:
                 "index": 1, "size": 10},
     )
 
-    # Test 5: pierwsze losowanie (2012-03-23)
+    # Test 5: first draw (2012-03-23)
     check(
         "by-date-per-game [2012-03-01..2012-05-01, index=1, size=5]",
         f"{BASE_URL}/api/open/v1/lotteries/draw-results/by-date-per-game",
@@ -118,7 +118,7 @@ def main() -> int:
     )
 
     print("\n" + "=" * 60)
-    print("Gotowe. Przejrzyj JSON powyzej — szukaj pol:")
+    print("Done. Review the JSON above — look for fields:")
     print("  drawDate / date, mainNumbers / numbers, euroNumbers / additionalNumbers")
     print("=" * 60)
     return 0

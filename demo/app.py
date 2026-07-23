@@ -1,20 +1,21 @@
 """Streamlit demo — DriftScope audit explorer (W9+ stretch, off-stack).
 
-Uruchomienie:  streamlit run demo/app.py   (wymaga: pip install -e ".[demo]")
+Usage:  streamlit run demo/app.py   (requires: pip install -e ".[demo]")
 
-Zero nowej methodology — warstwa prezentacji reuzywajaca baterie audytu
-(`reporting.prng_benchmark`) i suplement informacyjno-teoretyczny
-(`reporting.information_theory`). Trzy zakladki:
+Zero new methodology — a presentation layer reusing the audit battery
+(`reporting.prng_benchmark`) and the information-theoretic supplement
+(`reporting.information_theory`). Three tabs:
 
-  1. Detection matrix — bateria 4 detektorow nad PRNG (good/crypto/DEFECT) + realny
-     EuroJackpot; FLAG vs clear (sensitivity/specificity na zywo).
-  2. Entropy lens — histogram zlozonosci Lempel-Ziv 1976 (order-shuffle null) vs
-     wartosc obserwowana per zrodlo + bz2 ratio. Money shot suplementu IT.
-  3. Turing test — mini-gra: ktora z dwoch sekwencji to realny EuroJackpot, a ktora
-     uniform? (wow opcja #5, intuicja niesciliwosci losowego ciagu).
+  1. Detection matrix — battery of 4 detectors over PRNGs (good/crypto/DEFECT) + real
+     EuroJackpot; FLAG vs clear (sensitivity/specificity live).
+  2. Entropy lens — Lempel-Ziv 1976 complexity histogram (order-shuffle null) vs the
+     observed value per source + bz2 ratio. The IT supplement's money shot.
+  3. Turing test — mini-game: which of two sequences is the real EuroJackpot, and which
+     is uniform? (wow option #5, the intuition of a random string's incompressibility).
 
-Funkcje budujace dane/figury sa CZYSTE (testowalne bez runtime Streamlit); cala warstwa
-`st.*` zyje w `render()` pod `__main__`, wiec import modulu nie odpala UI.
+The data/figure builder functions are PURE (testable without the Streamlit runtime); the
+whole `st.*` layer lives in `render()` under `__main__`, so importing the module does not
+launch the UI.
 """
 from __future__ import annotations
 
@@ -38,19 +39,19 @@ _ROOT = Path(driftscope.__file__).resolve().parents[2]
 
 
 # ---------------------------------------------------------------------------
-# Czyste budowniczowie danych / figur (testowalne bez Streamlit)
+# Pure data / figure builders (testable without Streamlit)
 # ---------------------------------------------------------------------------
 
 def detection_rows(
     n_draws: int, n_perm: int, seed: int, *, with_real: bool = True
 ) -> list[BenchmarkRow]:
-    """Wiersze macierzy detekcji (bateria nad PRNG + opcjonalnie realny EuroJackpot)."""
+    """Detection matrix rows (battery over PRNGs + optionally the real EuroJackpot)."""
     seed_csv = (_ROOT / settings.data_seed_path) if with_real else Path("___none___")
     return run_benchmark(n_draws=n_draws, n_perm=n_perm, seed=seed, seed_csv=seed_csv)
 
 
 def detection_table(rows: list[BenchmarkRow]) -> list[dict[str, object]]:
-    """Lista wierszy do `st.dataframe` — macierz detekcji z werdyktem FLAG/clear."""
+    """List of rows for `st.dataframe` — detection matrix with the FLAG/clear verdict."""
     return [
         {
             "Source": r.source,
@@ -69,10 +70,10 @@ def detection_table(rows: list[BenchmarkRow]) -> list[dict[str, object]]:
 def entropy_lens_figure(
     draws: list[DrawRecord], n_perm: int, seed: int, *, title: str = ""
 ) -> go.Figure:
-    """Histogram zlozonosci LZ76 pod order-shuffle nullem + linia wartosci obserwowanej.
+    """LZ76 complexity histogram under the order-shuffle null + observed-value line.
 
-    Struktura (period/autocorr) → c_obs w LEWYM ogonie nulla (sekwencja sciliwa). Czysty
-    null → c_obs w masie rozkladu (niesciliwy).
+    Structure (period/autocorr) → c_obs in the LEFT tail of the null (compressible sequence).
+    A clean null → c_obs in the bulk of the distribution (incompressible).
     """
     c_obs, null = lz76_null_distribution(draws, n_perm=n_perm, seed=seed)
     p_left = (1 + int(np.sum(null <= c_obs))) / (n_perm + 1)
@@ -84,13 +85,13 @@ def entropy_lens_figure(
         x=c_obs,
         line_color="#c62828",
         line_width=3,
-        annotation_text=f"obserwowane c={c_obs}",
+        annotation_text=f"observed c={c_obs}",
         annotation_position="top",
     )
     fig.update_layout(
-        title=title or f"Lempel-Ziv 1976 — obs vs null (lewy-ogon p={p_left:.3f})",
-        xaxis_title="zlozonosc LZ76 (nizsza = bardziej sciliwy / strukturalny)",
-        yaxis_title="liczba permutacji",
+        title=title or f"Lempel-Ziv 1976 — obs vs null (left-tail p={p_left:.3f})",
+        xaxis_title="LZ76 complexity (lower = more compressible / structured)",
+        yaxis_title="permutation count",
         bargap=0.02,
         showlegend=False,
         height=420,
@@ -101,10 +102,10 @@ def entropy_lens_figure(
 def turing_pair(
     n_window: int, seed: int
 ) -> tuple[list[tuple[int, ...]], list[tuple[int, ...]]]:
-    """Dwie sekwencje losowan (5 liczb): realny EuroJackpot vs uniform syntetyczny.
+    """Two draw sequences (5 numbers): real EuroJackpot vs synthetic uniform.
 
-    Zwraca (real_rows, fake_rows) jako listy posortowanych krotek 5-liczbowych. Kolejnosc
-    prezentacji (kto jest A/B) decyduje warstwa UI.
+    Returns (real_rows, fake_rows) as lists of sorted 5-number tuples. The presentation order
+    (who is A/B) is decided by the UI layer.
     """
     path = _ROOT / settings.data_seed_path
     real_all = load_seed_csv(path)
@@ -117,52 +118,52 @@ def turing_pair(
 
 
 # ---------------------------------------------------------------------------
-# UI Streamlit (tylko pod __main__ — import nie odpala render)
+# Streamlit UI (only under __main__ — importing does not launch render)
 # ---------------------------------------------------------------------------
 
-def render() -> None:  # pragma: no cover - warstwa UI
+def render() -> None:  # pragma: no cover - UI layer
     import streamlit as st
 
     st.set_page_config(page_title="DriftScope — audit explorer", layout="wide")
     st.title("DriftScope — audit explorer")
     st.caption(
-        "Ten sam battery, ktory nie znajduje nic w EuroJackpot, zapala sie na PRNG z "
-        "wstrzyknietym defektem i milczy na krypto-PRNG. Suplement informacyjno-teoretyczny "
-        "(Lempel-Ziv 1976) dodaje sekwencyjny obiektyw."
+        "The same battery that finds nothing in EuroJackpot fires on a PRNG with an "
+        "injected defect and stays silent on crypto PRNGs. The information-theoretic "
+        "supplement (Lempel-Ziv 1976) adds a sequential lens."
     )
 
     with st.sidebar:
-        st.header("Parametry")
-        n_draws = st.slider("Losowan na syntetyczne zrodlo", 300, 2000, 800, step=100)
-        n_perm = st.slider("Permutacje (null)", 49, 499, 199, step=50)
+        st.header("Parameters")
+        n_draws = st.slider("Draws per synthetic source", 300, 2000, 800, step=100)
+        n_perm = st.slider("Permutations (null)", 49, 499, 199, step=50)
         seed = st.number_input("Seed", value=42, step=1)
-        with_real = st.checkbox("Dolacz realny EuroJackpot", value=True)
+        with_real = st.checkbox("Include real EuroJackpot", value=True)
 
     tab_matrix, tab_entropy, tab_turing = st.tabs(
         ["🔬 Detection matrix", "🧬 Entropy lens", "🎲 Turing test"]
     )
 
     with tab_matrix:
-        st.subheader("Macierz detekcji — 4 detektory × źródła z ground-truth labelem")
+        st.subheader("Detection matrix — 4 detectors × sources with a ground-truth label")
         rows = _cached_rows(int(n_draws), int(n_perm), int(seed), bool(with_real))
         st.dataframe(detection_table(rows), width="stretch", hide_index=True)
         sens = all(r.flagged for r in rows if r.klass == "DEFECT")
         spec = all(not r.flagged for r in rows if r.klass != "DEFECT")
         c1, c2 = st.columns(2)
-        c1.metric("Sensitivity (defekt → FLAG)", "✓" if sens else "✗")
+        c1.metric("Sensitivity (defect → FLAG)", "✓" if sens else "✗")
         c2.metric("Specificity (good/crypto/real → clear)", "✓" if spec else "✗")
         st.info(
-            "IT (LZ) p jest celowo WYSOKIE dla `+bias` (marginal — order-shuffle go zachowuje) "
-            "i NISKIE dla `+period` (struktura szeregowa). To jego komplementarna nisza — "
-            "suplement, NIE 4. filar Disagreement Protocol (ten pozostaje 3/3)."
+            "IT (LZ) p is deliberately HIGH for `+bias` (marginal — order-shuffle preserves it) "
+            "and LOW for `+period` (serial structure). That is its complementary niche — a "
+            "supplement, NOT a 4th Disagreement Protocol pillar (which stays 3/3)."
         )
 
     with tab_entropy:
-        st.subheader("Lempel-Ziv 1976 — niesciliwosc jako sygnatura losowosci")
+        st.subheader("Lempel-Ziv 1976 — incompressibility as a signature of randomness")
         sources = build_sources(int(n_draws), int(seed))
         names = [s[0] for s in sources]
         default_idx = names.index("EuroJackpot") if "EuroJackpot" in names else 0
-        pick = st.selectbox("Źródło", names, index=default_idx)
+        pick = st.selectbox("Source", names, index=default_idx)
         draws = next(d for nm, _, d in sources if nm == pick)
         st.plotly_chart(
             entropy_lens_figure(draws, int(n_perm), int(seed), title=f"{pick} — LZ76 obs vs null"),
@@ -170,16 +171,16 @@ def render() -> None:  # pragma: no cover - warstwa UI
         )
         res = information_test(draws, n_perm=int(n_perm), seed=int(seed))
         m1, m2, m3 = st.columns(3)
-        m1.metric("LZ76 znormalizowane", f"{res.metadata['lz76_norm']:.3f}")
-        m2.metric("p (lewy ogon)", f"{res.p_value:.3f}")
+        m1.metric("LZ76 normalized", f"{res.metadata['lz76_norm']:.3f}")
+        m2.metric("p (left tail)", f"{res.p_value:.3f}")
         m3.metric("bz2 ratio", f"{res.metadata['bz2_ratio']:.3f}")
 
     with tab_turing:
-        st.subheader("Która sekwencja to realny EuroJackpot?")
-        st.caption("Intuicja: oba wyglądają losowo. Audyt rozstrzyga to, czego oko nie widzi.")
+        st.subheader("Which sequence is the real EuroJackpot?")
+        st.caption("Intuition: both look random. The audit resolves what the eye cannot see.")
         if "turing_seed" not in st.session_state:
             st.session_state.turing_seed = int(seed)
-            st.session_state.turing_score = [0, 0]  # [trafione, wszystkie]
+            st.session_state.turing_score = [0, 0]  # [hits, total]
         real, fake = turing_pair(8, st.session_state.turing_seed)
         flip = st.session_state.turing_seed % 2 == 0
         left, right = (real, fake) if flip else (fake, real)
@@ -187,33 +188,33 @@ def render() -> None:  # pragma: no cover - warstwa UI
             return [{"draw": i + 1, "numbers": " ".join(map(str, r))} for i, r in enumerate(seq)]
 
         col_a, col_b = st.columns(2)
-        col_a.write("**Sekwencja A**")
+        col_a.write("**Sequence A**")
         col_a.table(_rows(left))
-        col_b.write("**Sekwencja B**")
+        col_b.write("**Sequence B**")
         col_b.table(_rows(right))
-        guess = st.radio("Która jest REALNA?", ["A", "B"], horizontal=True)
-        if st.button("Sprawdź"):
+        guess = st.radio("Which one is REAL?", ["A", "B"], horizontal=True)
+        if st.button("Check"):
             real_is_a = flip
             correct = (guess == "A") == real_is_a
             st.session_state.turing_score[1] += 1
             if correct:
                 st.session_state.turing_score[0] += 1
-                st.success("Trafione — ale to zgadywanie. Real był: " + ("A" if real_is_a else "B"))
+                st.success("Hit — but it's a guess. Real was: " + ("A" if real_is_a else "B"))
             else:
-                st.error("Pudło. Real był: " + ("A" if real_is_a else "B"))
+                st.error("Miss. Real was: " + ("A" if real_is_a else "B"))
             hit, tot = st.session_state.turing_score
             st.write(
-                f"Twój wynik: **{hit}/{tot}** ({hit / tot:.0%}) — oczekiwane ~50% (nieodróżnialne)."
+                f"Your score: **{hit}/{tot}** ({hit / tot:.0%}) — ~50% expected (indistinguishable)"
             )
             st.session_state.turing_seed += 1
 
 
 def _cached_rows(
     n_draws: int, n_perm: int, seed: int, with_real: bool
-) -> list[BenchmarkRow]:  # pragma: no cover - wymaga runtime Streamlit
+) -> list[BenchmarkRow]:  # pragma: no cover - requires the Streamlit runtime
     import streamlit as st
 
-    @st.cache_data(show_spinner="Liczę baterię detektorów…")
+    @st.cache_data(show_spinner="Computing the detector battery…")
     def _inner(nd: int, npp: int, sd: int, wr: bool) -> list[BenchmarkRow]:
         return detection_rows(nd, npp, sd, with_real=wr)
 

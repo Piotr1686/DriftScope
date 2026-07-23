@@ -1,7 +1,7 @@
-"""Smoke test srodowiska DriftScope.
+"""DriftScope environment smoke test.
 
-Weryfikuje: importy wszystkich zaleznosci, Numba JIT, CPU/RAM, GPU (informacyjnie).
-Uruchomienie: python scripts/smoke_test.py
+Verifies: imports of all dependencies, Numba JIT, CPU/RAM, GPU (informational).
+Usage: python scripts/smoke_test.py
 """
 import subprocess
 import sys
@@ -40,9 +40,9 @@ def _check_cpu() -> str:
         import psutil
         cores = psutil.cpu_count(logical=True)
         ram_gb = psutil.virtual_memory().total / 1e9
-        return f"{cores} watkow logicznych | RAM {ram_gb:.1f} GB"
+        return f"{cores} logical threads | RAM {ram_gb:.1f} GB"
     except ImportError:
-        return "psutil nie zainstalowany"
+        return "psutil not installed"
 
 
 def _check_gpu() -> str:
@@ -52,11 +52,11 @@ def _check_gpu() -> str:
              "--format=csv,noheader"],
             stderr=subprocess.DEVNULL,
         ).decode().strip()
-        return f"GPU obecne (pipeline CPU-only, VRAM nieuzywane): {out}"
+        return f"GPU present (CPU-only pipeline, VRAM unused): {out}"
     except FileNotFoundError:
-        return "nvidia-smi nie znalezione — OK dla pipeline CPU-only"
+        return "nvidia-smi not found — OK for a CPU-only pipeline"
     except Exception as exc:
-        return f"nvidia-smi blad: {exc}"
+        return f"nvidia-smi error: {exc}"
 
 
 PACKAGES: list[tuple[str, str]] = [
@@ -85,13 +85,13 @@ def main() -> int:
     print("=" * 62)
     print("DriftScope — SMOKE TEST")
     print("=" * 62)
-    print(f"\n[Python] {sys.version.split()[0]} na {sys.platform}")
+    print(f"\n[Python] {sys.version.split()[0]} on {sys.platform}")
 
-    print("\n[Pakiety]")
+    print("\n[Packages]")
     missing: list[str] = []
     for label, module in PACKAGES:
         ok, version = _check_import(module)
-        status = "OK  " if ok else "BRAK"
+        status = "OK  " if ok else "MISS"
         print(f"  {label:<22} {status}  {version}")
         if not ok:
             missing.append(label)
@@ -108,13 +108,13 @@ def main() -> int:
 
     print("\n" + "=" * 62)
     if not missing and ok:
-        print("WYNIK: srodowisko gotowe. Uruchom: pytest tests/test_environment.py")
+        print("RESULT: environment ready. Run: pytest tests/test_environment.py")
     else:
         if missing:
-            print(f"BRAKUJACE PAKIETY: {missing}")
-            print("Uruchom: pip install -e '.[dev]'")
+            print(f"MISSING PACKAGES: {missing}")
+            print("Run: pip install -e '.[dev]'")
         if not ok:
-            print("Numba JIT FAIL — sprawdz test_environment.py")
+            print("Numba JIT FAIL — check test_environment.py")
     print("=" * 62)
     return 0 if (not missing and ok) else 1
 

@@ -1,269 +1,273 @@
 # preregistration_v7.md — DriftScope Methodology Pre-registration
 
-**Status:** ACTIVE (zastepuje v6; rewizja CZYSTA — korekta licznika Family B + scope per-rezim, zob. §0)
-**Wersja:** v7
-**Data zamrozenia:** 2026-06-04 (przed regime-aware `run_audit`; Faza 2)
-**Supersedes:** preregistration_v6.md (ktora superseduje v5, v4, v3, v2, v1)
+**Status:** ACTIVE (supersedes v6; CLEAN revision — Family B count correction + per-regime scope, see §0)
+**Version:** v7
+**Freeze date:** 2026-06-04 (before regime-aware `run_audit`; Phase 2)
+**Supersedes:** preregistration_v6.md (which supersedes v5, v4, v3, v2, v1)
 
-> Ten plik jest czescia architectural contract (PROJECT_BRIEF.md).
-> Kazda korekta metodologiczna tworzy preregistration_v{N+1}.md
-> z polem `revision_reason: <text>`.
+> This file is part of the architectural contract (PROJECT_BRIEF.md).
+> Every methodological correction creates preregistration_v{N+1}.md
+> with a `revision_reason: <text>` field.
 
 ---
 
 ## §0. Revision reason (v6 → v7)
 
-`revision_reason:` Rewizja **CZYSTA** (NIE informowana wynikami real-data — korekta
-specyfikacji wykryta przy integracji end-to-end / Faza 2, przez inspekcje CO detektory
-faktycznie zwracaja, nie ich wynikow). Dwie zmiany sprzezone:
+`revision_reason:` A **CLEAN** revision (NOT informed by real-data results — a specification
+correction discovered during end-to-end integration / Phase 2, by inspecting WHAT the detectors
+actually return, not their results). Two coupled changes:
 
-### (A) §5 licznik Family B: 450 → 150 [CZYSTA — korekta bledu kategorii]
+### (A) §5 Family B count: 450 → 150 [CLEAN — category-error correction]
 
-Pre-rejestrowane (od v2) **„Family B = 450 = 50 liczb × 3 testy {chi², exact-binomial,
-gap GoF} × 3 rezimy"** zawiera **blad kategorii**: zaklada, ze wszystkie trzy testy
-zwracaja p-value PER LICZBA. To nieprawda — tylko **exact-binomial** jest naturalnie
-per-liczba (50 p-values/rezim, count_k ~ Binomial(n, 5/50)). Pozostale to detektory
-**OMNIBUS**, zwracajace **1 p-value + lokalizacje** na strumien/rezim:
+The pre-registered (since v2) **"Family B = 450 = 50 numbers × 3 tests {chi², exact-binomial,
+gap GoF} × 3 regimes"** contains a **category error**: it assumes all three tests return a
+p-value PER NUMBER. That is false — only **exact-binomial** is naturally per-number
+(50 p-values/regime, count_k ~ Binomial(n, 5/50)). The rest are **OMNIBUS** detectors,
+returning **1 p-value + a location** per stream/regime:
 
-- `chi2_main_uniformity` (§5) — jeden chi² nad 50 zliczeniami,
-- `gap_recurrence_test` (§5b) — omnibus max_k (+ lokalizacja liczby),
-- `cooccurrence` (§5c) — omnibus max-pair (+ lokalizacja pary).
+- `chi2_main_uniformity` (§5) — one chi² over 50 counts,
+- `gap_recurrence_test` (§5b) — omnibus max_k (+ number location),
+- `cooccurrence` (§5c) — omnibus max-pair (+ pair location).
 
-Mnoznik „× 3 testy" laczyl per-number z omnibus w jednej rodzinie per-number — niespojnie.
+The "× 3 tests" multiplier merged per-number with omnibus into a single per-number family — inconsistently.
 
-**Korekta:** rodzina per-number (FDR Benjamini-Yekutieli) sklada sie **wylacznie**
-z exact-binomial: **50 liczb × 3 rezimy = 150 hipotez**. Detektory omnibus (chi²/gap/cooc)
-tworza **rodziny komplementarne raportowane OSOBNO** (po 1 p-value/rezim), zasilaja
-Disagreement Protocol (§6.5) i NIE napompowuja per-number licznika. Pelne wciagniecie
-gap/cooc do rodziny per-number/per-para wymagaloby refaktoru tych statystyk na granularnosc
-per-liczba/per-para — odrzucone (ryzyko miskalibracji; lekcja W3/W6: walidowac statystyki
-PRZED zamrozeniem). Family A (§5, 4 testy omnibus × 3 rezimy = 12) jest spojna i bez zmian.
+**Correction:** the per-number family (Benjamini-Yekutieli FDR) consists **exclusively**
+of exact-binomial: **50 numbers × 3 regimes = 150 hypotheses**. The omnibus detectors
+(chi²/gap/cooc) form **complementary families reported SEPARATELY** (1 p-value/regime each),
+feed the Disagreement Protocol (§6.5), and DO NOT inflate the per-number count. Fully pulling
+gap/cooc into a per-number/per-pair family would require refactoring those statistics to
+per-number/per-pair granularity — rejected (miscalibration risk; W3/W6 lesson: validate
+statistics BEFORE freezing). Family A (§5, 4 omnibus tests × 3 regimes = 12) is consistent
+and unchanged.
 
-### (B) §1c scope audytu: negative control + Family B liczone PER REZIM [CZYSTA — wybor metodologiczny zgodny z H0 §1]
+### (B) §1c audit scope: negative control + Family B computed PER REGIME [CLEAN — a methodological choice consistent with H0 §1]
 
-H0 (§1) jest pre-rejestrowana per rezim („proces stacjonarny, uniform, i.i.d. **w kazdym
-rezimie**"). Ratyfikuje sie, ze:
+H0 (§1) is pre-registered per regime ("a stationary, uniform, i.i.d. process **in each
+regime**"). We ratify that:
 
-- **Negative control** (3 filary: H1/temporal, MMD/distributional, co-occurrence/joint na
-  puli GLOWNEJ 1-50) liczony jest **per rezim** (R1/R2/R3) — test stacjonarnosci WEWNATRZ
-  rezimu, zgodnie z H0 §1. Pula glowna jest strukturalnie niezmienna przez wszystkie rezimy,
-  wiec kazdy rezim to niezalezny negative control.
-- **Family B** (per-number exact-binomial) liczona **per rezim** → 50 × 3 = **150** (spojne z (A)).
-- **Positive control** (BOCPD na euronumerach) pozostaje **FULL-STREAM**. Sygnal ground-truth
-  EuroJackpot to zmiana puli euron MIEDZY rezimami (8→10→12); ciecie euron per-rezim
-  ZNISZCZYLOBY ten sygnal. BOCPD-euron jest detektorem przejscia, nie stacjonarnosci wewnatrz.
+- The **negative control** (3 pillars: H1/temporal, MMD/distributional, co-occurrence/joint on
+  the MAIN pool 1-50) is computed **per regime** (R1/R2/R3) — a within-regime stationarity
+  test, consistent with H0 §1. The main pool is structurally invariant across all regimes,
+  so each regime is an independent negative control.
+- **Family B** (per-number exact-binomial) is computed **per regime** → 50 × 3 = **150** (consistent with (A)).
+- The **positive control** (BOCPD on the euronumbers) remains **FULL-STREAM**. The EuroJackpot
+  ground-truth signal is the change of the euron pool BETWEEN regimes (8→10→12); cutting euron
+  per-regime WOULD DESTROY that signal. BOCPD-euron is a transition detector, not a
+  within-regime stationarity detector.
 
-Zmiana dotyczy granulacji RAPORTOWANIA (per-rezim vs full-stream) + licznika hipotez.
-Modele generatywne, statystyki, nulle, progi (§2–§6.5) BEZ zmian. DoD-4 pozostaje 3/3.
+The change concerns REPORTING granularity (per-regime vs full-stream) + the hypothesis count.
+Generative models, statistics, nulls, thresholds (§2–§6.5) are UNCHANGED. DoD-4 remains 3/3.
 
 ---
 
-## §1. Hipotezy
+## §1. Hypotheses
 
-**H1:** Strumien losowan EuroJackpot wykazuje mierzalne odchylenia od stacjonarnosci
-w co najmniej jednym wymiarze (marginals / CP / spectral / MMD / recurrence /
-co-occurrence) w co najmniej jednym rezimie regul.
+**H1:** The EuroJackpot draw stream exhibits measurable departures from stationarity
+in at least one dimension (marginals / CP / spectral / MMD / recurrence /
+co-occurrence) in at least one rules regime.
 
-**H0:** Strumien jest generowany przez stacjonarny, uniform, i.i.d. proces
-w kazdym rezimie:
+**H0:** The stream is generated by a stationary, uniform, i.i.d. process
+in each regime:
 - **R1:** 2012-03-23 → 2014-10-03 (5/50 + 2/8)
 - **R2:** 2014-10-10 → 2022-03-18 (5/50 + 2/10)
-- **R3:** 2022-03-25 → obecnie (5/50 + 2/12)
+- **R3:** 2022-03-25 → present (5/50 + 2/12)
 
 ---
 
 ## §1b. Control design (pre-registered)
 
-- **Positive control:** strumien euronumerow. Znana zmiana support w 2014-10-10 (8→10) i 2022-03-25 (10→12). Detektor MUSI zapalic — sanity check, ze dziala w ogole.
-- **Negative control:** strumien glownych liczb 1-50. Brak znanej zmiany regul w 2014/2022. Detektor NIE powinien rankowac CP w tych datach; spurious CP = halucynacja.
+- **Positive control:** the euronumbers stream. Known support change on 2014-10-10 (8→10) and 2022-03-25 (10→12). The detector MUST fire — a sanity check that it works at all.
+- **Negative control:** the main-numbers stream 1-50. No known rule change in 2014/2022. The detector should NOT rank a CP at those dates; a spurious CP = a hallucination.
 
-Oba strumienie pochodza z TEGO SAMEGO realnego zbioru — kontrola wbudowana, nie syntetyczna.
+Both streams come from the SAME real dataset — a built-in control, not synthetic.
 
-**Tolerancja detekcji (DoD-1b):** BOCPD wykrywa zmiane w DANYCH, nie w regulach.
-Pierwszy nowy symbol: 2014 → 2014-11-28 (~49 dni po regule 2014-10-10, losowania
-trafialy {1-8} przypadkowo); 2022 → 2022-03-29 (~4 dni). Stad **±60 dni dla 2014**,
-**±30 dni dla 2022** (MEMORY.md 2026-05-26).
-
----
-
-## §1c. Scope audytu — granularnosc per-rezim (v7 §0(B))
-
-- **Positive control (BOCPD euron):** FULL-STREAM. Wykrywa zmiany puli MIEDZY rezimami
-  (ground truth 2014/2022). NIE ciety per-rezim (zniszczyloby sygnal przejscia).
-- **Negative control (3 filary H1/MMD/co-occurrence na puli glownej 1-50):** PER REZIM
-  (R1/R2/R3). Test stacjonarnosci WEWNATRZ rezimu (H0 §1). Pula glowna niezmienna → kazdy
-  rezim = niezalezny negative control. Oczekiwane: 0/3 w kazdym rezimie.
-- **Family B (per-number exact-binomial):** PER REZIM → 150 hipotez (§5).
-- **Detektory omnibus (chi²/gap/cooc):** po 1 p-value/rezim, rodziny komplementarne
-  raportowane osobno (§5, §6.5).
-
-R1 (n=133) jest najcienszy — MMD okienne na granicy wykonalnosci (§3 „Ograniczenie danych");
-wynik per-rezim raportowany z ta uwaga.
+**Detection tolerance (DoD-1b):** BOCPD detects a change in the DATA, not in the rules.
+First new symbol: 2014 → 2014-11-28 (~49 days after the 2014-10-10 rule, draws hit {1-8}
+by chance); 2022 → 2022-03-29 (~4 days). Hence **±60 days for 2014**,
+**±30 days for 2022** (MEMORY.md 2026-05-26).
 
 ---
 
-## §2. Model generatywny — Bayesian online CP (Adams-MacKay 2007)
+## §1c. Audit scope — per-regime granularity (v7 §0(B))
 
-- **Prior:** p ~ Dirichlet(α=0.1) — slaby (sparse) prior na simpleksie Δ⁴⁹.
-  **Decyzja empiryczna** (MEMORY.md 2026-05-26): α=1 (flat) osłabia sygnał przy
-  zmianie puli; α=0.1 daje cp_prob>0.4 przy pierwszym niewidzianym symbolu.
+- **Positive control (BOCPD euron):** FULL-STREAM. Detects pool changes BETWEEN regimes
+  (ground truth 2014/2022). NOT cut per-regime (which would destroy the transition signal).
+- **Negative control (3 pillars H1/MMD/co-occurrence on the main pool 1-50):** PER REGIME
+  (R1/R2/R3). A within-regime stationarity test (H0 §1). The main pool is invariant → each
+  regime = an independent negative control. Expected: 0/3 in each regime.
+- **Family B (per-number exact-binomial):** PER REGIME → 150 hypotheses (§5).
+- **Omnibus detectors (chi²/gap/cooc):** 1 p-value/regime each, complementary families
+  reported separately (§5, §6.5).
+
+R1 (n=133) is the thinnest — windowed MMD is at the edge of feasibility (§3 "Data constraint");
+the per-regime result is reported with that caveat.
+
+---
+
+## §2. Generative model — Bayesian online CP (Adams-MacKay 2007)
+
+- **Prior:** p ~ Dirichlet(α=0.1) — a weak (sparse) prior on the simplex Δ⁴⁹.
+  **An empirical decision** (MEMORY.md 2026-05-26): α=1 (flat) weakens the signal at a
+  pool change; α=0.1 yields cp_prob>0.4 at the first unseen symbol.
 - **Likelihood:** draw_t ~ Categorical(p)
-- **Posterior update:** α_k += 1 dla kazdego wylosowanego k
-- **Hazard:** geometric z rate r=1/200 = 0.005 (expected run length = 200 losowan)
-- **Output:** pelna macierz run-length posterior P(R_t) (forward-pass) — wymagana dla animacji W8 i surprise S_t = -log P(x_t | R_{t-1})
-- **Implementacja:** wlasna (~150 LOC), cross-check vs ruptures PELT
-- **Cross-check kryterium:** disagreement z PELT ≤ 10%
+- **Posterior update:** α_k += 1 for each drawn k
+- **Hazard:** geometric with rate r=1/200 = 0.005 (expected run length = 200 draws)
+- **Output:** the full run-length posterior matrix P(R_t) (forward-pass) — required for the W8 animation and the surprise S_t = -log P(x_t | R_{t-1})
+- **Implementation:** custom (~150 LOC), cross-checked vs ruptures PELT
+- **Cross-check criterion:** disagreement with PELT ≤ 10%
 
-**Regula reject (v6 §0, bez zmian):**
-- **Warm-up:** detekcja (max cp_prob + kandydaci na CP) liczona z pominieciem pierwszych
-  `warmup = N // K` losowan (euron 6, main 10) — usuwa transient burn-in, w ktorym cp_prob
-  rosnie sztucznie zanim pula symboli zostanie „zobaczona" (NIE change-point).
-- **Prog per-pole:** `reject_h0 ⇔ max(cp_prob[warmup:]) > prog`, gdzie prog = 95. percentyl
-  rozkladu nullowego uniform-iid (FPR≈0.05): **euron 0.33 / main 0.70**. Prog zalezy od
-  (N, K) — magiczny wspolny prog 0.3 dawal FPR=0.77 dla `main`. Wazny dla α=0.1, hazard=0.005;
-  length-invariant. Kalibracja: `scripts/calibrate_bocpd_threshold.py`.
+**Reject rule (v6 §0, unchanged):**
+- **Warm-up:** detection (max cp_prob + CP candidates) is computed excluding the first
+  `warmup = N // K` draws (euron 6, main 10) — this removes the transient burn-in in which cp_prob
+  rises artificially before the symbol pool has been "seen" (NOT a change-point).
+- **Per-field threshold:** `reject_h0 ⇔ max(cp_prob[warmup:]) > threshold`, where threshold = the
+  95th percentile of the uniform-iid null distribution (FPR≈0.05): **euron 0.33 / main 0.70**. The
+  threshold depends on (N, K) — a magic shared threshold of 0.3 gave FPR=0.77 for `main`. Valid for
+  α=0.1, hazard=0.005; length-invariant. Calibration: `scripts/calibrate_bocpd_threshold.py`.
 
 ---
 
-## §3. K4-MMD — stabilnosc i parametry
+## §3. K4-MMD — stability and parameters
 
-- **Input space:** frequency vector p ∈ Δ⁴⁹ per sliding window (NIE raw draws)
-- **Window size:** **N = 25 (deployed, v4)** — patrz v4 §0(A). Okna **NIENAKLADAJACE sie**:
-  `step = window` (non-overlap WYMAGANY; `step < window` ZABRONIONE — lamie wymienialnosc
-  permutacyjna → FPR ~1.0).
-- **Framing:** dwuprobkowy MMD² (X = okna obserwacji, Y = okna swiezego uniform 5/50
-  o tym samym n).
-- **Kernel:** Gaussian RBF z bandwidth = median heuristic
-- **Anti-leakage:** bandwidth obliczana WYLACZNIE na probie X (training window)
-- **Estymator:** unbiased MMD² (Gretton et al. 2012)
-- **Null:** permutacja etykiet polaczonej puli okien nad pre-policzona macierza Grama
-- **Threshold stabilnosci:** FPR ≤ 7.5% na shuffled/uniform null — zwalidowany dla N=25
-- **Ograniczenie danych:** R1 (n=133 → 5 okien) na granicy wykonalnosci MMD okiennego.
-- **Teoria asymptotyczna:** Gretton et al. 2012
+- **Input space:** the frequency vector p ∈ Δ⁴⁹ per sliding window (NOT raw draws)
+- **Window size:** **N = 25 (deployed, v4)** — see v4 §0(A). Windows are **NON-OVERLAPPING**:
+  `step = window` (non-overlap REQUIRED; `step < window` FORBIDDEN — it breaks permutation
+  exchangeability → FPR ~1.0).
+- **Framing:** two-sample MMD² (X = observation windows, Y = windows of fresh uniform 5/50
+  with the same n).
+- **Kernel:** Gaussian RBF with bandwidth = median heuristic
+- **Anti-leakage:** the bandwidth is computed EXCLUSIVELY on the X sample (training window)
+- **Estimator:** unbiased MMD² (Gretton et al. 2012)
+- **Null:** label permutation of the pooled windows over a pre-computed Gram matrix
+- **Stability threshold:** FPR ≤ 7.5% on the shuffled/uniform null — validated for N=25
+- **Data constraint:** R1 (n=133 → 5 windows) is at the edge of feasibility for windowed MMD.
+- **Asymptotic theory:** Gretton et al. 2012
 
 ---
 
 ## §4. Specification Curve Space (pre-registered)
 
-- window size N ∈ **{15, 25, 40}** (skorygowane w v4 §0(A) — wykonalne na n≈958/non-overlap)
+- window size N ∈ **{15, 25, 40}** (corrected in v4 §0(A) — feasible on n≈958/non-overlap)
 - bandwidth ∈ {0.5×, 1×, 2×} median heuristic
-= **9 punktow** spec curve per sygnal
+= **9 points** of the spec curve per signal
 
-**Walidacja FPR (W6):** FPR ≤ 7.5% zweryfikowany dotad dla N=25. Punkty N∈{15,40} × bandwidth
-musza przejsc te sama kalibracje; punkt nieprzechodzacy = udokumentowany jako niestabilny.
+**FPR validation (W6):** FPR ≤ 7.5% verified so far for N=25. The points N∈{15,40} × bandwidth
+must pass the same calibration; a non-passing point = documented as unstable.
 
-**Kryterium stabilnosci:** sygnal niestabilny jesli znika w >2/9 punktach (p > 0.05) → nie raportowany.
+**Stability criterion:** a signal is unstable if it disappears in >2/9 points (p > 0.05) → not reported.
 
 ---
 
-## §5. Multiple Testing Families (licznik skorygowany v7 §0(A))
+## §5. Multiple Testing Families (count corrected v7 §0(A))
 
 **Family A (global time-series, omnibus):**
-- 4 testy (ADF, KPSS, Bayesian CP, Welch) × 3 rezimy = **12 hipotez**
-- Kazdy test zwraca 1 p-value/rezim (omnibus) → licznik spojny, bez zmian.
-- Korekcja: Benjamini-Hochberg FDR α=0.05 + Storey q-values (secondary sanity)
+- 4 tests (ADF, KPSS, Bayesian CP, Welch) × 3 regimes = **12 hypotheses**
+- Each test returns 1 p-value/regime (omnibus) → the count is consistent, unchanged.
+- Correction: Benjamini-Hochberg FDR α=0.05 + Storey q-values (secondary sanity)
 
 **Family B (per-number, FDR primary Benjamini-Yekutieli):**
-- **Rodzina per-number = WYLACZNIE exact-binomial:** 50 liczb × 3 rezimy = **150 hipotez**
-  (skorygowane z 450 — zob. §0(A) blad kategorii). Pod uniform count_k ~ Binomial(n, 5/50),
-  dwustronny exact test per liczba per rezim.
-- Korekcja: **Benjamini-Yekutieli** FDR α=0.05 jako primary — wazny przy dowolnej strukturze
-  zaleznosci (zliczenia 5/50 ujemnie skorelowane), gdzie zalozenie PRDS dla BH jest niepewne;
-  BH jako secondary. Storey odrzucony (niestabilny przy dominujacym null).
+- **The per-number family = EXCLUSIVELY exact-binomial:** 50 numbers × 3 regimes = **150 hypotheses**
+  (corrected from 450 — see §0(A) category error). Under uniform count_k ~ Binomial(n, 5/50),
+  a two-sided exact test per number per regime.
+- Correction: **Benjamini-Yekutieli** FDR α=0.05 as primary — valid under an arbitrary dependence
+  structure (the 5/50 counts are negatively correlated), where the PRDS assumption for BH is
+  uncertain; BH as secondary. Storey rejected (unstable under a dominant null).
 
-**Rodziny komplementarne OMNIBUS (raportowane OSOBNO, NIE w per-number Family B):**
-- chi² (§5 per-rezim), gap GoF (§5b per-rezim), co-occurrence (§5c per-rezim) — kazdy
-  1 p-value + lokalizacja/rezim. Nie sa per-liczba → nie wchodza do rodziny per-number (§0(A)).
-  Zasilaja Disagreement Protocol (§6.5) jako niezalezne filary. Korekcja FDR w obrebie wlasnej
-  rodziny jesli liczba czlonkow > 1 (np. 3 rezimy); inaczej raportowane jako pojedyncze testy.
+**Complementary OMNIBUS families (reported SEPARATELY, NOT in the per-number Family B):**
+- chi² (§5 per-regime), gap GoF (§5b per-regime), co-occurrence (§5c per-regime) — each
+  1 p-value + location/regime. They are not per-number → they do not enter the per-number family (§0(A)).
+  They feed the Disagreement Protocol (§6.5) as independent pillars. FDR correction within their own
+  family if the member count > 1 (e.g. 3 regimes); otherwise reported as single tests.
 
-**Klaryfikacja: konwergencja (DoD-4) ≠ kontrola FDR.** Disagreement Protocol (§6.5, DoD-4)
-liczy **SUROWE** per-rezim `reject_h0` filarow przy α (mierzy ZGODNOSC trzech niezaleznych
-rodzin, nie family-wise error). Korekcja FDR w obrebie rodziny omnibus przez rezimy (powyzej)
-to OSOBNA warstwa raportowania i NIE bramkuje liczenia konwergencji. Konsekwencja: pojedynczy
-filar zapalajacy w JEDNYM rezimie → klasyfikacja **1/3** ("single-pillar, requires power
-context"), NIE finding. Promocja do findingu wymaga gate'u watchlisty (DoD-3 FDR via Family B
-per-number ORAZ DoD-4 konwergencja ≥min) — single-pillar 1/3 na czystej puli glownej nie
-przechodzi. [Doprecyzowanie strukturalne wykryte przy integracji Fazy 2 — zob. §0; ujawniam,
-ze zaobserwowano je przy single-pillar cooc w jednym rezimie real-data, ale regula jest
-strukturalna, niezalezna od konkretnego wyniku.]
+**Clarification: convergence (DoD-4) ≠ FDR control.** The Disagreement Protocol (§6.5, DoD-4)
+counts the **RAW** per-regime `reject_h0` of the pillars at α (it measures the AGREEMENT of three
+independent families, not the family-wise error). FDR correction within an omnibus family across
+regimes (above) is a SEPARATE reporting layer and does NOT gate the convergence count. Consequence:
+a single pillar firing in ONE regime → classification **1/3** ("single-pillar, requires power
+context"), NOT a finding. Promotion to a finding requires the watchlist gate (DoD-3 FDR via Family B
+per-number AND DoD-4 convergence ≥min) — a single-pillar 1/3 on the clean main pool does not
+pass. [A structural refinement discovered during Phase 2 integration — see §0; I disclose
+that it was observed with a single-pillar cooc in one real-data regime, but the rule is
+structural, independent of the specific result.]
 
 ---
 
 ## §5b. Recurrence / gap analysis (pre-registered)
 
-Czas (liczba losowan) miedzy kolejnymi wystapieniami danej liczby. Pod nullem uniform-iid: gap ~ Geometric(q), q = 5/50 dla puli glownej.
+The time (number of draws) between successive occurrences of a given number. Under the uniform-iid null: gap ~ Geometric(q), q = 5/50 for the main pool.
 
-- **Gap goodness-of-fit:** odchylenie empirycznego rozkladu gapow od Geometric(q) per liczba per rezim. ⚠️ **NIE analityczny KS** (Kolmogorov-Smirnov niewazny dla rozkladow dyskretnych — bledne p-value). Statystyka kalibrowana PERMUTACYJNIE (silnik z §permutation, Krok 6 PROJECT_BRIEF).
-- **Nelson-Aalen cumulative hazard** per liczba: liniowosc = stala intensywnosc = zgodnosc z uniform.
-- **EVT max-gap:** maksymalny gap ma asymptotycznie rozklad Gumbela (gapy geometryczne w domenie przyciagania Gumbela).
-- **Status w liczniku (v7 §0(A)):** detektor OMNIBUS (1 p-value max_k + lokalizacja/rezim).
-  Rodzina komplementarna raportowana OSOBNO (§5), NIE czlonek per-number Family B.
+- **Gap goodness-of-fit:** the departure of the empirical gap distribution from Geometric(q) per number per regime. ⚠️ **NOT an analytic KS** (Kolmogorov-Smirnov is invalid for discrete distributions — wrong p-value). The statistic is calibrated by PERMUTATION (the engine from §permutation, Step 6 PROJECT_BRIEF).
+- **Nelson-Aalen cumulative hazard** per number: linearity = constant intensity = consistency with uniform.
+- **EVT max-gap:** the maximum gap asymptotically follows a Gumbel distribution (geometric gaps are in the Gumbel domain of attraction).
+- **Status in the count (v7 §0(A)):** an OMNIBUS detector (1 p-value max_k + location/regime).
+  A complementary family reported SEPARATELY (§5), NOT a per-number member of Family B.
 
 ---
 
-## §5c. Co-occurrence test (pre-registered v4; statystyka skorygowana v5 §0(A); licznik ratyfikowany v7 §0(A))
+## §5c. Co-occurrence test (pre-registered v4; statistic corrected v5 §0(A); count ratified v7 §0(A))
 
-**Cel:** wykryc strukture LACZNA (signal #5 pair_corr), na ktora detektory marginalne
-(chi² §5, MMD §3) sa z zalozenia slepe — para liczb (i,j) wspolwystepuje w jednym
-losowaniu czesciej niz pod uniform, przy NIEzmienionych marginesach.
+**Goal:** detect JOINT structure (signal #5 pair_corr), to which the marginal detectors
+(chi² §5, MMD §3) are blind by design — a pair of numbers (i,j) co-occurs in a single
+draw more often than under uniform, while the marginals are UNCHANGED.
 
-- **Null — swap-randomization (curveball, Strona et al. 2014):** permutacja macierzy
-  incydencji losowanie×liczba zachowuje JEDNOCZESNIE sumy wierszy (=5 liczb/losowanie) i
-  sumy kolumn (marginalna czestosc kazdej liczby), a lamie TYLKO parowanie. Izoluje sygnal
-  laczny od marginalnego — analityczny Binomial(n, p_pair) niewazny przy nie-uniform
-  marginesach. Lancuch sekwencyjny (burn-in + thinning, Gotelli 2000; Besag-Clifford serial).
-- **Statystyka (v5 §0(A)):** **max-pair** z_ij = (O_ij − E_ij)/sqrt(E_ij); reject ⇔
-  max_ij z_ij w prawym ogonie nulla. E_ij = srednia wspolwystapien pod nullem (z permutacji).
-  p = (1 + #{maxstat_perm ≥ maxstat_obs})/(n_perm+1). Lokalizacja: top_pair = argmax z_ij.
-  **Odrzucona** suma T = Σ(O−E)²/E (v4): rozmywa rzadki sygnal + miskalibrowana (zob. v6 §0(A)).
-- **Status w liczniku (v7 §0(A), RATYFIKACJA otwartego punktu v5/v6):** detektor OMNIBUS
-  (1 p-value max-pair + lokalizacja pary/rezim). NIE jest per-para czlonkiem per-number
-  Family B (rozwiniecie na per-para wymagaloby refaktoru → ryzyko miskalibracji, odrzucone).
-  Rodzina komplementarna raportowana OSOBNO (§5), zasila Disagreement Protocol (§6.5).
-- **Status walidacji:** zaimplementowany i skalibrowany na DriftSim (W6). Power: zob. §6.5.
+- **Null — swap-randomization (curveball, Strona et al. 2014):** permuting the
+  draw×number incidence matrix preserves BOTH the row sums (=5 numbers/draw) and
+  the column sums (the marginal frequency of each number) SIMULTANEOUSLY, and breaks ONLY the
+  pairing. It isolates the joint signal from the marginal — an analytic Binomial(n, p_pair) is
+  invalid under non-uniform marginals. A sequential chain (burn-in + thinning, Gotelli 2000;
+  Besag-Clifford serial).
+- **Statistic (v5 §0(A)):** **max-pair** z_ij = (O_ij − E_ij)/sqrt(E_ij); reject ⇔
+  max_ij z_ij in the right tail of the null. E_ij = the mean co-occurrence under the null (from the permutations).
+  p = (1 + #{maxstat_perm ≥ maxstat_obs})/(n_perm+1). Location: top_pair = argmax z_ij.
+  **Rejected** the sum T = Σ(O−E)²/E (v4): it dilutes the sparse signal + is miscalibrated (see v6 §0(A)).
+- **Status in the count (v7 §0(A), RATIFYING the open point from v5/v6):** an OMNIBUS detector
+  (1 p-value max-pair + pair location/regime). It is NOT a per-pair member of the per-number
+  Family B (expanding to per-pair would require a refactor → miscalibration risk, rejected).
+  A complementary family reported SEPARATELY (§5), feeding the Disagreement Protocol (§6.5).
+- **Validation status:** implemented and calibrated on DriftSim (W6). Power: see §6.5.
 
 ---
 
 ## §6. DriftSim — planted signals (pre-registered)
 
-5 typow sygnalu × 4 effect sizes = 20 scenarios per rezim + 1 null = **21 datasetow per rezim** (× 3 = 63 unikalne). Sygnal izolowany w puli GLOWNEJ (Δ⁴⁹); euronumery i kalendarz pozostaja nullowe. Liczba noszaca sygnal #1/#3/#4 jest ustalona (reprodukowalnosc); para dla #5 ustalona.
+5 signal types × 4 effect sizes = 20 scenarios per regime + 1 null = **21 datasets per regime** (× 3 = 63 unique). The signal is isolated in the MAIN pool (Δ⁴⁹); the euronumbers and the calendar remain null. The number carrying signal #1/#3/#4 is fixed (reproducibility); the pair for #5 is fixed.
 
-1. **Frequency shift** — p_k = 1/50 + δ, δ ∈ {0.01, 0.02, 0.05, 0.10}  *(PINNED od v2)*
-2. **Autocorrelation lag-1** — boost wag liczb z poprzedniego losowania o ρ, ρ ∈ {0.05, 0.10, 0.15, 0.20}  *(PINNED od v2)*
-3. **Linear trend** — p_k(t) = 1/50 + β·(t/T), **β ∈ {0.01, 0.02, 0.05, 0.10}**  *(PINNED w v3)*
-4. **Weekly seasonality** — kontrast wtorek vs piatek na liczbie planted: +c w piatki, −c we wtorki (clip > 0), **c ∈ {0.01, 0.02, 0.05, 0.10}**  *(PINNED w v3)*. **GUARD: tylko R3** — EuroJackpot losowal wylacznie w piatki do marca 2022; wtorki dodano w R3. W R1/R2 kontrast Tue/Fri nie istnieje → scenariusz degeneruje do uniform null (zajmuje slot datasetu, pelni role dodatkowego negative control; count 63 zachowany).
+1. **Frequency shift** — p_k = 1/50 + δ, δ ∈ {0.01, 0.02, 0.05, 0.10}  *(PINNED since v2)*
+2. **Autocorrelation lag-1** — boost the weights of the previous draw's numbers by ρ, ρ ∈ {0.05, 0.10, 0.15, 0.20}  *(PINNED since v2)*
+3. **Linear trend** — p_k(t) = 1/50 + β·(t/T), **β ∈ {0.01, 0.02, 0.05, 0.10}**  *(PINNED in v3)*
+4. **Weekly seasonality** — a Tuesday vs Friday contrast on the planted number: +c on Fridays, −c on Tuesdays (clip > 0), **c ∈ {0.01, 0.02, 0.05, 0.10}**  *(PINNED in v3)*. **GUARD: R3 only** — EuroJackpot drew exclusively on Fridays until March 2022; Tuesdays were added in R3. In R1/R2 the Tue/Fri contrast does not exist → the scenario degenerates to the uniform null (it occupies a dataset slot, playing the role of an additional negative control; the count of 63 is preserved).
 5. **Pair correlation (MARGIN-PRESERVING, re-design v5 — v6 §0(B) ref)** — forced-fraction
-   **p ∈ {0.01, 0.02, 0.05, 0.10}** (NIE mnoznik lift). Mieszanka 3-komponentowa: z p wymus
-   pare {i,j}+3, z 9p wymus brak obu, z (1−10p) uniform. Zachowuje WSZYSTKIE marginesy
-   DOKLADNIE (P(dowolnej liczby)=0.1), podnosi P(i,j razem) z 0.00816 do 0.918p+0.00816.
-   Czysty sygnal JOINT: **detektor docelowy = §5c co-occurrence (max-pair, curveball null)**;
-   chi²/MMD dowodliwie slepe (marginesy uniform). Stary mechanizm (lift, v2–v4) przeciekal do
-   marginesow i byl below detection floor.
+   **p ∈ {0.01, 0.02, 0.05, 0.10}** (NOT a lift multiplier). A 3-component mixture: with p force
+   the pair {i,j}+3, with 9p force the absence of both, with (1−10p) uniform. It preserves ALL
+   marginals EXACTLY (P(any number)=0.1), and raises P(i,j together) from 0.00816 to 0.918p+0.00816.
+   A clean JOINT signal: **target detector = §5c co-occurrence (max-pair, curveball null)**;
+   chi²/MMD are provably blind (uniform marginals). The old mechanism (lift, v2–v4) leaked into the
+   marginals and was below the detection floor.
 
-**Permutacja stratyfikowana (R3):** w rezimie z dwoma dniami losowan permutacja zachowuje etykiete dnia (Tue/Fri), zeby null nie konfundowal signal #4.
+**Stratified permutation (R3):** in the regime with two draw days, the permutation preserves the day label (Tue/Fri), so that the null does not confound signal #4.
 
 ---
 
-## §6.5. Wyniki kalibracji DriftSim (W3/W4/W6) — pre-rejestrowane oczekiwania vs empiria
+## §6.5. DriftSim calibration results (W3/W4/W6) — pre-registered expectations vs empirical
 
-Tabela komplementarnosci detektorow (n realne per rezim; zwalidowane testami):
-- **freq_shift / trend** — chi² i MMD wykrywaja (odchylenie marginalne).
-- **autocorr / seasonality** — chi² i MMD wykrywaja przez nadmierna dyspersje / kontrast.
-- **pair_corr (joint, margin-preserving)** — WYLACZNIE §5c co-occurrence; chi²/MMD na FPR
-  floor (dowodliwie slepe). Power §5c: p≥0.05 → ≥0.80 wszedzie (Decision Gate spelniony);
-  p=0.01 below floor; p=0.02 floor w R1, czesciowy R2/R3.
+Detector complementarity table (real n per regime; validated by tests):
+- **freq_shift / trend** — chi² and MMD detect (marginal departure).
+- **autocorr / seasonality** — chi² and MMD detect via over-dispersion / contrast.
+- **pair_corr (joint, margin-preserving)** — EXCLUSIVELY §5c co-occurrence; chi²/MMD at the FPR
+  floor (provably blind). §5c power: p≥0.05 → ≥0.80 everywhere (Decision Gate met);
+  p=0.01 below the floor; p=0.02 at the floor in R1, partial in R2/R3.
 
-To uzasadnia DoD-4 = 3/3 (H1/MMD/co-occurrence sa wzajemnie NIE-redundantne) i zasila
-Disagreement Protocol (kazdy sygnal: ktore z 3 rodzin go widza).
+This justifies DoD-4 = 3/3 (H1/MMD/co-occurrence are mutually NON-redundant) and feeds the
+Disagreement Protocol (each signal: which of the 3 families see it).
 
 ---
 
 ## §7. Revision Log
 
-- **v1 → v2** [2026-05-29]: zob. v2 §0. Piec zmian czystych (przed real-data): korekta daty 2014-10-10, control design positive/negative, recurrence test family, Family B BH → Benjamini-Yekutieli (300 → 450 hipotez), synchronizacja BOCPD α=0.1/hazard=0.005 z kodem (korekta transkrypcji).
-- **v2 → v3** [2026-05-30]: zob. v3 §0. Jedna zmiana czysta (przed kalibracja): pinowanie siatek effect-size dla signal #3 (trend β) i #4 (seasonality c). Doprecyzowano mechanizm seasonality (±c Fri/Tue). δ/ρ/lift bez zmian.
-- **v3 → v4** [2026-05-31]: zob. v4 §0. Rewizja MIESZANA. (A) INFORMOWANA real-data [disclosed]: §3 window 200→25 i §4 spec {100,200,400}→{15,25,40} — korekta wymuszona niewykonalnoscia na n≈958/non-overlap. (B) CZYSTA: §5c co-occurrence test (curveball null) pre-rejestrowany. (C) DOPRECYZOWANIE: §3 non-overlap + framing vs uniform reference.
-- **v4 → v5** [2026-05-31]: zob. v5 §0. Rewizja MIESZANA, INFORMOWANA DriftSim (synthetic, clean wrt real EuroJackpot). (A) §5c statystyka: suma T → **max-pair**. (B) §6 signal #5 pair_corr re-design: lift → **forced-frac** + mechanizm **margin-preserving**. Dodano §6.5.
-- **v5 → v6** [2026-06-02]: zob. v6 §0. Rewizja MIESZANA reguly reject BOCPD (§2). (A) CLEAN: prog `max_cp_prob>0.3` → per-pole 95. perc. nullu (**euron 0.33 / main 0.70**, FPR≈0.05; stary 0.3 dawal FPR=0.77 dla `main`). (B) STRUKTURALNE [disclosed]: warm-up exclusion `max(cp_prob[warmup:])`, warmup=N//K. Model generatywny i §3–§6.5 bez zmian. DoD-4=3/3.
-- **v6 → v7** [2026-06-04]: zob. §0. Rewizja **CZYSTA** (korekta specyfikacji przy integracji Faza 2; NIE informowana wynikami). (A) §5 licznik Family B **450 → 150**: blad kategorii — „50 × 3 testy × 3 rezimy" zakladal chi²/gap/cooc jako per-liczba, gdy sa OMNIBUS (1 p-value/rezim). Rodzina per-number = wylacznie exact-binomial (50 × 3 rezimy); chi²/gap/cooc = rodziny komplementarne raportowane osobno (NIE napompowuja per-number FDR). Domyka otwarty punkt licznika z §5c v5/v6. Dodano klaryfikacje §5: konwergencja DoD-4 liczy SUROWE per-rezim rejecty (≠ family-wise FDR; single-pillar 1/3 = nie finding). (B) §1c scope per-rezim: negative control (3 filary) + Family B liczone per rezim (R1/R2/R3) zgodnie z H0 §1 (stacjonarnosc WEWNATRZ rezimu); positive control BOCPD-euron pozostaje FULL-STREAM (wykrywa przejscia MIEDZY rezimami — ground truth). Statystyki/nulle/progi bez zmian. DoD-4 pozostaje 3/3.
+- **v1 → v2** [2026-05-29]: see v2 §0. Five clean changes (before real-data): correction of the date 2014-10-10, positive/negative control design, the recurrence test family, Family B BH → Benjamini-Yekutieli (300 → 450 hypotheses), synchronization of BOCPD α=0.1/hazard=0.005 with the code (a transcription correction).
+- **v2 → v3** [2026-05-30]: see v3 §0. One clean change (before calibration): pinning the effect-size grids for signal #3 (trend β) and #4 (seasonality c). The seasonality mechanism was clarified (±c Fri/Tue). δ/ρ/lift unchanged.
+- **v3 → v4** [2026-05-31]: see v4 §0. A MIXED revision. (A) INFORMED by real-data [disclosed]: §3 window 200→25 and §4 spec {100,200,400}→{15,25,40} — a correction forced by infeasibility on n≈958/non-overlap. (B) CLEAN: the §5c co-occurrence test (curveball null) pre-registered. (C) REFINEMENT: §3 non-overlap + framing vs uniform reference.
+- **v4 → v5** [2026-05-31]: see v5 §0. A MIXED revision, INFORMED by DriftSim (synthetic, clean wrt real EuroJackpot). (A) §5c statistic: sum T → **max-pair**. (B) §6 signal #5 pair_corr re-design: lift → **forced-frac** + the **margin-preserving** mechanism. Added §6.5.
+- **v5 → v6** [2026-06-02]: see v6 §0. A MIXED revision of the BOCPD reject rule (§2). (A) CLEAN: threshold `max_cp_prob>0.3` → per-field 95th perc. of the null (**euron 0.33 / main 0.70**, FPR≈0.05; the old 0.3 gave FPR=0.77 for `main`). (B) STRUCTURAL [disclosed]: warm-up exclusion `max(cp_prob[warmup:])`, warmup=N//K. The generative model and §3–§6.5 unchanged. DoD-4=3/3.
+- **v6 → v7** [2026-06-04]: see §0. A **CLEAN** revision (a specification correction during Phase 2 integration; NOT informed by results). (A) §5 Family B count **450 → 150**: a category error — "50 × 3 tests × 3 regimes" assumed chi²/gap/cooc were per-number, when they are OMNIBUS (1 p-value/regime). The per-number family = exclusively exact-binomial (50 × 3 regimes); chi²/gap/cooc = complementary families reported separately (they do NOT inflate the per-number FDR). This closes the open count point from §5c v5/v6. Added the §5 clarification: DoD-4 convergence counts RAW per-regime rejects (≠ family-wise FDR; single-pillar 1/3 = not a finding). (B) §1c per-regime scope: the negative control (3 pillars) + Family B computed per regime (R1/R2/R3) consistent with H0 §1 (within-regime stationarity); the positive control BOCPD-euron remains FULL-STREAM (it detects transitions BETWEEN regimes — the ground truth). Statistics/nulls/thresholds unchanged. DoD-4 remains 3/3.
+- **v7 (i18n)** [2026-07-23]: prose translated PL→EN (project i18n). **NO statistical change** — no threshold, null, statistic, generative model, count, or DoD altered; hence a language-only edit, NOT a methodological revision and NOT a new version (per the §0 precedent that non-statistical edits — cf. the 2026-06-05 type-annotation pass — do not require a `revision_reason`). The frozen v1–v6 chain is left in the original Polish as immutable history.

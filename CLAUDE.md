@@ -35,7 +35,7 @@
 
 ## Konwencje projektu
 - Nazewnictwo plików: snake_case (Python)
-- Język komentarzy w kodzie: polski
+- Język komentarzy w kodzie: **angielski** (decyzja i18n 2026-07-23; wcześniej polski — migracja legacy w toku, `notebooks/` świadomie poza zakresem)
 - Styl commitów: conventional commits (feat:, fix:, refactor:, docs:, chore:)
 - Linter/formatter: ruff (wszystko) + mypy --strict (priorytetowo dla `methodology/`)
 - Package layout: `pyproject.toml` + `src/driftscope/` (PEP 621)

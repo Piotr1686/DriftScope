@@ -412,7 +412,7 @@ python scripts/make_readme_assets.py                         # regenerate the RE
 | Metric | Value | Conditions |
 |---|---|---|
 | Full audit | **~4.5 s**, **~220 MB** peak RAM | 958 draws, `n_perm=999`, i5-12500H (CPU-only) |
-| Test suite | **296 collected**, CI-green | 294 pass / 2 skip locally (Win11) |
+| Test suite | **312 collected**, CI-green | 310 pass / 2 skip locally (Win11) |
 | JIT hot loops | **~2.7×** vs NumPy baseline | permutation PoC (`notebooks/poc_permutation_engine.py`) |
 
 > The ~4 GB RAM figure sometimes quoted is the **budget for the full DriftSim calibration sweep**
@@ -501,7 +501,7 @@ src/driftscope/
 └── cli.py          # `driftscope run`
 scripts/            # archive (SHA-256 manifest), prng_benchmark + multimulti_audit, make_readme_assets
 demo/               # Streamlit audit explorer (optional, `pip install -e ".[demo]"`)
-tests/              # 279 tests — calibration, invariants, FPR ≤ α, reproducibility, PRNG, info-theory
+tests/              # 312 tests — calibration, invariants, FPR ≤ α, reproducibility, PRNG, info-theory
 data/seed/          # eurojackpot_history.csv (958 draws) + multimulti_history.csv (committed)
 docs/               # published HTML report + executive summary (GitHub Pages) + assets/
 ```

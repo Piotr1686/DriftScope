@@ -419,7 +419,7 @@ python scripts/make_readme_assets.py                         # regeneruj figury 
 | Metryka | Wartość | Warunki |
 |---|---|---|
 | Pełny audyt | **~4.5 s**, **~220 MB** peak RAM | 958 losowań, `n_perm=999`, i5-12500H (CPU-only) |
-| Zestaw testów | **296 zebranych**, CI-green | 294 pass / 2 skip lokalnie (Win11) |
+| Zestaw testów | **312 zebranych**, CI-green | 310 pass / 2 skip lokalnie (Win11) |
 | Gorące pętle JIT | **~2.7×** vs baseline NumPy | permutacyjny PoC (`notebooks/poc_permutation_engine.py`) |
 
 > Cyfra ~4 GB RAM czasem przypisywana DriftScope to **budżet pełnego sweepu kalibracyjnego DriftSim**
@@ -508,7 +508,7 @@ src/driftscope/
 └── cli.py          # `driftscope run`
 scripts/            # archive (manifest SHA-256), prng_benchmark + multimulti_audit, make_readme_assets
 demo/               # eksplorator audytu Streamlit (opcjonalnie, `pip install -e ".[demo]"`)
-tests/              # 279 testów — kalibracja, niezmienniki, FPR ≤ α, reprodukowalność, PRNG, info-theory
+tests/              # 312 testów — kalibracja, niezmienniki, FPR ≤ α, reprodukowalność, PRNG, info-theory
 data/seed/          # eurojackpot_history.csv (958 losowań) + multimulti_history.csv (committed)
 docs/               # opublikowany raport HTML + streszczenie (GitHub Pages) + assets/
 ```

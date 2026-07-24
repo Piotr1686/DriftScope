@@ -99,6 +99,19 @@ GAME_CONFIGS: dict[str, GameConfig] = {
             MatrixChangeEvent("white 75->70 shrink (2017 matrix change)", date(2017, 10, 31)),
         ),
     ),
+    # UK Lotto — the longest stream audited here (1994-11-19 onwards) and the closest
+    # structural twin of the Powerball 2015 event: a pool EXPANSION three days apart
+    # (UK 49->59 on 2015-10-10, PB 59->69 on 2015-10-07). Two draws share a date from
+    # 2026-06-10 onwards (a genuine format change, present in the official source too) —
+    # harmless here: the audit consumes the draw SEQUENCE, and onsets are reported as dates.
+    "uk_lotto": GameConfig(
+        name="UK Lotto (6/59 main)",
+        seed_filename="uk_lotto_history.csv",
+        pool_size=59,
+        events=(
+            MatrixChangeEvent("main 49->59 (2015 matrix change)", date(2015, 10, 10)),
+        ),
+    ),
 }
 
 

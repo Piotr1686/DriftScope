@@ -127,6 +127,11 @@ _MAIN_REJECT_THRESHOLD_BY_POOL: dict[int, float] = {
     # Callers MUST pass the matching warmup (see lottery_audit.coverage_warmup).
     69: 0.49,  # Powerball white N=69, K=5, warmup=67; p95 null = 0.4815 (n=1968, trials=200)
     75: 0.39,  # Mega Millions white N=75, K=5, warmup=74; p95 null = 0.3858 (n=2520, trials=200)
+    59: 0.53,  # UK Lotto N=59, K=6, warmup=46; p95 null = 0.5267 (n=2000, trials=200)
+               # → round up to 0.53 (EJ convention: threshold >= p95, FPR@p95 = 0.05)
+               # cross-validation n=3000/trials=200: p95=0.5267 (delta=0.0000) → length-invariant.
+               # NOTE: the two runs share seeds (n=3000 extends the same stream), so this is a
+               # NESTED check, not an independent replication — same convention as pool 80.
 }
 
 

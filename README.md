@@ -318,18 +318,24 @@ disciplined silence.
 
 The strongest test yet: **blindly recover *documented* rule changes in games the framework has
 never seen**. Powerball (5-of-69) and Mega Millions (5-of-75) histories come straight from the
-official NY Open Data portal ([data.ny.gov](https://data.ny.gov)) — 4,488 draws (2002–2026)
-carrying **four publicly documented matrix changes**, including a pool *shrink* (Mega Millions
-75→70, 2017), a harder target than any expansion (`python scripts/lottery_audit.py`).
+official NY Open Data portal ([data.ny.gov](https://data.ny.gov)); UK Lotto (6-of-59) adds the
+longest stream of all — 3,201 draws back to the game's first ever draw in 1994 — for **7,689
+draws carrying five publicly documented matrix changes**, including a pool *shrink* (Mega
+Millions 75→70, 2017), a harder target than any expansion (`python scripts/lottery_audit.py`).
 
 | Documented change | BOCPD onset (blind) | Family B contrast | caught |
 |---|---|---|---|
+| UK Lotto 49→59 (2015-10-10) | **2015-10-10 — day zero** | appeared {50..59} | ✓✓ |
 | Mega Millions 56→75 (2013-10-22) | **2013-10-22 — day zero** | appeared {57..75} | ✓✓ |
 | Mega Millions 52→56 (2005-06-24) | below threshold | appeared {53,54,55,56} | ✓ |
 | Mega Millions 75→70 shrink (2017-10-31) | below threshold | **vanished {71..75}** | ✓ |
 | Powerball 59→69 (2015-10-07) | near-miss (p = 0.065) | appeared {60..69} | ✓ |
 
-**4/4 documented changes detected, 0 spurious onsets, and the exact matrix delta recovered
+The UK Lotto and Powerball rows are near-perfect controls for each other: **the same kind of
+event — a pool expansion — three days apart** (2015-10-10 vs 2015-10-07), in unrelated games.
+One is caught by both pillars at day zero, the other only by Family B.
+
+**5/5 documented changes detected, 0 spurious onsets, and the exact matrix delta recovered
 symbol-by-symbol.** Two honest findings ride along: the Powerball change peak lands at an
 empirical **p = 0.065** — formally *not* significant, and reported as such (Family B carries
 the detection instead); and the shrink case exposes a *structural* asymmetry — BOCPD reacts
@@ -403,7 +409,7 @@ driftscope run --no-figures                   # skip figure generation
 quarto render src/driftscope/reporting/report.qmd --to html   # reproduce the full HTML report
 python scripts/prng_benchmark.py                              # PRNG sensitivity/specificity matrix
 python scripts/multimulti_audit.py                           # second real game (Multi Multi, 20-of-80)
-python scripts/lottery_audit.py                              # World Lottery Audit (Powerball + Mega Millions)
+python scripts/lottery_audit.py                              # World Lottery Audit (Powerball + Mega Millions + UK Lotto)
 python scripts/make_readme_assets.py                         # regenerate the README figures
 ```
 
@@ -412,7 +418,7 @@ python scripts/make_readme_assets.py                         # regenerate the RE
 | Metric | Value | Conditions |
 |---|---|---|
 | Full audit | **~4.5 s**, **~220 MB** peak RAM | 958 draws, `n_perm=999`, i5-12500H (CPU-only) |
-| Test suite | **312 collected**, CI-green | 310 pass / 2 skip locally (Win11) |
+| Test suite | **314 collected**, CI-green | 312 pass / 2 skip locally (Win11) |
 | JIT hot loops | **~2.7×** vs NumPy baseline | permutation PoC (`notebooks/poc_permutation_engine.py`) |
 
 > The ~4 GB RAM figure sometimes quoted is the **budget for the full DriftSim calibration sweep**
@@ -501,7 +507,7 @@ src/driftscope/
 └── cli.py          # `driftscope run`
 scripts/            # archive (SHA-256 manifest), prng_benchmark + multimulti_audit, make_readme_assets
 demo/               # Streamlit audit explorer (optional, `pip install -e ".[demo]"`)
-tests/              # 312 tests — calibration, invariants, FPR ≤ α, reproducibility, PRNG, info-theory
+tests/              # 314 tests — calibration, invariants, FPR ≤ α, reproducibility, PRNG, info-theory
 data/seed/          # eurojackpot_history.csv (958 draws) + multimulti_history.csv (committed)
 docs/               # published HTML report + executive summary (GitHub Pages) + assets/
 ```

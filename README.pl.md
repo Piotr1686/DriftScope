@@ -410,7 +410,7 @@ driftscope run --no-figures                   # pomiń generowanie figur
 quarto render src/driftscope/reporting/report.qmd --to html   # odtwórz pełny raport HTML
 python scripts/prng_benchmark.py                              # macierz czułości/swoistości PRNG
 python scripts/multimulti_audit.py                           # druga prawdziwa gra (Multi Multi, 20-z-80)
-python scripts/lottery_audit.py                              # World Lottery Audit (Powerball + Mega Millions)
+python scripts/lottery_audit.py                              # World Lottery Audit (Powerball + Mega Millions + UK Lotto)
 python scripts/make_readme_assets.py                         # regeneruj figury README
 ```
 
@@ -419,7 +419,7 @@ python scripts/make_readme_assets.py                         # regeneruj figury 
 | Metryka | Wartość | Warunki |
 |---|---|---|
 | Pełny audyt | **~4.5 s**, **~220 MB** peak RAM | 958 losowań, `n_perm=999`, i5-12500H (CPU-only) |
-| Zestaw testów | **312 zebranych**, CI-green | 310 pass / 2 skip lokalnie (Win11) |
+| Zestaw testów | **314 zebranych**, CI-green | 312 pass / 2 skip lokalnie (Win11) |
 | Gorące pętle JIT | **~2.7×** vs baseline NumPy | permutacyjny PoC (`notebooks/poc_permutation_engine.py`) |
 
 > Cyfra ~4 GB RAM czasem przypisywana DriftScope to **budżet pełnego sweepu kalibracyjnego DriftSim**
@@ -508,7 +508,7 @@ src/driftscope/
 └── cli.py          # `driftscope run`
 scripts/            # archive (manifest SHA-256), prng_benchmark + multimulti_audit, make_readme_assets
 demo/               # eksplorator audytu Streamlit (opcjonalnie, `pip install -e ".[demo]"`)
-tests/              # 312 testów — kalibracja, niezmienniki, FPR ≤ α, reprodukowalność, PRNG, info-theory
+tests/              # 314 testów — kalibracja, niezmienniki, FPR ≤ α, reprodukowalność, PRNG, info-theory
 data/seed/          # eurojackpot_history.csv (958 losowań) + multimulti_history.csv (committed)
 docs/               # opublikowany raport HTML + streszczenie (GitHub Pages) + assets/
 ```

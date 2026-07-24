@@ -427,22 +427,36 @@ This closes the reusability loop on **real** data. DriftScope is not a EuroJackp
 same calibrated instrument audits a structurally different real game (4× the pool, 4× the draw
 size) and behaves exactly as designed — quiet where there is no convergent signal.
 
-# 7. World Lottery Audit — Powerball & Mega Millions
+# 7. World Lottery Audit — Powerball, Mega Millions & UK Lotto
 
 Multi Multi answers "does the instrument stay quiet on a clean second game?". The World
 Lottery Audit asks the sharper question: **does it blindly recover *documented* rule changes
 in games it has never seen?** Powerball (5-of-69) and Mega Millions (5-of-75) histories come
-from the official NY Open Data portal (`data.ny.gov`), and their matrix changes are public
-record — four ground-truth change-points across 4,488 draws (2002–2026), including a pool
-*shrink* (Mega Millions 75→70 in 2017), a harder target than the EuroJackpot-style expansions.
+from the official NY Open Data portal (`data.ny.gov`); UK Lotto (6-of-59) adds the longest
+stream of all, reaching back to the game's first ever draw in 1994. Their matrix changes are
+public record — five ground-truth change-points across 7,689 draws (1994–2026), including a
+pool *shrink* (Mega Millions 75→70 in 2017), a harder target than any expansion.
+
+UK Lotto earns its place by being a near-perfect natural control for Powerball: **the same
+kind of event — a pool expansion — three days apart** (UK 49→59 on 2015-10-10, Powerball
+59→69 on 2015-10-07), in two unrelated games on two continents. Whatever separates their
+outcomes below cannot be attributed to the calendar or to the kind of change.
+
+Its history is also the one case here without a machine-readable official feed: the operator's
+site is closed to non-browser clients and its export window is capped at roughly 180 days, so
+the stream comes from a mirror. Rather than trust it, we cross-validated it against a
+64-record sample taken straight from the official export — **main numbers agree on 64/64
+records** (`scripts/validate_uk_mirror.py`, reproducible). The single discrepancy found is a
+crossed pair of *bonus* balls on one date; the bonus stream is consequently not used at all.
 
 Two reusability-layer refinements were fixed before reading any results (both documented in
-`reporting/lottery_audit.py`): a **coverage warm-up** of ⌈(N/k)·H_N⌉ draws — for k=5 pools the
-default N∕∕K warm-up grossly under-covers the coupon-collector transient, whose first-appearance
-spikes otherwise inflate the null (mean null max 0.43 → 0.19 after the fix; thresholds
-re-calibrated at this warm-up: pool 69 → 0.49, pool 75 → 0.39, FPR≈0.05) — and **onset-based
-localization**, because a pool expansion smears its signature over months of new-symbol debuts
-(measured: +81 days for Powerball, +189 days for Mega Millions).
+`reporting/lottery_audit.py`): a **coverage warm-up** of ⌈(N/k)·H_N⌉ draws — for small-k pools
+the default N∕∕K warm-up grossly under-covers the coupon-collector transient, whose
+first-appearance spikes otherwise inflate the null (mean null max 0.43 → 0.19 after the fix;
+thresholds re-calibrated at this warm-up: pool 69 → 0.49, pool 75 → 0.39, pool 59 → 0.53,
+FPR≈0.05) — and **onset-based localization**, because a pool expansion smears its signature
+over months of new-symbol debuts (measured: +81 days for Powerball, +189 days for Mega
+Millions).
 
 ```{python}
 #| label: lottery-audit
@@ -482,19 +496,28 @@ print(f"**{n_detected}/{n_events} documented changes detected; "
       f"{sum(r.n_draws for r in rows.values()):,} draws.")
 ```
 
-Three results deserve emphasis. **First**, the Mega Millions 2013 expansion is localized
-**blind to the exact day** (onset 2013-10-22, Δ = 0), and the Family B pre/post contrast
-recovers the *exact* matrix delta symbol-by-symbol in all four events — {60..69} appearing in
-Powerball 2015, {71..75} vanishing in the 2017 shrink. **Second**, the honest near-miss:
-Powerball's change peak reaches max cp\_prob = 0.474 against the pool-69 null threshold of
-0.49 — an empirical **p = 0.065**, formally *not* significant at α = 0.05. The framework
-reports it as such; the change is instead carried decisively by Family B. **Third**, the
-shrink case exposes a *structural* detector asymmetry: BOCPD reacts instantly to a new symbol
-(a zero-count category appearing is a likelihood shock) but is nearly blind to symbol
-*retirement*, where evidence accumulates only from absence. Family B's two-sided binomial has
-no such asymmetry. This is the Disagreement Protocol's complementarity argument — previously
-demonstrated on synthetic planted signals (§4) — replicating on real, documented ground truth:
-every change is caught, but no single pillar catches all of them.
+Four results deserve emphasis. **First**, two of the five changes are localized **blind to the
+exact day** — UK Lotto 2015 (onset 2015-10-10, Δ = 0) and Mega Millions 2013 (onset
+2013-10-22, Δ = 0) — and the Family B pre/post contrast recovers the *exact* matrix delta
+symbol-by-symbol in all five events: {50..59} appearing in UK Lotto 2015, {60..69} in
+Powerball 2015, {71..75} vanishing in the 2017 shrink. Not one spurious onset appears across
+7,689 draws and 32 years.
+
+**Second**, the twin events are the sharpest evidence in this report, precisely because they
+disagree. UK Lotto 2015 is caught by *both* pillars at day zero; Powerball 2015, three days
+earlier and structurally identical, is a near-miss for BOCPD — its change peak reaches max
+cp\_prob = 0.474 against the pool-69 null threshold of 0.49, an empirical **p = 0.065**,
+formally *not* significant at α = 0.05. The framework reports it as such, and Family B carries
+the detection instead. Two matched events, one caught twice and one caught once: that is what
+a calibrated instrument looks like, as opposed to one tuned until everything fires.
+
+**Third**, the shrink case exposes a *structural* detector asymmetry: BOCPD reacts instantly
+to a new symbol (a zero-count category appearing is a likelihood shock) but is nearly blind to
+symbol *retirement*, where evidence accumulates only from absence. Family B's two-sided
+binomial has no such asymmetry. **Fourth**, taken together these are the Disagreement
+Protocol's complementarity argument — previously demonstrated on synthetic planted signals
+(§4) — replicating on real, documented ground truth: every change is caught, but no single
+pillar catches all of them.
 
 # 8. Beacon withholding — a bespoke observable for a battery-invisible attack
 
